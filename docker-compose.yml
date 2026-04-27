@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-smart_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smart_password}
+      POSTGRES_DB: ${POSTGRES_DB:-smart_directory}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api_gateway:
+    build: ./services/api_gateway
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_URL=postgresql://${POSTGRES_USER:-smart_user}:${POSTGRES_PASSWORD:-smart_password}@db:5432/${POSTGRES_DB:-smart_directory}
+      - SECRET_KEY=${SECRET_KEY:-change_me}
+    depends_on:
+      - db
+
+  ad_sync_worker:
+    build: ./services/ad_sync_worker
+    restart: always
+    environment:
+      - DB_URL=postgresql://${POSTGRES_USER:-smart_user}:${POSTGRES_PASSWORD:-smart_password}@db:5432/${POSTGRES_DB:-smart_directory}
+      - AD_SERVER=${AD_SERVER}
+      - AD_USER=${AD_USER}
+      - AD_PASSWORD=${AD_PASSWORD}
+    depends_on:
+      - db
+
+  web_frontend:
+    build: ./services/web_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./services/web_frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - api_gateway
+
+volumes:
+  postgres_data:

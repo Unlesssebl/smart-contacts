@@ -1,0 +1,12 @@
+smart_directory/
+├── docs/                   # Вся бизнес-документация
+├── services/
+│   ├── api_gateway/        # Основной сервис FastAPI (API для Web и Bot)
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   ├── ad_sync_worker/     # Изолированный Python-скрипт/Celery для работы с AD
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   └── web_frontend/       # React/Vue приложение (Личный кабинет + Админки)
+├── docker-compose.yml      # Оркестрация среды
+└── .env.example            # Шаблон переменных окружения
