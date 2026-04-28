@@ -1,12 +1,25 @@
-smart_directory/
-├── docs/                   # Вся бизнес-документация
+smart-contacts/
+├── docs/
+│   ├── README.md               # Статус компонентов и бизнес-цель
+│   ├── ARCHITECTURE.md         # Микросервисная архитектура и изоляция сервисов
+│   ├── BUSINESS_LOGIC.md       # Gatekeeper, репорты, ролевая модель
+│   ├── DATABASE_SCHEMA.md      # Схема PostgreSQL: таблицы, индексы, ограничения
+│   ├── AD_INTEGRATION.md       # Маппинг LDAP, Pull/Push логика, retry, OOO (EWS)
+│   ├── API_SPEC.md             # REST API: все эндпоинты, схемы запросов/ответов
+│   ├── AUTH_SPEC.md            # Аутентификация (LDAP+JWT), матрица прав по ролям
+│   ├── FRONTEND_SPEC.md        # Стек, страницы, компоненты, API-клиент
+│   ├── BOT_SPEC.md             # Telegram Bot: команды, API-вызовы, привязка tg_id
+│   └── DOCKER_SPEC.md          # Docker: healthchecks, сборка фронтенда, зависимости
 ├── services/
-│   ├── api_gateway/        # Основной сервис FastAPI (API для Web и Bot)
+│   ├── api_gateway/            # FastAPI сервис (REST API для Web и Bot)
 │   │   ├── Dockerfile
 │   │   └── requirements.txt
-│   ├── ad_sync_worker/     # Изолированный Python-скрипт/Celery для работы с AD
+│   ├── ad_sync_worker/         # Python воркер: синхронизация с AD (Pull/Push)
 │   │   ├── Dockerfile
 │   │   └── requirements.txt
-│   └── web_frontend/       # React/Vue приложение (Личный кабинет + Админки)
-├── docker-compose.yml      # Оркестрация среды
-└── .env.example            # Шаблон переменных окружения
+│   └── web_frontend/           # React 18 + Vite + TypeScript (Личный кабинет + Админки)
+│       ├── Dockerfile
+│       └── package.json
+├── docker-compose.yml          # Оркестрация: db, api_gateway, ad_sync_worker, web_frontend
+├── .env.example                # Шаблон переменных окружения (все сервисы)
+└── .gitignore

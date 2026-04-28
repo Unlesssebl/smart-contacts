@@ -1,14 +1,171 @@
 # Интеграция с Active Directory
 
-## Правила Маппинга (Data Mapping)
-| Поле в БД (PostgreSQL) | Атрибут в AD (LDAP)          | Бизнес-правило записи                 |
-|------------------------|------------------------------|---------------------------------------|
-| `mobile_phone`         | `mobile`                     | Строгая нормализация E.164            |
-| `extension_number`     | `telephoneNumber`            | Raw-формат (сохраняем как есть)       |
-| `office_location`      | `physicalDeliveryOfficeName` | -                                     |
+## Полный маппинг полей (PostgreSQL ↔ LDAP)
 
-## Логика Двунаправленной Синхронизации (AD Sync Worker)
-1. **Pull (AD -> DB)**: Каждые 10-15 минут воркер опрашивает AD на предмет изменений (например, проверка атрибута `uSNChanged` или статуса OOO - Out Of Office). Обновляет локальную БД, чтобы уволенные сотрудники пропадали из поиска Telegram-бота.
-2. **Push (DB -> AD)**: Записи из таблицы `change_requests` со статусом `approved` записываются в AD. После успешной команды `LDAP MODIFY` статус меняется на `applied`.
+| Поле в БД (`users`) | Атрибут LDAP | Бизнес-правило |
+|---|---|---|
+| `object_guid` | `objectGUID` | Первичный ключ (Конвертация из Binary AD в UUID v4 String). Никогда не меняется. |
+| `sam_account_name` | `sAMAccountName` | Логин. Может меняться при смене статуса сотрудника (добавление суффикса). |
+| `status` | `userAccountControl`, `sAMAccountName` | **Сложная логика**: `RESIGNED` если бит `0x0002` в `UAC` установлен ИЛИ суффикс `-uv`. `-time` -> `ON_LEAVE`, иначе `ACTIVE`. |
+| `full_name` | `displayName` | Читается как есть. Изменение только через IT-Operator. |
+| `internal_phone` | `telephoneNumber` | Корпоративный (внутренний) номер. Приведение к формату XX-XX (например, 49-87). |
+| `mobile_phone` | `mobile` | Мобильный телефон. Нормализация в E.164 (`+7XXXXXXXXXX`). |
+| `department` | `department` | Читается как есть. Структурные изменения одобряет IT-Operator. |
+| `office_location` | `physicalDeliveryOfficeName` | Читается как есть. |
+| `job_title` | `title` | Читается как есть. Изменение только через AD/HR. |
+| `organization` | `memberOf` | **Сложная логика**: сопоставление CN групп с файлом `docs/CN.md`. |
 
-*Примечание:* VIP-профили (`is_protected = True`) никогда не перезаписываются системой автоматически из Web.
+**Поля `is_verified`, `is_protected`, `grace_period_left`, `role`, `tg_id`** — только в PostgreSQL. В AD **не записываются**.
+
+---
+
+## Логика Pull (AD → PostgreSQL)
+
+**Расписание**: каждые 10–15 минут (настраивается через `AD_SYNC_INTERVAL_SECONDS` в `.env`).
+
+### Алгоритм Pull
+
+```
+1. Подключиться к AD через LDAP BIND (сервисный аккаунт AD_USER / AD_PASSWORD)
+2. Запросить все объекты OU с атрибутом uSNChanged > last_known_usn:
+   - LDAP Filter: (&(objectClass=user)(objectCategory=person)(uSNChanged>={last_usn}))
+   - Атрибуты: objectGUID, sAMAccountName, displayName, mobile, telephoneNumber, department,
+               physicalDeliveryOfficeName, userAccountControl, uSNChanged, memberOf, title
+   - ВАЖНО: Использовать paged_search (размер страницы: 1000) для обхода MaxPageSize AD.
+
+3. Для каждого полученного объекта:
+   a. Конвертировать бинарный objectGUID в строковый формат UUID v4.
+   b. Найти запись в users по object_guid.
+   c. Если не найдена — создать новую запись (INSERT), role='employee', is_verified=False.
+   d. Если найдена:
+      - Обновить sam_account_name (мог измениться).
+      - Определить статус (Status Logic):
+        1. Если (userAccountControl & 0x0002) != 0 (ACCOUNTDISABLE), статус = RESIGNED.
+        2. Иначе, проверить суффикс sAMAccountName:
+           - {login}-uv -> RESIGNED
+           - {login}-time -> ON_LEAVE
+           - иначе -> ACTIVE
+      - Обновить full_name, department, office_location, job_title (AD — SSOT).
+      - Обновить organization (см. раздел "Логика определения организации").
+      - Обновить internal_phone, mobile_phone — ТОЛЬКО если нет активного change_request
+        со статусом pending/conflict на это поле.
+   e. Обновить last_sync_timestamp = now().
+
+4. Сохранить максимальное значение uSNChanged из обработанного набора как last_known_usn.
+```
+
+---
+
+## Логика определения организации
+
+Эта логика применяется в процессе Pull для заполнения поля `organization` в БД.
+
+### Алгоритм сопоставления
+1. **Динамическая загрузка**: Список организаций извлекается из файла `docs/CN.md` **в начале каждого цикла синхронизации** (Pull). Это гарантирует актуальность списка без перезапуска воркера.
+2. Для каждой группы в атрибуте `memberOf` пользователя:
+    - Извлечь **CN** группы (например, из `CN=ООО Технотрон,OU=...` извлечь `ООО Технотрон`).
+3. Сравнить извлеченные CN со списком из `CN.md`:
+    - **Регистрозависимое совпадение (Case-Sensitive):** Имеет наивысший приоритет.
+    - **Регистронезависимое совпадение (Case-Insensitive):** Используется для поиска потенциальных совпадений.
+
+### Обработка результатов
+*   **Найдено 0 совпадений:** Поле `organization` остается пустым (`NULL`).
+*   **Найдено 1 совпадение:** Значение записывается в поле `organization`.
+*   **Найдено >1 совпадения:**
+    1.  **Для пользователя (Frontend):** Выбирается то значение, которое **точно совпадает по регистру** с записью в `CN.md`. Если таких несколько или ни одного — берется первое найденное из списка `memberOf`.
+    2.  **Для IT-Оператора (Admin Panel):** В поле `sync_error_log` записывается предупреждение: `Warning: Multiple organizations found in memberOf: [Group1, Group2]. Using Group1.` Это предупреждение должно подсвечиваться в интерфейсе оператора.
+
+---
+
+## Логика Push (PostgreSQL → AD)
+
+**Триггер**: AD Sync Worker проверяет таблицу `change_requests` на записи со статусом `approved` при каждом цикле Pull (или немедленно после одобрения через webhook).
+
+### Алгоритм Push
+
+```
+1. SELECT * FROM change_requests WHERE status = 'approved'
+2. Для каждой записи:
+   a. Найти пользователя в AD по objectGUID
+   b. Если профиль is_protected = True → пропустить, записать в sync_error_log "VIP profile, skipping push"
+   c. Выполнить LDAP MODIFY: заменить атрибут на new_value
+   d. При успехе:
+      - UPDATE change_requests SET status = 'applied', resolved_at = now()
+      - UPDATE users SET last_sync_timestamp = now()
+   e. При ошибке LDAP:
+      - Записать ошибку в sync_error_log
+      - Статус change_request НЕ меняется (остаётся 'approved'), повторная попытка — в следующем цикле
+```
+
+---
+
+
+## Конфликт-резолюция (Push vs Pull на одно поле)
+
+| Ситуация | Действие |
+|---|---|
+| AD изменил поле, но в БД есть `pending` change_request на то же поле | Pull **не перезаписывает** поле в БД. `change_request` остаётся активным. IT-Operator принимает решение вручную. |
+| `change_request` одобрен → Push записывает в AD → Pull читает то же значение обратно | Pull видит то же значение, изменений нет — конфликта нет. |
+| Push не удался (LDAP error) → следующий Pull принёс старое значение из AD | В `sync_error_log` фиксируется ошибка. IT-Operator видит расхождение в дашборде. |
+
+---
+
+## Retry-политика (недоступность AD)
+
+```
+Стратегия: Экспоненциальный Backoff с Jitter
+
+Математическая формула задержки:
+T = base * 2^n + jitter
+
+Где:
+- base: AD_RETRY_BASE_SECONDS (по умолчанию 10)
+- n: номер попытки (0, 1, 2, ...)
+- jitter: случайное значение ±10% для предотвращения «эффекта стада» (thundering herd)
+
+Пример (base=10):
+- Попытка 0: 10 * 2^0 = 10 сек + jitter
+- Попытка 1: 10 * 2^1 = 20 сек + jitter
+- Попытка 2: 10 * 2^2 = 40 сек + jitter
+- Попытка 3: 10 * 2^3 = 80 сек + jitter
+- Попытка 4: 10 * 2^4 = 160 сек + jitter
+
+После достижения AD_MAX_RETRIES (по умолчанию 5):
+Воркер переходит в режим ожидания (sleep 5 минут), затем полностью перезапускает цикл синхронизации.
+
+Пока AD недоступен:
+- API Gateway продолжает штатно обслуживать пользователей (читает из PostgreSQL)
+- Push-операции накапливаются в очереди (остаются в статусе 'approved')
+- В sync_error_log каждой затронутой записи фиксируется: "AD unavailable at {timestamp}"
+```
+
+**Переменная окружения**: `AD_MAX_RETRIES=5`, `AD_RETRY_BASE_SECONDS=10`
+
+---
+
+## Переменные окружения AD Sync Worker (полный список)
+
+| Переменная | Значение по умолчанию | Описание |
+|---|---|---|
+| `AD_SERVER` | `ldap://ad.example.local` | LDAP-адрес контроллера домена |
+| `AD_USER` | — | DN сервисного аккаунта |
+| `AD_PASSWORD` | — | Пароль сервисного аккаунта |
+| `AD_BASE_DN` | `DC=example,DC=local` | Базовый DN для поиска |
+| `AD_SYNC_INTERVAL_SECONDS` | `600` | Интервал Pull-цикла (10 мин) |
+| `AD_MAX_RETRIES` | `5` | Кол-во попыток при недоступности |
+| `AD_RETRY_BASE_SECONDS` | `10` | База экспоненциального backoff |
+| `DATABASE_URL` | — | PostgreSQL connection string |
+
+---
+
+## Безопасность и права доступа (Security)
+
+### Принцип наименьших привилегий
+Сервисная учетная запись (`AD_USER`), используемая воркером, должна иметь строго ограниченные права в Active Directory.
+
+**Права на запись (LDAP MODIFY)** должны быть предоставлены **только** для следующих атрибутов:
+- `telephoneNumber` (внутренний телефон)
+- `mobile` (мобильный телефон)
+- `physicalDeliveryOfficeName` (расположение кабинета)
+
+Изменение любых других атрибутов (включая `displayName`, `department`, `title`, `userAccountControl`) на уровне прав AD для этой учетной записи должно быть **запрещено**. Это предотвращает компрометацию критических данных AD в случае взлома системы Smart Contacts.

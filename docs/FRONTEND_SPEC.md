@@ -1,0 +1,222 @@
+# Спецификация Web Frontend
+
+## Стек
+
+| Слой | Технология |
+|------|-----------|
+| Фреймворк | **React 18** + **Vite** |
+| Язык | **TypeScript** |
+| Маршрутизация | **React Router v6** |
+| UI-библиотека | **Ant Design 5** |
+| HTTP-клиент | **Axios** (с interceptor для JWT и обработки 503) |
+| Управление состоянием | **Zustand** (auth store, user store) + **persist** |
+| Сборка | Vite (`npm run dev` → порт 3000) |
+
+---
+
+## Дизайн-система
+
+- **Шрифт:** Inter
+- **Цветовые токены Ant Design:**
+  - `colorPrimary` — основной цвет компании
+  - `colorSuccess` — верифицирован
+  - `colorWarning` — ожидает действий (Gatekeeper, заявки)
+  - `colorError` — блокировка, ошибки
+- **Стилистика:** glassmorphism (лёгкое размытие фона, мягкие тени, `borderRadius: 12px`), светлая тема, обилие пространства.
+- **Визуализация сотрудников:** аватарки отсутствуют. Используются инициалы на цветном фоне; цвет жёстко привязан к департаменту.
+
+---
+
+## Управление состоянием
+
+Для сохранения состояния авторизации и статуса Gatekeeper при перезагрузке страницы необходимо использовать middleware **persist** в Zustand:
+- **Storage:** `localStorage`
+- **Сохраняемые данные:** `accessToken`, `role`, `is_verified`, `grace_period_left`.
+- **Логика:** При инициализации приложения Zustand автоматически восстанавливает состояние из хранилища.
+
+---
+
+## Структура проекта
+
+```
+services/web_frontend/
+├── src/
+│   ├── api/
+│   │   ├── client.ts           # Базовый axios instance + interceptors
+│   │   ├── auth.ts
+│   │   ├── users.ts
+│   │   ├── changeRequests.ts
+│   │   └── reports.ts
+│   ├── stores/
+│   │   ├── authStore.ts        # accessToken, role, gatekeeper_status
+│   │   └── userStore.ts        # Профиль текущего пользователя
+│   ├── pages/
+│   │   ├── LoginPage/
+│   │   ├── ProfilePage/
+│   │   ├── DirectoryPage/
+│   │   ├── AdminPage/
+│   ├── components/
+│   │   ├── GatekeeperModal/
+│   │   ├── UserCard/
+│   │   ├── ChangeRequestTable/
+│   │   ├── ReportsTable/
+│   │   └── ProtectedRoute/
+│   ├── router.tsx
+│   └── main.tsx
+├── Dockerfile
+├── package.json
+└── vite.config.ts
+```
+
+---
+
+## Страницы и роуты
+
+### `/login` — Вход
+- Форма: `username` (AD-логин) и `password`
+- Успех → токен в `authStore` → редирект на `/profile`
+- 401 → сообщение «Неверный логин или пароль»
+
+---
+
+### `/profile` — Личный кабинет
+**Доступ:** все авторизованные роли.
+
+**Логика при монтировании:**
+1. Прочитать `is_verified` и `grace_period_left` из `authStore` (уже получены при логине — доп. запрос не нужен).
+2. `!is_verified && grace_period_left == 0` → `<GatekeeperModal hardBlock={true}>` (нельзя закрыть)
+3. `!is_verified && grace_period_left > 0` → `<GatekeeperModal hardBlock={false}>`
+4. Иначе → рендер страницы
+
+**Содержимое:**
+- Карточка профиля (данные из `GET /auth/me`)
+- Таблица «Мои заявки»: поле, новое значение, статус, дата
+- Кнопка «Изменить данные» → форма с полями `internal_phone` (корпоративный внутренний, маска `99-99`), `mobile_phone` (мобильный, маска `+7 (999) 999-99-99`), `office_location` (только они редактируемы пользователем; остальные поля — из AD, не доступны для правки) → `POST /profile/me/change-request`
+- Форма предзаполнена текущими значениями; поля, синхронизированные из AD (`full_name`, `department`, `job_title`), отображаются как read-only с пояснением «Синхронизируется из Active Directory»
+
+---
+
+### `/directory` — Справочник сотрудников
+**Доступ:** все авторизованные.
+
+**UI:** Поисковая строка по центру. Под ней — выпадающие фильтры (по отделу). Результаты — карточки (`<UserCard>`). При загрузке — Skeleton Loaders. Если результатов нет — Empty State с кнопкой «Сбросить фильтры».
+
+**Поведение `<UserCard>`:**
+- Поля: имя, должность, отдел, кабинет, телефон, добавочный.
+- Если поле `null` — плейсхолдер «Не указан» серым цветом (поле не скрывается).
+- Длинные имена — `text-overflow: ellipsis`.
+
+**Детальный профиль:** клик на карточку → модальное окно со всеми контактами (кликабельные).
+
+**Кнопка «Сообщить об ошибке»** (`POST /reports`):
+- Визуально второстепенна: `type="text"` / `size="small"`, расположена внизу модалки.
+- При нажатии — появляется `<TextArea>` для описания ошибки (макс. 500 символов) и кнопка «Отправить».
+- После отправки — `<Alert type="success">` «Спасибо, мы разберёмся»; форма скрывается.
+
+---
+
+### `/admin` — Пульт ИТ-оператора
+**Доступ:** `<ProtectedRoute roles={['it_operator']}>`
+
+**Разделы (вкладки):**
+1. **Заявки** — таблица `<ChangeRequestTable>` всех `change_requests`; фильтр по статусу; кнопки «Одобрить» / «Отклонить»
+2. **Репорты** — таблица `<ReportsTable>`; кнопка «Обработано» → `PATCH /reports/{id}/process`
+
+---
+
+
+
+## UI States
+
+| Состояние | Поведение |
+|-----------|-----------|
+| Загрузка списка | Skeleton Loaders (не спиннер) |
+| Пустой результат поиска | Empty State + кнопка «Сбросить фильтры» |
+| Ошибка API | Error Boundary — «Сервис временно недоступен» |
+| Глобальная проверка сессии | Полноэкранный лоадер |
+| Gatekeeper — мягкая блокировка | Баннер над страницей: «Пожалуйста, проверьте актуальность ваших данных. Осталось пропусков: N» с кнопкой «Проверить» |
+| Gatekeeper — жёсткая блокировка | Страница недоступна; модалку нельзя закрыть; отображается заголовок «Подтвердите ваши данные» |
+| AD Синхронизация недоступна (503) | Глобальный баннер: «Синхронизация с AD временно недоступна. Изменения будут сохранены позже». Кнопка «Отправить заявку» заблокирована. |
+
+---
+
+## API-клиент (`src/api/client.ts`)
+
+```typescript
+const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  timeout: 10000,
+});
+
+// Добавляет Bearer token из authStore
+apiClient.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Обработка ответов (Refresh Token и 503)
+apiClient.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    // При 401 → попытка refresh → при неудаче → /login
+    if (error.response?.status === 401) {
+      // refresh logic...
+    }
+
+    // При 503 → блокировка отправки заявок (AD Sync Unavailable)
+    if (error.response?.status === 503) {
+      // 1. Установить глобальный флаг adSyncUnavailable в store
+      // 2. Показать глобальный баннер: "Синхронизация с AD временно недоступна..."
+      // 3. Блокировать кнопки "Отправить заявку"
+    }
+
+    return Promise.reject(error);
+  }
+);
+```
+
+---
+
+## Компонент `<GatekeeperModal>`
+
+```
+Props:
+  hardBlock: boolean  — если true: кнопка «Пропустить» скрыта, модалку нельзя закрыть
+  userData: UserProfile — текущие данные пользователя для отображения
+
+Содержимое модалки:
+  1. Заголовок: «Проверьте актуальность ваших данных»
+  2. Подзаголовок (если !hardBlock): «Осталось пропусков: {grace_period_left} из 3»
+  3. Read-only карточка с текущими данными пользователя:
+     - ФИО, должность, отдел (из AD — не редактируются)
+     - Корпоративный номер (XX-XX), мобильный телефон (E.164), кабинет
+  4. Кнопки действий:
+     «Всё верно»    → POST /profile/me/acknowledge { action: "confirm" } → is_verified = true в store
+     «Изменить данные» → закрыть модалку → открыть форму редактирования на /profile
+     «Пропустить»   → POST /profile/me/acknowledge { action: "skip" }   → grace_period_left -= 1 в store
+                       (скрыта если hardBlock=true)
+
+Правила отображения счётчика:
+  grace_period_left == 2 → colorWarning (жёлтый)
+  grace_period_left == 1 → colorError (красный), текст «Последний пропуск». Кнопка «Пропустить» окрашивается в `colorError` и имеет всплывающую подсказку: «Это ваша последняя возможность пропустить подтверждение данных».
+  grace_period_left == 0 → hardBlock=true, счётчик скрыт
+```
+
+---
+
+## Переменные окружения
+
+```env
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+```
+
+---
+
+## Запуск
+
+```bash
+cd services/web_frontend
+npm install
+npm run dev   # http://localhost:3000
+```

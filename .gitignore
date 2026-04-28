@@ -25,6 +25,10 @@ venv/
 ENV/
 env/
 
+# UV
+.uv/
+# uv.lock is recommended to be committed for applications
+
 # Node
 node_modules/
 dist/
@@ -42,6 +46,9 @@ dist-ssr/
 
 # Docker
 .docker/
+data/
+pgdata/
+redisdata/
 
 # IDEs
 .idea/
@@ -50,6 +57,5 @@ dist-ssr/
 *.swo
 .DS_Store
 
-# UV
-.uv/
-uv.lock
+# Misc
+*.log

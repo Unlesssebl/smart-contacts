@@ -3,49 +3,89 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
+    container_name: smart_contacts_db
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-smart_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smart_password}
-      POSTGRES_DB: ${POSTGRES_DB:-smart_directory}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
+      POSTGRES_DB: ${POSTGRES_DB:-smart_contacts}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-smart_contacts}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: smart_contacts_redis
+    restart: always
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api_gateway:
-    build: ./services/api_gateway
+    build:
+      context: ./services/api_gateway
+      dockerfile: Dockerfile
+    container_name: smart_contacts_api
     restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
     ports:
       - "8000:8000"
-    environment:
-      - DB_URL=postgresql://${POSTGRES_USER:-smart_user}:${POSTGRES_PASSWORD:-smart_password}@db:5432/${POSTGRES_DB:-smart_directory}
-      - SECRET_KEY=${SECRET_KEY:-change_me}
-    depends_on:
-      - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   ad_sync_worker:
-    build: ./services/ad_sync_worker
+    build:
+      context: ./services/ad_sync_worker
+      dockerfile: Dockerfile
+    container_name: smart_contacts_worker
     restart: always
-    environment:
-      - DB_URL=postgresql://${POSTGRES_USER:-smart_user}:${POSTGRES_PASSWORD:-smart_password}@db:5432/${POSTGRES_DB:-smart_directory}
-      - AD_SERVER=${AD_SERVER}
-      - AD_USER=${AD_USER}
-      - AD_PASSWORD=${AD_PASSWORD}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - ./docs:/app/docs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "uv run python -c \"import psycopg2, os; conn = psycopg2.connect(user=os.getenv('POSTGRES_USER'), password=os.getenv('POSTGRES_PASSWORD'), host=os.getenv('DB_HOST'), port=os.getenv('DB_PORT'), dbname=os.getenv('POSTGRES_DB')); conn.cursor().execute('SELECT 1'); conn.close()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   web_frontend:
-    build: ./services/web_frontend
+    build:
+      context: ./services/web_frontend
+      dockerfile: Dockerfile
+    container_name: smart_contacts_web
+    restart: always
     ports:
-      - "5173:5173"
-    volumes:
-      - ./services/web_frontend:/app
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:8000
+      - "80:80"
     depends_on:
       - api_gateway
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
 
 volumes:
   postgres_data:
