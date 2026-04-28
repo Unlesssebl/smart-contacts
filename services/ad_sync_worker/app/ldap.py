@@ -60,13 +60,6 @@ class LDAPClient:
         """
         Finds DN of an object by its objectGUID.
         """
-        # Note: Searching by binary GUID in filter can be tricky. 
-        # Usually we use the string representation formatted for LDAP: \XX\XX...
-        # But here we can search by sAMAccountName if we have it, 
-        # or use a special guid search.
-        # Actually, if we have the string UUID, we can't easily search AD without converting back to binary.
-        # However, for Push logic, we usually have the object_guid.
-        
         import uuid
         guid_bytes = uuid.UUID(guid_str).bytes_le
         guid_filter = "".join(f"\\{b:02x}" for b in guid_bytes)
@@ -74,7 +67,7 @@ class LDAPClient:
         self.conn.search(
             search_base=settings.AD_BASE_DN,
             search_filter=f"(objectGUID={guid_filter})",
-            attributes=["entryDN"]
+            attributes=["distinguishedName"]
         )
         
         if self.conn.entries:

@@ -10,16 +10,19 @@ interface UserCardProps {
   onClick?: () => void;
 }
 
-const getInitials = (name: string) => {
+const getInitials = (name: string | null | undefined) => {
+  if (!name) return '?';
   return name
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
 };
 
-const getDeptColor = (dept: string) => {
+const getDeptColor = (dept: string | null | undefined) => {
+  if (!dept) return '#ccc';
   const hash = dept.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
   const hue = Math.abs(hash % 360);
   return `hsl(${hue}, 70%, 50%)`;
@@ -35,7 +38,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onClick }) => {
       className="glass-card" 
       onClick={onClick}
       style={{ height: '100%', borderRadius: '12px' }}
-      bodyStyle={{ padding: '20px' }}
+      styles={{ body: { padding: '20px' } }}
     >
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -43,7 +46,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onClick }) => {
             size={64} 
             style={{ 
               backgroundColor: avatarColor, 
-              fontSize: '24px',
+              fontSize: initials.length > 1 ? '20px' : '24px',
               fontWeight: 'bold',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
             }}
@@ -52,18 +55,18 @@ const UserCard: React.FC<UserCardProps> = ({ user, onClick }) => {
           </Avatar>
           <div style={{ overflow: 'hidden' }}>
             <Title level={5} style={{ margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {user.full_name}
+              {user.full_name || 'Без имени'}
               {user.status === 'ON_LEAVE' && (
                 <Tooltip title="В отпуске / Отключен временно">
                   <ClockCircleOutlined style={{ marginLeft: '8px', color: '#faad14' }} />
                 </Tooltip>
               )}
             </Title>
-            <Text type="secondary" style={{ fontSize: '12px' }}>{user.job_title}</Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>{user.job_title || 'Должность не указана'}</Text>
           </div>
         </div>
 
-        <Tag color="blue" style={{ borderRadius: '4px' }}>{user.department}</Tag>
+        <Tag color="blue" style={{ borderRadius: '4px' }}>{user.department || 'Без отдела'}</Tag>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <Space size="small">

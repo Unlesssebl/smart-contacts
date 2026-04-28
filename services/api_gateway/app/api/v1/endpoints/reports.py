@@ -29,7 +29,7 @@ def create_report(
     existing_report = db.query(Report).filter(
         Report.target_user_guid == data.target_user_id,
         Report.reporter_user_guid == current_user.object_guid,
-        Report.status == "new"
+        Report.status == "pending"
     ).first()
     
     if existing_report:
@@ -40,14 +40,14 @@ def create_report(
         target_user_guid=data.target_user_id,
         reporter_user_guid=current_user.object_guid,
         reason=data.reason,
-        status="new"
+        status="pending"
     )
     db.add(new_report)
     
     # Логика конфликта: если это не первый репорт, переводим заявки в conflict
     report_count = db.query(Report).filter(
         Report.target_user_guid == data.target_user_id,
-        Report.status == "new"
+        Report.status == "pending"
     ).count()
     
     # Если есть хотя бы один репорт (включая текущий), и это не защищенный пользователь

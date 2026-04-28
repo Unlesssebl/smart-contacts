@@ -21,9 +21,11 @@ const LoginPage: React.FC = () => {
       const data = await login(values.username, values.password);
       setAuth({
         accessToken: data.access_token,
-        role: data.role,
-        is_verified: data.is_verified,
-        grace_period_left: data.grace_period_left,
+        role: data.user.role,
+        full_name: data.user.full_name,
+        sam_account_name: data.user.sam_account_name,
+        is_verified: data.user.is_verified,
+        grace_period_left: data.user.grace_period_left,
       });
       message.success('Успешный вход!');
       navigate(from, { replace: true });

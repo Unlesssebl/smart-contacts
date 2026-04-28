@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -9,9 +9,9 @@ class ReportCreate(BaseModel):
 
 class ReportRead(BaseModel):
     id: UUID
-    target_user_guid: UUID
+    user_id: UUID = Field(alias="target_user_guid")
     reporter_user_guid: Optional[UUID] = None
-    reason: str
+    description: str = Field(alias="reason")
     status: str
     created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

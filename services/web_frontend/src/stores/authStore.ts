@@ -4,11 +4,20 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 interface AuthState {
   accessToken: string | null;
   role: string | null;
+  full_name: string | null;
+  sam_account_name: string | null;
   is_verified: boolean;
   grace_period_left: number;
   adSyncUnavailable: boolean;
   
-  setAuth: (data: { accessToken: string; role: string; is_verified: boolean; grace_period_left: number }) => void;
+  setAuth: (data: { 
+    accessToken: string; 
+    role: string; 
+    is_verified: boolean; 
+    grace_period_left: number;
+    full_name: string;
+    sam_account_name: string;
+  }) => void;
   setAdSyncStatus: (status: boolean) => void;
   logout: () => void;
   updateVerification: (status: boolean) => void;
@@ -20,6 +29,8 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       accessToken: null,
       role: null,
+      full_name: null,
+      sam_account_name: null,
       is_verified: false,
       grace_period_left: 3,
       adSyncUnavailable: false,
@@ -27,6 +38,8 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (data) => set({ 
         accessToken: data.accessToken, 
         role: data.role, 
+        full_name: data.full_name,
+        sam_account_name: data.sam_account_name,
         is_verified: data.is_verified, 
         grace_period_left: data.grace_period_left 
       }),
@@ -36,6 +49,8 @@ export const useAuthStore = create<AuthState>()(
       logout: () => set({ 
         accessToken: null, 
         role: null, 
+        full_name: null,
+        sam_account_name: null,
         is_verified: false, 
         grace_period_left: 3,
         adSyncUnavailable: false 

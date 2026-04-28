@@ -22,7 +22,9 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.POSTGRES_DB}"
+        import urllib.parse
+        password = urllib.parse.quote_plus(self.POSTGRES_PASSWORD)
+        return f"postgresql://{self.POSTGRES_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.POSTGRES_DB}"
     
     # Paths
     CN_LIST_PATH: str = "docs/CN.md"

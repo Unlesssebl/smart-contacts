@@ -47,10 +47,14 @@ class SyncWorker:
 
         with LDAPClient() as ldap:
             for entry in ldap.search_paged(filter_str, attributes):
-                self._process_ad_entry(entry)
-                current_usn = int(entry.get("uSNChanged", 0))
-                if current_usn > max_usn:
-                    max_usn = current_usn
+                try:
+                    self._process_ad_entry(entry)
+                    current_usn = int(entry.get("uSNChanged", 0))
+                    if current_usn > max_usn:
+                        max_usn = current_usn
+                except Exception as e:
+                    logger.error(f"Error processing entry {entry.get('sAMAccountName')}: {e}")
+                    continue
 
         if max_usn > self.last_usn:
             self._save_last_usn(max_usn + 1)
@@ -70,8 +74,27 @@ class SyncWorker:
         org, warnings = match_organization(entry.get("memberOf", []))
         
         with SessionLocal() as session:
+            # 1. Try to find by object_guid
             user = session.get(User, guid_str)
             
+            # 2. If not found, try to find by sam_account_name (handle stubs from API Gateway)
+            if not user:
+                user = session.execute(
+                    select(User).where(User.sam_account_name == sam)
+                ).scalars().first()
+                
+                if user:
+                    logger.info(f"Linking existing stub user {sam} to new GUID {guid_str}")
+                    # Update primary key (requires manual SQL in many cases, or delete/re-insert)
+                    # For safety and simplicity, we'll update the guid if the session allows it
+                    # or better, we can delete and re-create.
+                    # In SQLAlchemy, changing PK is tricky. Let's use a direct update.
+                    session.execute(
+                        update(User).where(User.sam_account_name == sam).values(object_guid=guid_str)
+                    )
+                    session.commit()
+                    user = session.get(User, guid_str)
+
             if not user:
                 user = User(
                     object_guid=guid_str,

@@ -14,7 +14,8 @@ export interface UserProfile {
 }
 
 export const searchUsers = async (params: { query?: string; department?: string }) => {
-  const response = await apiClient.get('/users', { params });
+  const { query, ...rest } = params;
+  const response = await apiClient.get('/users', { params: { q: query, ...rest } });
   return response.data;
 };
 

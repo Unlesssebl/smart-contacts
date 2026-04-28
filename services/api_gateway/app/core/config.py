@@ -5,16 +5,19 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Smart Contacts API"
     API_V1_STR: str = "/api/v1"
 
-    # PostgreSQL
+    # PostgreSQL (Required)
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
     DB_HOST: str
-    DB_PORT: int
+    DB_PORT: int = 5432
 
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.POSTGRES_DB}"
+        import urllib.parse
+        password = urllib.parse.quote_plus(self.POSTGRES_PASSWORD)
+        uri = f"postgresql://{self.POSTGRES_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.POSTGRES_DB}"
+        return uri
 
     # Redis
     REDIS_HOST: str = "redis"
@@ -23,15 +26,17 @@ class Settings(BaseSettings):
     # JWT
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Initial admins (comma separated list of samAccountNames)
+    INIT_ADMINS: str = ""
 
     # LDAP / AD
     AD_SERVER: str
     AD_BASE_DN: str
 
     model_config = SettingsConfigDict(
-        env_file=".env",
         case_sensitive=True,
         extra="ignore"
     )

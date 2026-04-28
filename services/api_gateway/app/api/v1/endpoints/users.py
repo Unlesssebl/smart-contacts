@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
-from typing import Optional
+from typing import Optional, List
 from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
@@ -43,6 +43,14 @@ def list_users(
         "limit": limit,
         "items": items
     }
+
+@router.get("/departments", response_model=List[str])
+def list_departments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    departments = db.query(User.department).filter(User.department != None).distinct().all()
+    return [d[0] for d in departments]
 
 @router.get("/{user_id}", response_model=UserFull)
 def get_user(

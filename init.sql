@@ -35,7 +35,7 @@ CREATE TABLE users (
 -- 3. Таблица change_requests (Очередь изменений)
 CREATE TABLE change_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE,
+    user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
     attribute_name VARCHAR(64) NOT NULL,
     new_value TEXT NOT NULL,
     source VARCHAR(10) NOT NULL,
@@ -54,22 +54,22 @@ CREATE TABLE change_requests (
 -- 4. Таблица reports (Жалобы на контакты)
 CREATE TABLE reports (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    target_user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE,
+    target_user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
     reporter_user_guid UUID REFERENCES users(object_guid) ON DELETE SET NULL,
     reason TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'new',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     processed_at TIMESTAMPTZ,
     processed_by UUID REFERENCES users(object_guid) ON DELETE SET NULL,
     
     -- Ограничение статуса
-    CONSTRAINT reports_status_check CHECK (status IN ('new', 'processed'))
+    CONSTRAINT reports_status_check CHECK (status IN ('pending', 'processed'))
 );
 
 -- 5. Таблица refresh_tokens (Сессии)
 CREATE TABLE refresh_tokens (
     id UUID PRIMARY KEY,
-    user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE,
+    user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
     token_hash VARCHAR(64) UNIQUE NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -99,7 +99,7 @@ CREATE INDEX idx_cr_status  ON change_requests (status);
 -- Уникальный индекс для reports: один пользователь — одна активная жалоба на профиль
 CREATE UNIQUE INDEX idx_reports_unique_new
   ON reports (target_user_guid, reporter_user_guid)
-  WHERE status = 'new';
+  WHERE status = 'pending';
 
 CREATE INDEX idx_reports_target   ON reports (target_user_guid);
 CREATE INDEX idx_reports_status   ON reports (status);

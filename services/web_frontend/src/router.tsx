@@ -4,6 +4,7 @@ import ProfilePage from './pages/ProfilePage/ProfilePage';
 import DirectoryPage from './pages/DirectoryPage/DirectoryPage';
 import AdminPage from './pages/AdminPage/AdminPage';
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
+import MainLayout from './components/MainLayout/MainLayout';
 
 export const router = createBrowserRouter([
   {
@@ -11,28 +12,29 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: '/profile',
     element: (
       <ProtectedRoute>
-        <ProfilePage />
+        <MainLayout />
       </ProtectedRoute>
     ),
-  },
-  {
-    path: '/directory',
-    element: (
-      <ProtectedRoute>
-        <DirectoryPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/admin',
-    element: (
-      <ProtectedRoute roles={['it_operator']}>
-        <AdminPage />
-      </ProtectedRoute>
-    ),
+    children: [
+      {
+        path: '/profile',
+        element: <ProfilePage />,
+      },
+      {
+        path: '/directory',
+        element: <DirectoryPage />,
+      },
+      {
+        path: '/admin',
+        element: (
+          <ProtectedRoute roles={['it_operator']}>
+            <AdminPage />
+          </ProtectedRoute>
+        ),
+      },
+    ],
   },
   {
     path: '/',

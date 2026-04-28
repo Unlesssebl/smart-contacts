@@ -8,18 +8,20 @@ def get_user_by_sam(db: Session, sam: str) -> Optional[User]:
 def get_user_by_guid(db: Session, guid: str) -> Optional[User]:
     return db.query(User).filter(User.object_guid == guid).first()
 
-def create_user_stub(db: Session, sam: str) -> User:
+def create_user_stub(db: Session, sam: str, guid: Optional[str] = None, full_name: Optional[str] = None) -> User:
     """
     Creates a user record if it doesn't exist (Sync Worker will fill details later).
-    In a real LDAP system, we might pull some basic info during BIND if possible,
-    but the spec says Sync Worker handles the rest.
     """
-    user = User(
-        sam_account_name=sam,
-        full_name=sam, # Placeholder
-        role="employee",
-        is_verified=False
-    )
+    user_data = {
+        "sam_account_name": sam,
+        "full_name": full_name or sam,
+        "role": "employee",
+        "is_verified": False
+    }
+    if guid:
+        user_data["object_guid"] = guid
+        
+    user = User(**user_data)
     db.add(user)
     db.commit()
     db.refresh(user)

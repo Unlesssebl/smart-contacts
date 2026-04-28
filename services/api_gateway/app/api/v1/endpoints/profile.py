@@ -25,6 +25,15 @@ def get_my_profile(
         "pending_changes": pending_changes
     }
 
+@router.get("/me/change-requests", response_model=List[ChangeRequestRead])
+def get_my_change_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    return db.query(ChangeRequest).filter(
+        ChangeRequest.user_guid == current_user.object_guid
+    ).order_by(ChangeRequest.created_at.desc()).all()
+
 @router.post("/me/acknowledge")
 def acknowledge_gatekeeper(
     data: ProfileAcknowledge,
