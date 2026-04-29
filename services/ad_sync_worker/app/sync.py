@@ -5,7 +5,8 @@ from sqlalchemy import select, update
 from .config import settings
 from .db import SessionLocal, User, ChangeRequest
 from .ldap import LDAPClient
-from .logic import ad_guid_to_uuid, determine_status, match_organization
+from .logic import determine_status, match_organization
+from shared.utils import ad_guid_to_uuid
 from .utils import with_retry
 
 logger = logging.getLogger(__name__)

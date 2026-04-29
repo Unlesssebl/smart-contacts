@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
 import ssl
 import logging
+import queue
 from ldap3 import Server, Connection, ALL, SIMPLE, Tls, ServerPool, ROUND_ROBIN, REUSABLE
 from app.core.config import settings
 
@@ -23,6 +24,9 @@ server_pool = ServerPool([ldap_server], ROUND_ROBIN, active=True, exhaust=True)
 
 # Глобальный пул соединений для сервисного аккаунта (поиск пользователей)
 search_pool_conn = None
+# Пул соединений для аутентификации (проверки пароля)
+auth_pool = queue.Queue(maxsize=20)
+
 if settings.AD_USER and settings.AD_PASSWORD:
     search_pool_conn = Connection(
         server_pool,
@@ -89,15 +93,20 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
             username if "@" in username else f"{username}@{ad_domain}"
         )
 
-        # 3. Проверка пароля — отдельное соединение; закрываем в finally
-        auth_conn = Connection(
-            server_pool,
-            user=user_bind_value,
-            password=password,
-            authentication=SIMPLE,
-            check_names=True,
-            raise_exceptions=False
-        )
+        # 3. Проверка пароля — используем пул соединений
+        try:
+            auth_conn = auth_pool.get_nowait()
+            auth_conn.user = user_bind_value
+            auth_conn.password = password
+        except queue.Empty:
+            auth_conn = Connection(
+                server_pool,
+                user=user_bind_value,
+                password=password,
+                authentication=SIMPLE,
+                check_names=True,
+                raise_exceptions=False
+            )
 
         try:
             logger.info(f"Attempting LDAP bind for: {user_bind_value}")
@@ -129,8 +138,10 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
             return user_data
 
         finally:
-            # Гарантируем закрытие соединения даже при ошибке или ранем return
-            if auth_conn.bound:
+            # Возвращаем соединение в пул для повторного использования (rebind)
+            try:
+                auth_pool.put_nowait(auth_conn)
+            except queue.Full:
                 auth_conn.unbind()
 
     except Exception as e:

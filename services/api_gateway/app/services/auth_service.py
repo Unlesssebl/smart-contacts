@@ -5,7 +5,7 @@ from app.core.security import create_access_token
 from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_by_guid, update_user_guid
 from app.db.repository.token import create_refresh_token, verify_refresh_token, revoke_refresh_token
 from app.core.config import settings
-from app.core.redis import is_brute_force_blocked, record_failed_attempt, reset_brute_force
+from app.core.redis import is_brute_force_blocked, reset_brute_force
 from app.schemas.auth import LoginResponse, Token, UserAuthResponse
 import uuid
 
@@ -22,7 +22,8 @@ class AuthService:
         # 2. LDAP BIND
         ldap_user = authenticate_via_ldap(username, password)
         if ldap_user is None:
-            record_failed_attempt(client_ip)
+            # Счетчик уже атомарно увеличен в is_brute_force_blocked
+
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials"

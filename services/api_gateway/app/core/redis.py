@@ -12,12 +12,13 @@ def is_brute_force_blocked(ip: str) -> bool:
     """
     2.3. Атомарная проверка и инкремент счетчика попыток.
     Возвращает True, если IP заблокирован.
+    Выполняется атомарно через Lua скрипт.
     """
     key = f"brute_force:{ip}"
     
-    # Получаем текущее значение без инкремента для проверки блокировки
-    attempts = redis_client.get(key)
-    if attempts and int(attempts) >= 5:
+    # Атомарно инкрементируем и получаем текущее значение
+    attempts = redis_client.eval(LUA_RECORD_ATTEMPT, 1, key)
+    if attempts and int(attempts) > 5:
         return True
     return False
 
@@ -28,14 +29,6 @@ if attempts == 1 or attempts >= 5 then
 end
 return attempts
 """
-
-def record_failed_attempt(ip: str) -> int:
-    """
-    Инкрементирует счетчик и возвращает текущее кол-во попыток.
-    Выполняется атомарно через Lua скрипт.
-    """
-    key = f"brute_force:{ip}"
-    return redis_client.eval(LUA_RECORD_ATTEMPT, 1, key)
 
 def reset_brute_force(ip: str):
     """
