@@ -1,10 +1,10 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
 from datetime import datetime
 import re
 
-INTERNAL_PHONE_PATTERN = r"^\d{2}-\d{2}$"
+INTERNAL_PHONE_PATTERN = r"^\d{2}-?\d{2}$"
 MOBILE_PHONE_PATTERN = r"^\+7\d{10}$"
 
 class ChangeRequestBase(BaseModel):
@@ -24,11 +24,15 @@ class ChangeRequestBase(BaseModel):
     def validate_new_value(cls, v: str, info) -> str:
         attr = info.data.get("attribute_name")
         if attr == "internal_phone":
+            # Разрешаем 0000 и 00-00
             if not re.match(INTERNAL_PHONE_PATTERN, v):
-                raise ValueError("Internal phone must match pattern \d{2}-\d{2}")
+                raise ValueError(r"Internal phone must match pattern \d{2}-\d{2} or \d{4}")
         elif attr == "mobile_phone":
-            if not re.match(MOBILE_PHONE_PATTERN, v):
-                raise ValueError("Mobile phone must match pattern \+7\d{10}")
+            # Нормализация: убираем пробелы, скобки и тире
+            v_clean = re.sub(r"[\s\(\)\-]", "", v)
+            if not re.match(MOBILE_PHONE_PATTERN, v_clean):
+                raise ValueError(r"Mobile phone must match pattern +7 (999) 999-99-99")
+            return v_clean
         return v
 
 class ChangeRequestCreate(ChangeRequestBase):

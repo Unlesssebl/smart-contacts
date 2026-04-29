@@ -1,11 +1,21 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.ldap import init_ldap_pool
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize LDAP pool
+    init_ldap_pool()
+    yield
+    # Shutdown logic (if any) could go here
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 
 # Set specific origins for development

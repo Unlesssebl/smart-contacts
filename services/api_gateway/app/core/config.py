@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     # LDAP / AD
     AD_SERVER: str
     AD_BASE_DN: str
+    AD_USER: Optional[str] = None
+    AD_PASSWORD: Optional[str] = None
 
     model_config = SettingsConfigDict(
         case_sensitive=True,
