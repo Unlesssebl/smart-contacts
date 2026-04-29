@@ -8,33 +8,7 @@ from .config import settings
 logger = logging.getLogger(__name__)
 
 
-def ad_guid_to_uuid(binary_guid: Any) -> str:
-    """
-    Converts AD objectGUID to a UUID string.
-    Handles:
-    - Binary bytes (16 bytes, little-endian)
-    - Lists of bytes (ldap3 style)
-    - Formatted strings like '{uuid}' or 'uuid'
-    """
-    if isinstance(binary_guid, list):
-        if not binary_guid:
-            raise ValueError("GUID list is empty")
-        binary_guid = binary_guid[0]
-    
-    if isinstance(binary_guid, str):
-        # Handle string format "{89bdc9c6-7a3a-44e2-afdb-8c5d1f32ba8c}"
-        return str(uuid.UUID(binary_guid.strip("{}")))
-    
-    if isinstance(binary_guid, bytes):
-        if len(binary_guid) == 16:
-            return str(uuid.UUID(bytes_le=binary_guid))
-        # Could be a string encoded as bytes
-        try:
-            return str(uuid.UUID(binary_guid.decode().strip("{}")))
-        except Exception:
-            pass
-        
-    raise ValueError(f"Unsupported GUID format: {type(binary_guid)} (len={len(binary_guid) if hasattr(binary_guid, '__len__') else 'N/A'})")
+from shared.utils import ad_guid_to_uuid
 
 
 def determine_status(uac: int, sam_account_name: str) -> str:

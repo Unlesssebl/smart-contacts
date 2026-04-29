@@ -21,17 +21,21 @@ def is_brute_force_blocked(ip: str) -> bool:
         return True
     return False
 
+LUA_RECORD_ATTEMPT = """
+local attempts = redis.call('INCR', KEYS[1])
+if attempts == 1 or attempts >= 5 then
+    redis.call('EXPIRE', KEYS[1], 900)
+end
+return attempts
+"""
+
 def record_failed_attempt(ip: str) -> int:
     """
     Инкрементирует счетчик и возвращает текущее кол-во попыток.
+    Выполняется атомарно через Lua скрипт.
     """
     key = f"brute_force:{ip}"
-    attempts = redis_client.incr(key)
-    if attempts == 1:
-        redis_client.expire(key, 900) # 15 minutes
-    elif attempts >= 5:
-        redis_client.expire(key, 900) # Reset expiry on block
-    return attempts
+    return redis_client.eval(LUA_RECORD_ATTEMPT, 1, key)
 
 def reset_brute_force(ip: str):
     """

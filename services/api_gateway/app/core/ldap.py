@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 import ssl
 import logging
 import uuid
-from ldap3 import Server, Connection, ALL, SIMPLE, Tls, SUBTREE, ServerPool, ROUND_ROBIN
+from ldap3 import Server, Connection, ALL, SIMPLE, Tls, SUBTREE, ServerPool, ROUND_ROBIN, REUSABLE
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -22,31 +22,17 @@ ldap_server = Server(
 )
 server_pool = ServerPool([ldap_server], ROUND_ROBIN, active=True, exhaust=True)
 
-def ad_guid_to_uuid(binary_guid: Any) -> str:
-    """
-    3.3. Конвертирует AD objectGUID в строку UUID v4.
-    Поддерживает:
-    - Бинарные данные (16 байт, little-endian)
-    - Списки байтов (ldap3 style)
-    - Строковые форматы
-    """
-    if isinstance(binary_guid, list):
-        if not binary_guid:
-            raise ValueError("GUID list is empty")
-        binary_guid = binary_guid[0]
-    
-    if isinstance(binary_guid, str):
-        return str(uuid.UUID(binary_guid.strip("{}")))
-    
-    if isinstance(binary_guid, bytes):
-        if len(binary_guid) == 16:
-            return str(uuid.UUID(bytes_le=binary_guid))
-        try:
-            return str(uuid.UUID(binary_guid.decode().strip("{}")))
-        except Exception:
-            pass
-        
-    raise ValueError(f"Unsupported GUID format: {type(binary_guid)}")
+# Создаем глобальный объект Connection с пулом для переиспользования сокетов
+ldap_pool_conn = Connection(
+    server_pool,
+    client_strategy=REUSABLE,
+    pool_size=10,
+    pool_lifetime=3600,
+    check_names=True,
+    raise_exceptions=True
+)
+
+from shared.utils import ad_guid_to_uuid
 
 def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, Any]]:
     if not password:
@@ -58,27 +44,21 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
         
         logger.info(f"Attempting LDAP bind for: {user_bind_value}")
         
-        # Используем Connection без контекстного менеджера здесь, так как мы сразу биндимся
-        # Но для пула лучше иметь долгоживущий объект. 
+        # Вместо создания нового соединения, используем rebind на глобальном пуле
         # В ldap3 Connection может переиспользовать сокеты если использовать пул.
-        conn = Connection(
-            server_pool, 
-            user=user_bind_value, 
-            password=password, 
-            authentication=SIMPLE,
-            check_names=True,
-            raise_exceptions=True # Включаем исключения для лучшей обработки ошибок
-        )
-        
-        if not conn.bind():
-            logger.warning(f"Failed LDAP bind for {user_bind_value}: {conn.result}")
+        try:
+            if not ldap_pool_conn.rebind(user=user_bind_value, password=password):
+                logger.warning(f"Failed LDAP bind for {user_bind_value}: {ldap_pool_conn.result}")
+                return None
+        except Exception as e:
+            logger.warning(f"Failed LDAP bind for {user_bind_value}: {str(e)}")
             return None
 
         logger.info(f"Successfully authenticated user: {username}")
         
         # Поиск пользователя
         search_filter = f"(sAMAccountName={username})"
-        conn.search(
+        ldap_pool_conn.search(
             search_base=settings.AD_BASE_DN,
             search_filter=search_filter,
             search_scope=SUBTREE,
@@ -86,8 +66,8 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
         )
         
         user_data = None
-        if conn.entries:
-            entry = conn.entries[0]
+        if ldap_pool_conn.entries:
+            entry = ldap_pool_conn.entries[0]
             guid_str = ad_guid_to_uuid(entry.objectGUID.value)
             
             user_data = {
@@ -97,7 +77,7 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
                 "job_title": entry.title.value if entry.title else None
             }
         
-        conn.unbind()
+        # Пул сам управляет соединениями, unbind делать не нужно
         return user_data or {"object_guid": None}
         
     except Exception as e:
