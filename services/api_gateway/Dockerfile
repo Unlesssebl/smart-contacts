@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 # Suppress debconf warnings
 ENV DEBIAN_FRONTEND=noninteractive
@@ -17,9 +17,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml ./
-# If uv.lock exists, copy it too. For now, we'll let uv generate it if missing.
-# COPY uv.lock ./
+COPY pyproject.toml uv.lock ./
 
 # Install dependencies using uv
 RUN uv sync --no-dev
