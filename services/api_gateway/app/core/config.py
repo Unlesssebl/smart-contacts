@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     AD_USER: Optional[str] = None
     AD_PASSWORD: Optional[str] = None
 
+    # Development Account (Bypass AD)
+    DEV_USER: Optional[str] = None
+    DEV_PASSWORD: Optional[str] = None
+
     model_config = SettingsConfigDict(
         case_sensitive=True,
         extra="ignore"
