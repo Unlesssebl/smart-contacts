@@ -1,6 +1,6 @@
 import uuid
 import re
-from typing import List, Optional, Tuple, Any, Union
+from typing import List, Optional, Tuple, Any
 import logging
 
 from .config import settings

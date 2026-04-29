@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import select, update
 from .config import settings
 from .db import SessionLocal, User, ChangeRequest

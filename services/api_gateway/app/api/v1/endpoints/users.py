@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
+from sqlalchemy import or_
 from typing import Optional, List
 from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
-from app.schemas.user import UserRead, PaginatedUsers, UserFull
+from app.schemas.user import PaginatedUsers, UserFull
 from uuid import UUID
 
 import re
