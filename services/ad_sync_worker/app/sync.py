@@ -74,26 +74,8 @@ class SyncWorker:
         org, warnings = match_organization(entry.get("memberOf", []))
         
         with SessionLocal() as session:
-            # 1. Try to find by object_guid
-            user = session.get(User, guid_str)
-            
-            # 2. If not found, try to find by sam_account_name (handle stubs from API Gateway)
-            if not user:
-                user = session.execute(
-                    select(User).where(User.sam_account_name == sam)
-                ).scalars().first()
-                
-                if user:
-                    logger.info(f"Linking existing stub user {sam} to new GUID {guid_str}")
-                    # Update primary key (requires manual SQL in many cases, or delete/re-insert)
-                    # For safety and simplicity, we'll update the guid if the session allows it
-                    # or better, we can delete and re-create.
-                    # In SQLAlchemy, changing PK is tricky. Let's use a direct update.
-                    session.execute(
-                        update(User).where(User.sam_account_name == sam).values(object_guid=guid_str)
-                    )
-                    session.commit()
-                    user = session.get(User, guid_str)
+            # 1. User lookup/linking (Extracted)
+            user = self._find_or_link_user(session, sam, guid_str)
 
             if not user:
                 user = User(
@@ -113,48 +95,75 @@ class SyncWorker:
                 session.add(user)
                 logger.info(f"Created new user: {sam} ({guid_str})")
             else:
-                # Update existing user
+                # 2. Update existing user (Extracted)
+                self._resolve_conflicts_and_update(session, user, entry, org, warnings, status)
                 user.sam_account_name = sam
-                user.status = status
-                user.full_name = str(entry.get("displayName", ""))
-                user.job_title = str(entry.get("title", ""))
-                user.department = str(entry.get("department", ""))
-                user.office_location = str(entry.get("physicalDeliveryOfficeName", ""))
-                user.organization = org
-                
-                # Update phones ONLY if no pending change requests (Conflict Resolution)
-                # We check for 'pending' or 'conflict' status
-                pending_cr = session.execute(
-                    select(ChangeRequest).where(
-                        ChangeRequest.user_guid == user.object_guid,
-                        ChangeRequest.status.in_(["pending", "conflict"])
-                    )
-                ).scalars().all()
-                
-                pending_fields = {cr.attribute_name for cr in pending_cr}
-                
-                if "internal_phone" not in pending_fields:
-                    user.internal_phone = str(entry.get("telephoneNumber", ""))
-                
-                if "mobile_phone" not in pending_fields:
-                    user.mobile_phone = str(entry.get("mobile", ""))
-
-                if "office_location" not in pending_fields:
-                    user.office_location = str(entry.get("physicalDeliveryOfficeName", ""))
-
-                if "department" not in pending_fields:
-                    user.department = str(entry.get("department", ""))
-
-                if "full_name" not in pending_fields:
-                    user.full_name = str(entry.get("displayName", ""))
-
-                if warnings:
-                    user.sync_error_log = (user.sync_error_log or "") + "\n" + "\n".join(warnings)
-                
-                user.last_sync_timestamp = datetime.now()
                 logger.info(f"Updated user: {sam}")
 
             session.commit()
+
+    def _find_or_link_user(self, session, sam: str, guid_str: str) -> User:
+        """
+        Tries to find a user by GUID, or links a SAM stub to a new GUID.
+        """
+        user = session.get(User, guid_str)
+        if user:
+            return user
+
+        # Try to find by sam_account_name (handle stubs from API Gateway)
+        user = session.execute(
+            select(User).where(User.sam_account_name == sam)
+        ).scalars().first()
+        
+        if user:
+            logger.info(f"Linking existing stub user {sam} to new GUID {guid_str}")
+            session.execute(
+                update(User).where(User.sam_account_name == sam).values(object_guid=guid_str)
+            )
+            session.commit()
+            return session.get(User, guid_str)
+            
+        return None
+
+    def _resolve_conflicts_and_update(self, session, user: User, entry: dict, org: str, warnings: list, status: str):
+        """
+        Updates user fields while respecting pending change requests.
+        """
+        # We check for 'pending' or 'conflict' status
+        pending_cr = session.execute(
+            select(ChangeRequest).where(
+                ChangeRequest.user_guid == user.object_guid,
+                ChangeRequest.status.in_(["pending", "conflict"])
+            )
+        ).scalars().all()
+        
+        pending_fields = {cr.attribute_name for cr in pending_cr}
+        
+        # Core fields (Sync unconditionally)
+        user.status = status
+        user.organization = org
+        user.job_title = str(entry.get("title", ""))
+        
+        # User-editable fields (Sync with conflict resolution)
+        if "full_name" not in pending_fields:
+            user.full_name = str(entry.get("displayName", ""))
+        
+        if "department" not in pending_fields:
+            user.department = str(entry.get("department", ""))
+            
+        if "office_location" not in pending_fields:
+            user.office_location = str(entry.get("physicalDeliveryOfficeName", ""))
+            
+        if "internal_phone" not in pending_fields:
+            user.internal_phone = str(entry.get("telephoneNumber", ""))
+        
+        if "mobile_phone" not in pending_fields:
+            user.mobile_phone = str(entry.get("mobile", ""))
+
+        if warnings:
+            user.sync_error_log = (user.sync_error_log or "") + "\n" + "\n".join(warnings)
+        
+        user.last_sync_timestamp = datetime.now()
 
     def push(self):
         """

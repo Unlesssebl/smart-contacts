@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.core.ldap import authenticate_via_ldap
 from app.core.security import create_access_token
-from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_by_guid
+from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_by_guid, update_user_guid
 from app.db.repository.token import create_refresh_token, verify_refresh_token, revoke_refresh_token
 from app.core.config import settings
 from app.core.redis import check_brute_force, increment_brute_force, reset_brute_force
@@ -31,25 +31,8 @@ class AuthService:
         # 3. Success - reset counter
         reset_brute_force(client_ip)
 
-        # 4. User lookup/creation
-        user = get_user_by_sam(db, username)
-        if not user:
-            user = create_user_stub(
-                db, 
-                username, 
-                guid=ldap_user.get("object_guid"),
-                full_name=ldap_user.get("full_name")
-            )
-        elif ldap_user.get("object_guid") and str(user.object_guid) != ldap_user.get("object_guid"):
-            # Update GUID if it was a stub with random UUID
-            # This handles cases where a stub was created before this fix
-            from sqlalchemy import update
-            from app.models.user import User as UserModel
-            db.execute(
-                update(UserModel).where(UserModel.sam_account_name == username).values(object_guid=ldap_user.get("object_guid"))
-            )
-            db.commit()
-            user = get_user_by_guid(db, ldap_user.get("object_guid"))
+        # 4. User lookup/creation (Extracted)
+        user = AuthService._ensure_user_from_ldap(db, username, ldap_user)
 
         # 5. Check for initial admin role
         init_admins = [a.strip().lower() for a in settings.INIT_ADMINS.split(",") if a.strip()]
@@ -81,6 +64,30 @@ class AuthService:
                 grace_period_left=user.grace_period_left
             )
         )
+
+    @staticmethod
+    def _ensure_user_from_ldap(db: Session, username: str, ldap_user: dict):
+        """
+        Ensures a user exists in the local database based on LDAP info.
+        Handles stub creation and GUID migration.
+        """
+        user = get_user_by_sam(db, username)
+        ldap_guid = ldap_user.get("object_guid")
+
+        if not user:
+            return create_user_stub(
+                db, 
+                username, 
+                guid=ldap_guid,
+                full_name=ldap_user.get("full_name")
+            )
+        
+        # If user exists but GUID is different (e.g. random UUID stub), update it
+        if ldap_guid and str(user.object_guid) != ldap_guid:
+            update_user_guid(db, username, ldap_guid)
+            user = get_user_by_guid(db, ldap_guid)
+            
+        return user
 
     @staticmethod
     def refresh(db: Session, token: str) -> Token:

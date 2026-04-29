@@ -1,7 +1,11 @@
 FROM python:3.11-slim-bookworm
 
+# Suppress debconf warnings
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-utils \
     curl \
     libpq-dev \
     gcc \

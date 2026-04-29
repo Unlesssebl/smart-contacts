@@ -1,26 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Layout, Card, Typography, Table, Tag, Button, 
-  Tabs, Space, message, Badge 
-} from 'antd';
-import { 
-  CheckOutlined, CloseOutlined, ToolOutlined, 
-  AuditOutlined, MessageOutlined 
-} from '@ant-design/icons';
+import { Layout, Card, Typography, Tabs, message, Badge } from 'antd';
+import { ToolOutlined, AuditOutlined, MessageOutlined } from '@ant-design/icons';
 import { getAllRequests, processRequest } from '../../api/changeRequests';
 import type { ChangeRequest } from '../../api/changeRequests';
 import { getAllReports, processReport } from '../../api/reports';
 import type { Report } from '../../api/reports';
+import RequestsManager from './RequestsManager';
+import ReportsManager from './ReportsManager';
 
 const { Content } = Layout;
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const AdminPage: React.FC = () => {
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {
       const [reqData, repData] = await Promise.all([
@@ -29,23 +25,23 @@ const AdminPage: React.FC = () => {
       ]);
       setRequests(reqData);
       setReports(repData);
-    } catch (e) {
+    } catch {
       message.error('Ошибка доступа к данным администрирования');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleProcessRequest = async (id: string, action: 'approve' | 'reject') => {
     try {
       await processRequest(id, action);
       message.success(`Заявка ${action === 'approve' ? 'одобрена' : 'отклонена'}`);
       fetchData();
-    } catch (e) {
+    } catch {
       message.error('Ошибка при обработке заявки');
     }
   };
@@ -55,116 +51,12 @@ const AdminPage: React.FC = () => {
       await processReport(id);
       message.success('Репорт помечен как обработанный');
       fetchData();
-    } catch (e) {
+    } catch {
       message.error('Ошибка при обработке репорта');
     }
   };
 
-  const requestColumns = [
-    {
-      title: 'Пользователь ID',
-      dataIndex: 'user_id',
-      key: 'user_id',
-    },
-    {
-      title: 'Поле',
-      dataIndex: 'field_name',
-      key: 'field_name',
-    },
-    {
-      title: 'Старое значение',
-      dataIndex: 'old_value',
-      key: 'old_value',
-      render: (v: string) => v || <Text type="secondary">-</Text>
-    },
-    {
-      title: 'Новое значение',
-      dataIndex: 'new_value',
-      key: 'new_value',
-      render: (v: string) => <Text strong>{v}</Text>
-    },
-    {
-      title: 'Статус',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => {
-        const colors: any = { pending: 'processing', approved: 'success', rejected: 'error', conflict: 'warning' };
-        return <Tag color={colors[status]}>{status.toUpperCase()}</Tag>;
-      }
-    },
-    {
-      title: 'Действия',
-      key: 'actions',
-      render: (_: any, record: ChangeRequest) => (
-        record.status === 'pending' || record.status === 'conflict' ? (
-          <Space>
-            <Button 
-              type="primary" 
-              size="small" 
-              icon={<CheckOutlined />} 
-              onClick={() => handleProcessRequest(record.id, 'approve')}
-            >
-              Одобрить
-            </Button>
-            <Button 
-              danger 
-              size="small" 
-              icon={<CloseOutlined />} 
-              onClick={() => handleProcessRequest(record.id, 'reject')}
-            >
-              Отклонить
-            </Button>
-          </Space>
-        ) : null
-      )
-    }
-  ];
-
-  const reportColumns = [
-    {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 100,
-    },
-    {
-      title: 'Описание ошибки',
-      dataIndex: 'description',
-      key: 'description',
-    },
-    {
-      title: 'Дата',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (d: string) => new Date(d).toLocaleString()
-    },
-    {
-      title: 'Статус',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'pending' ? 'gold' : 'green'}>
-          {status === 'pending' ? 'Ожидает' : 'Обработано'}
-        </Tag>
-      )
-    },
-    {
-      title: 'Действия',
-      key: 'actions',
-      render: (_: any, record: Report) => (
-        record.status === 'pending' ? (
-          <Button 
-            size="small" 
-            onClick={() => handleProcessReport(record.id)}
-          >
-            Обработано
-          </Button>
-        ) : null
-      )
-    }
-  ];
-
-  const items = [
+  const tabItems = [
     {
       key: 'requests',
       label: (
@@ -174,12 +66,10 @@ const AdminPage: React.FC = () => {
         </span>
       ),
       children: (
-        <Table 
-          dataSource={requests} 
-          columns={requestColumns} 
-          rowKey="id" 
-          loading={loading}
-          pagination={{ pageSize: 10 }}
+        <RequestsManager 
+          requests={requests} 
+          loading={loading} 
+          onProcess={handleProcessRequest} 
         />
       ),
     },
@@ -192,12 +82,10 @@ const AdminPage: React.FC = () => {
         </span>
       ),
       children: (
-        <Table 
-          dataSource={reports} 
-          columns={reportColumns} 
-          rowKey="id" 
-          loading={loading}
-          pagination={{ pageSize: 10 }}
+        <ReportsManager 
+          reports={reports} 
+          loading={loading} 
+          onProcess={handleProcessReport} 
         />
       ),
     },
@@ -211,7 +99,7 @@ const AdminPage: React.FC = () => {
         </div>
 
         <Card className="glass-card" style={{ borderRadius: '12px' }}>
-          <Tabs defaultActiveKey="requests" items={items} />
+          <Tabs defaultActiveKey="requests" items={tabItems} />
         </Card>
       </Content>
     </Layout>
