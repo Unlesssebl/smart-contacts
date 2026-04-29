@@ -65,17 +65,29 @@ def parse_cn(dn: str) -> str:
     return dn
 
 
+# 3.1. Кэширование бизнес-логики (CN List)
+_valid_cns_cache: Optional[List[str]] = None
+
+def get_valid_cns() -> List[str]:
+    """Возвращает список разрешенных CN из кэша или загружает его."""
+    global _valid_cns_cache
+    if _valid_cns_cache is None:
+        try:
+            with open(settings.CN_LIST_PATH, "r", encoding="utf-8") as f:
+                _valid_cns_cache = [line.strip() for line in f if line.strip()]
+                logger.info(f"Loaded {len(_valid_cns_cache)} organizations from {settings.CN_LIST_PATH}")
+        except Exception as e:
+            logger.error(f"Failed to read CN list from {settings.CN_LIST_PATH}: {e}")
+            return []
+    return _valid_cns_cache
+
 def match_organization(member_of: List[str]) -> Tuple[Optional[str], List[str]]:
     """
-    Matches memberOf CNs against the list in CN.md.
-    Returns (selected_org, warnings).
+    Сопоставляет группы пользователя со списком разрешенных организаций.
     """
-    try:
-        with open(settings.CN_LIST_PATH, "r", encoding="utf-8") as f:
-            valid_cns = [line.strip() for line in f if line.strip()]
-    except Exception as e:
-        logger.error(f"Failed to read CN list: {e}")
-        return None, [f"Error reading CN list: {e}"]
+    valid_cns = get_valid_cns()
+    if not valid_cns:
+        return None, ["CN list is empty or could not be loaded."]
 
     user_cns = [parse_cn(dn) for dn in member_of]
     

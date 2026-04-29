@@ -25,14 +25,15 @@ def with_retry(func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
                 logger.error(f"Max retries reached for {func.__name__}. Error: {e}")
                 raise e
 
-            jitter = random.uniform(-0.1, 0.1) * base * (2**n)
-            delay = base * (2**n) + jitter
+            # 4.2. Корректная формула Jitter (Full Jitter)
+            # Избегаем отрицательных значений и обеспечиваем равномерное распределение
+            delay = random.uniform(0, base * (2**n))
             
             logger.warning(
                 f"Attempt {n} failed for {func.__name__}: {e}. "
                 f"Retrying in {delay:.2f} seconds..."
             )
-            time.sleep(max(0, delay))
+            time.sleep(delay)
     
     # Should not reach here
     raise RuntimeError("Retry loop exited unexpectedly")

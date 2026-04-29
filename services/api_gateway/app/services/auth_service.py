@@ -5,7 +5,7 @@ from app.core.security import create_access_token
 from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_by_guid, update_user_guid
 from app.db.repository.token import create_refresh_token, verify_refresh_token, revoke_refresh_token
 from app.core.config import settings
-from app.core.redis import check_brute_force, increment_brute_force, reset_brute_force
+from app.core.redis import is_brute_force_blocked, record_failed_attempt, reset_brute_force
 from app.schemas.auth import LoginResponse, Token, UserAuthResponse
 import uuid
 
@@ -13,7 +13,7 @@ class AuthService:
     @staticmethod
     def login(db: Session, username: str, password: str, client_ip: str) -> LoginResponse:
         # 1. Brute-force protection
-        if check_brute_force(client_ip):
+        if is_brute_force_blocked(client_ip):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Too many attempts. IP blocked for 15 minutes."
@@ -22,7 +22,7 @@ class AuthService:
         # 2. LDAP BIND
         ldap_user = authenticate_via_ldap(username, password)
         if ldap_user is None:
-            increment_brute_force(client_ip)
+            record_failed_attempt(client_ip)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials"

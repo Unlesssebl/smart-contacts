@@ -8,10 +8,12 @@ from app.models.user import User
 from app.schemas.user import UserRead, PaginatedUsers, UserFull
 from uuid import UUID
 
+import re
+
 router = APIRouter()
 
 @router.get("/", response_model=PaginatedUsers)
-def list_users(
+async def list_users(
     q: Optional[str] = Query(None, description="Fuzzy search by name, department, office"),
     department: Optional[str] = Query(None, description="Filter by exact department name"),
     page: int = Query(1, ge=1),
@@ -25,14 +27,18 @@ def list_users(
         query = query.filter(User.department == department)
     
     if q:
-        # Используем оператор % для pg_trgm (fuzzy search)
-        query = query.filter(
-            or_(
-                User.full_name.op("%")(q),
-                User.department.op("%")(q),
-                User.office_location.op("%")(q)
+        # 2.1. Санитизация ввода для предотвращения SQL-инъекций и ошибок pg_trgm
+        # Оставляем только буквы, цифры, пробелы, точки и дефисы
+        clean_q = re.sub(r'[^\w\s\.-]', '', q).strip()
+        if clean_q:
+            # Используем оператор % для pg_trgm (fuzzy search)
+            query = query.filter(
+                or_(
+                    User.full_name.op("%")(clean_q),
+                    User.department.op("%")(clean_q),
+                    User.office_location.op("%")(clean_q)
+                )
             )
-        )
     
     total = query.count()
     items = query.offset((page - 1) * limit).limit(limit).all()
@@ -45,7 +51,7 @@ def list_users(
     }
 
 @router.get("/departments", response_model=List[str])
-def list_departments(
+async def list_departments(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
@@ -53,7 +59,7 @@ def list_departments(
     return [d[0] for d in departments]
 
 @router.get("/{user_id}", response_model=UserFull)
-def get_user(
+async def get_user(
     user_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)

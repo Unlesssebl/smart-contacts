@@ -8,30 +8,34 @@ redis_client = redis.Redis(
     decode_responses=True
 )
 
-def check_brute_force(ip: str) -> bool:
+def is_brute_force_blocked(ip: str) -> bool:
     """
-    Returns True if IP is blocked.
+    2.3. Атомарная проверка и инкремент счетчика попыток.
+    Возвращает True, если IP заблокирован.
     """
     key = f"brute_force:{ip}"
+    
+    # Получаем текущее значение без инкремента для проверки блокировки
     attempts = redis_client.get(key)
     if attempts and int(attempts) >= 5:
         return True
     return False
 
-def increment_brute_force(ip: str):
+def record_failed_attempt(ip: str) -> int:
     """
-    Increments fail counter and sets 15 min block if reached.
+    Инкрементирует счетчик и возвращает текущее кол-во попыток.
     """
     key = f"brute_force:{ip}"
     attempts = redis_client.incr(key)
     if attempts == 1:
         redis_client.expire(key, 900) # 15 minutes
     elif attempts >= 5:
-        redis_client.expire(key, 900) # Reset expiry to 15 mins on block
+        redis_client.expire(key, 900) # Reset expiry on block
+    return attempts
 
 def reset_brute_force(ip: str):
     """
-    Resets counter on successful login.
+    Сброс счетчика при успешном входе.
     """
     key = f"brute_force:{ip}"
     redis_client.delete(key)

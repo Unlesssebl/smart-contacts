@@ -1,3 +1,4 @@
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
@@ -12,12 +13,12 @@ class Settings(BaseSettings):
     DB_HOST: str
     DB_PORT: int = 5432
 
+    @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         import urllib.parse
         password = urllib.parse.quote_plus(self.POSTGRES_PASSWORD)
-        uri = f"postgresql://{self.POSTGRES_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.POSTGRES_DB}"
-        return uri
+        return f"postgresql://{self.POSTGRES_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.POSTGRES_DB}"
 
     # Redis
     REDIS_HOST: str = "redis"

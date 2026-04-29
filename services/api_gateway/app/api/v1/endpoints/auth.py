@@ -5,22 +5,21 @@ from app.schemas.auth import LoginRequest, LoginResponse, RefreshRequest, Token,
 from app.services.auth_service import AuthService
 from app.db.repository.user import get_user_by_guid
 
-router = APIRouter()
 from app.api import deps
 
 router = APIRouter()
 
 @router.post("/login", response_model=LoginResponse)
-def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
+async def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
     client_ip = request.client.host
     return AuthService.login(db, data.username, data.password, client_ip)
 
 @router.post("/refresh", response_model=Token)
-def refresh(data: RefreshRequest, db: Session = Depends(get_db)):
+async def refresh(data: RefreshRequest, db: Session = Depends(get_db)):
     return AuthService.refresh(db, data.refresh_token)
 
 @router.get("/me", response_model=UserProfile)
-def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Session = Depends(get_db)):
+async def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Session = Depends(get_db)):
     user = get_user_by_guid(db, user_guid)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

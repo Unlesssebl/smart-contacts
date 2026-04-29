@@ -46,22 +46,28 @@ class SyncWorker:
         max_usn = self.last_usn
 
         with LDAPClient() as ldap:
-            for entry in ldap.search_paged(filter_str, attributes):
-                try:
-                    self._process_ad_entry(entry)
-                    current_usn = int(entry.get("uSNChanged", 0))
-                    if current_usn > max_usn:
-                        max_usn = current_usn
-                except Exception as e:
-                    logger.error(f"Error processing entry {entry.get('sAMAccountName')}: {e}")
-                    continue
+            # 2.4. Одна сессия на весь цикл Pull
+            with SessionLocal() as session:
+                for entry in ldap.search_paged(filter_str, attributes):
+                    try:
+                        self._process_ad_entry(session, entry)
+                        current_usn = int(entry.get("uSNChanged", 0))
+                        if current_usn > max_usn:
+                            max_usn = current_usn
+                    except Exception as e:
+                        logger.error(f"Error processing entry {entry.get('sAMAccountName')}: {e}")
+                        session.rollback()
+                        continue
+                
+                # Финальный коммит если остались изменения
+                session.commit()
 
         if max_usn > self.last_usn:
             self._save_last_usn(max_usn + 1)
         
         logger.info("Pull cycle completed.")
 
-    def _process_ad_entry(self, entry: dict):
+    def _process_ad_entry(self, session, entry: dict):
         guid_bytes = entry.get("objectGUID")
         if not guid_bytes:
             return
@@ -73,34 +79,34 @@ class SyncWorker:
         status = determine_status(uac, sam)
         org, warnings = match_organization(entry.get("memberOf", []))
         
-        with SessionLocal() as session:
-            # 1. User lookup/linking (Extracted)
-            user = self._find_or_link_user(session, sam, guid_str)
+        # 1. User lookup/linking (Extracted)
+        user = self._find_or_link_user(session, sam, guid_str)
 
-            if not user:
-                user = User(
-                    object_guid=guid_str,
-                    sam_account_name=sam,
-                    status=status,
-                    full_name=str(entry.get("displayName", "")),
-                    job_title=str(entry.get("title", "")),
-                    department=str(entry.get("department", "")),
-                    office_location=str(entry.get("physicalDeliveryOfficeName", "")),
-                    organization=org,
-                    internal_phone=str(entry.get("telephoneNumber", "")),
-                    mobile_phone=str(entry.get("mobile", "")),
-                    sync_error_log="\n".join(warnings) if warnings else None,
-                    last_sync_timestamp=datetime.now()
-                )
-                session.add(user)
-                logger.info(f"Created new user: {sam} ({guid_str})")
-            else:
-                # 2. Update existing user (Extracted)
-                self._resolve_conflicts_and_update(session, user, entry, org, warnings, status)
-                user.sam_account_name = sam
-                logger.info(f"Updated user: {sam}")
+        if not user:
+            user = User(
+                object_guid=guid_str,
+                sam_account_name=sam,
+                status=status,
+                full_name=str(entry.get("displayName", "")),
+                job_title=str(entry.get("title", "")),
+                department=str(entry.get("department", "")),
+                office_location=str(entry.get("physicalDeliveryOfficeName", "")),
+                organization=org,
+                internal_phone=str(entry.get("telephoneNumber", "")),
+                mobile_phone=str(entry.get("mobile", "")),
+                sync_error_log="\n".join(warnings) if warnings else None,
+                last_sync_timestamp=datetime.now(timezone.utc) # 4.1 UTC
+            )
+            session.add(user)
+            logger.info(f"Created new user: {sam} ({guid_str})")
+        else:
+            # 2. Update existing user (Extracted)
+            self._resolve_conflicts_and_update(session, user, entry, org, warnings, status)
+            user.sam_account_name = sam
+            logger.info(f"Updated user: {sam}")
 
-            session.commit()
+        # Частичный коммит для сохранения прогресса
+        session.commit()
 
     def _find_or_link_user(self, session, sam: str, guid_str: str) -> User:
         """
@@ -163,7 +169,7 @@ class SyncWorker:
         if warnings:
             user.sync_error_log = (user.sync_error_log or "") + "\n" + "\n".join(warnings)
         
-        user.last_sync_timestamp = datetime.now()
+        user.last_sync_timestamp = datetime.now(timezone.utc)
 
     def push(self):
         """
@@ -211,8 +217,8 @@ class SyncWorker:
                     success = ldap.modify_attribute(dn, ad_attr, cr.new_value)
                     if success:
                         cr.status = "applied"
-                        cr.resolved_at = datetime.now()
-                        user.last_sync_timestamp = datetime.now()
+                        cr.resolved_at = datetime.now(timezone.utc)
+                        user.last_sync_timestamp = datetime.now(timezone.utc)
                         logger.info(f"Applied {cr.attribute_name} for {user.sam_account_name}")
                     else:
                         user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {cr.id}"
