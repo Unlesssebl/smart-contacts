@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     KRB5_KEYTAB: str = "/etc/krb5.keytab"
     KRB5_SERVICE_NAME: str = "HTTP"
 
+    # Development Account (Bypass AD)
+    DEV_USER: Optional[str] = None
+    DEV_PASSWORD: Optional[str] = None
+
     model_config = SettingsConfigDict(
         case_sensitive=True,
         extra="ignore"

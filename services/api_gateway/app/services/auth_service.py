@@ -19,17 +19,28 @@ class AuthService:
                 detail="Too many attempts. IP blocked for 15 minutes."
             )
 
-        # 2. LDAP BIND
-        ldap_user = authenticate_via_ldap(username, password)
+        # 2. Development Account Bypass
+        ldap_user = None
+        if settings.DEV_USER and username == settings.DEV_USER and password == settings.DEV_PASSWORD:
+            ldap_user = {
+                "object_guid": "00000000-0000-0000-0000-000000000001",
+                "full_name": "Development Admin",
+                "department": "IT",
+                "job_title": "Developer"
+            }
+        
+        # 3. LDAP BIND (if not dev user)
+        if not ldap_user:
+            ldap_user = authenticate_via_ldap(username, password)
+            
         if ldap_user is None:
             # Счетчик уже атомарно увеличен в is_brute_force_blocked
-
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials"
             )
 
-        # 3. Success - reset counter
+        # 4. Success - reset counter
         reset_brute_force(client_ip)
 
         # 4. User lookup/creation (Extracted)
