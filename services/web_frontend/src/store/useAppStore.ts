@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, ChangeRequest, Report } from '../types';
+import type { User, ChangeRequest, Report } from '../types';
 import { mockUsers, mockChangeRequests, mockReports } from '../lib/mockData';
 
 interface AppState {
@@ -40,7 +40,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAuthenticated: false,
   accessToken: null,
 
-  login: (samAccount: string, password: string) => {
+  login: (samAccount: string, _password: string) => {
     // Mock authentication - in production this would call an API
     const user = mockUsers.find(u => u.sam_account === samAccount);
     if (user) {
