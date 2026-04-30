@@ -6,7 +6,9 @@ interface AppState {
   // Auth
   currentUser: User | null;
   isAuthenticated: boolean;
+  accessToken: string | null;
   login: (samAccount: string, password: string) => boolean;
+  setAuth: (user: User, token: string) => void;
   logout: () => void;
 
   // Users
@@ -26,25 +28,34 @@ interface AppState {
   // Reports
   reports: Report[];
   addReport: (report: Omit<Report, 'id' | 'created_at'>) => void;
+
+  // Infrastructure
+  adSyncUnavailable: boolean;
+  setAdSyncStatus: (status: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   // Auth
   currentUser: null,
   isAuthenticated: false,
+  accessToken: null,
 
   login: (samAccount: string, password: string) => {
     // Mock authentication - in production this would call an API
     const user = mockUsers.find(u => u.sam_account === samAccount);
     if (user) {
-      set({ currentUser: user, isAuthenticated: true });
+      set({ currentUser: user, isAuthenticated: true, accessToken: 'mock-token' });
       return true;
     }
     return false;
   },
 
+  setAuth: (user: User, token: string) => {
+    set({ currentUser: user, isAuthenticated: true, accessToken: token });
+  },
+
   logout: () => {
-    set({ currentUser: null, isAuthenticated: false });
+    set({ currentUser: null, isAuthenticated: false, accessToken: null });
   },
 
   // Users
@@ -136,4 +147,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       reports: [...state.reports, newReport]
     }));
   },
+
+  // Infrastructure
+  adSyncUnavailable: false,
+  setAdSyncStatus: (status: boolean) => set({ adSyncUnavailable: status }),
 }));
