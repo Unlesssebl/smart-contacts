@@ -10,3 +10,9 @@ export const getMe = async () => {
   const response = await apiClient.get('/auth/me');
   return response.data;
 };
+
+export const checkSso = async () => {
+  // @ts-ignore - custom property for interceptor
+  const response = await apiClient.get('/auth/sso', { _skipAuthRedirect: true });
+  return response.data;
+};

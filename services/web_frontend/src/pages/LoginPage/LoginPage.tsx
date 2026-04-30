@@ -3,17 +3,54 @@ import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { login } from '../../api/auth';
+import { login, checkSso } from '../../api/auth';
+import { Spin } from 'antd';
 
 const { Title, Text } = Typography;
 
 const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const accessToken = useAuthStore((state) => state.accessToken);
 
   const from = location.state?.from?.pathname || '/profile';
+
+  // Silent SSO Check
+  React.useEffect(() => {
+    const performSso = async () => {
+      // If already logged in, redirect away
+      if (accessToken) {
+        navigate(from, { replace: true });
+        return;
+      }
+
+      try {
+        const data = await checkSso();
+        if (data && data.access_token) {
+          setAuth({
+            accessToken: data.access_token,
+            role: data.user.role,
+            full_name: data.user.full_name,
+            sam_account_name: data.user.sam_account_name,
+            is_verified: data.user.is_verified,
+            grace_period_left: data.user.grace_period_left,
+          });
+          message.success('Автоматический вход (SSO)...');
+          navigate(from, { replace: true });
+        }
+      } catch (error) {
+        // SSO failed or not available, just stop loading and show login form
+        console.log('SSO not available or failed');
+      } finally {
+        setSsoLoading(false);
+      }
+    };
+
+    performSso();
+  }, []);
 
   const onFinish = async (values: any) => {
     setLoading(true);
@@ -39,6 +76,14 @@ const LoginPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (ssoLoading) {
+    return (
+      <div className="login-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" tip="Проверка доступа..." />
+      </div>
+    );
+  }
 
   return (
     <div className="login-container">

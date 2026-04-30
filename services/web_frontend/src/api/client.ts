@@ -29,7 +29,7 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest._skipAuthRedirect) {
       originalRequest._retry = true;
       // In a real app, you might try to refresh the token here.
       // For now, we'll just logout if we get a 401 on a non-retry request.

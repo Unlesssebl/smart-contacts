@@ -67,6 +67,59 @@ class AuthService:
         )
 
     @staticmethod
+    def login_sso(db: Session, full_username: str) -> LoginResponse:
+        """
+        Handles SSO login after successful Kerberos ticket validation.
+        """
+        # 1. Normalize username (remove domain part if present: 'user@DOMAIN' -> 'user')
+        username = full_username.split('@')[0].lower() if '@' in full_username else full_username.lower()
+
+        # 2. User lookup
+        user = get_user_by_sam(db, username)
+        
+        if not user:
+            # If user not in DB, we could try to fetch them from LDAP to get the GUID
+            try:
+                from app.core.ldap import search_user_by_sam
+                ldap_info = search_user_by_sam(username)
+                if ldap_info:
+                    user = AuthService._ensure_user_from_ldap(db, username, ldap_info)
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail=f"User {username} not found in Active Directory"
+                    )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"SSO authentication failed: {str(e)}"
+                )
+
+        # 3. Generate tokens
+        access_token = create_access_token(
+            subject=user.object_guid,
+            role=user.role,
+            sam=user.sam_account_name,
+            dept=user.department
+        )
+        refresh_token = create_refresh_token(db, user.object_guid)
+
+        return LoginResponse(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            refresh_token=refresh_token,
+            user=UserAuthResponse(
+                id=user.object_guid,
+                sam_account_name=user.sam_account_name,
+                full_name=user.full_name,
+                role=user.role,
+                is_verified=user.is_verified,
+                grace_period_left=user.grace_period_left
+            )
+        )
+
+    @staticmethod
     def _ensure_user_from_ldap(db: Session, username: str, ldap_user: dict):
         """
         Ensures a user exists in the local database based on LDAP info.

@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     AD_BASE_DN: str
     AD_USER: Optional[str] = None
     AD_PASSWORD: Optional[str] = None
+    
+    # Kerberos
+    KRB5_KEYTAB: str = "/etc/krb5.keytab"
+    KRB5_SERVICE_NAME: str = "HTTP"
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

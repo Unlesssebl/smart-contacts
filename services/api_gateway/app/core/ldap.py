@@ -147,3 +147,33 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
     except Exception as e:
         logger.error(f"LDAP exception: {str(e)}")
         return None
+
+def search_user_by_sam(username: str) -> Optional[Dict[str, Any]]:
+    """
+    Searches for a user in AD by sAMAccountName using the service account.
+    Returns user data if found, None otherwise.
+    """
+    if not search_pool_conn:
+        logger.warning("LDAP search pool not configured. Cannot search user by SAM.")
+        return None
+
+    search_filter = f"(sAMAccountName={username})"
+    try:
+        search_pool_conn.search(
+            search_base=settings.AD_BASE_DN,
+            search_filter=search_filter,
+            attributes=["objectGUID", "displayName", "department", "title"]
+        )
+        entries = list(search_pool_conn.entries)
+        if entries:
+            entry = entries[0]
+            return {
+                "object_guid": ad_guid_to_uuid(entry.objectGUID.value),
+                "full_name": entry.displayName.value if entry.displayName else username,
+                "department": entry.department.value if entry.department else None,
+                "job_title": entry.title.value if entry.title else None
+            }
+    except Exception as e:
+        logger.error(f"Error searching user by SAM: {e}")
+        
+    return None

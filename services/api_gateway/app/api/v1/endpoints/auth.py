@@ -1,13 +1,26 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, Response, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.auth import LoginRequest, LoginResponse, RefreshRequest, Token, UserProfile
 from app.services.auth_service import AuthService
 from app.db.repository.user import get_user_by_guid
+from app.core.spnego import validate_kerberos_ticket
 
 from app.api import deps
 
 router = APIRouter()
+
+@router.get("/sso", response_model=LoginResponse)
+async def login_sso(request: Request, response: Response, db: Session = Depends(get_db)):
+    auth_header = request.headers.get("Authorization")
+    username = validate_kerberos_ticket(auth_header)
+    
+    if not username:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        response.headers["WWW-Authenticate"] = "Negotiate"
+        return response
+        
+    return AuthService.login_sso(db, username)
 
 @router.post("/login", response_model=LoginResponse)
 async def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
