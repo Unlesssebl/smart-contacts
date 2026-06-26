@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Phone, MapPin, Building2, User as UserIcon, Edit } from 'lucide-react';
 import { toast } from 'sonner';
-import { User } from '../../types';
+import type { User } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
+import { getChangeWord } from '../../lib/localization';
 
 interface ProfileModalProps {
   user: User;
@@ -47,8 +48,8 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
     }
 
     if (changeCount > 0) {
-      toast.success('Change request submitted', {
-        description: `${changeCount} change${changeCount > 1 ? 's' : ''} pending admin approval`,
+      toast.success('Запрос на изменение отправлен', {
+        description: `${changeCount} ${getChangeWord(changeCount)} на рассмотрении у администратора`,
       });
     }
 
@@ -130,7 +131,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                   {/* Contact Information */}
                   <div>
                     <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#1C1C1E]">
-                      Contact Information
+                      Контактная информация
                     </h3>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
@@ -144,7 +145,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                       <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
                         <Phone className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
                         <div>
-                          <p className="text-xs text-[#8E8E93]">Internal Phone</p>
+                          <p className="text-xs text-[#8E8E93]">Внутренний телефон</p>
                           <p className="text-sm text-[#1C1C1E]">{user.internal_phone}</p>
                         </div>
                       </div>
@@ -153,7 +154,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                         <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
                           <Phone className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
                           <div className="flex-1">
-                            <p className="mb-1 text-xs text-[#8E8E93]">Mobile Phone</p>
+                            <p className="mb-1 text-xs text-[#8E8E93]">Мобильный телефон</p>
                             <input
                               type="text"
                               value={mobilePhone}
@@ -166,7 +167,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                         <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
                           <Phone className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
                           <div>
-                            <p className="text-xs text-[#8E8E93]">Mobile Phone</p>
+                            <p className="text-xs text-[#8E8E93]">Мобильный телефон</p>
                             <p className="text-sm text-[#1C1C1E]">{user.mobile_phone}</p>
                           </div>
                         </div>
@@ -176,7 +177,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                         <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
                           <MapPin className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
                           <div className="flex-1">
-                            <p className="mb-1 text-xs text-[#8E8E93]">Office Location</p>
+                            <p className="mb-1 text-xs text-[#8E8E93]">Офис / Расположение</p>
                             <input
                               type="text"
                               value={officeLocation}
@@ -190,7 +191,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                           <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
                             <MapPin className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
                             <div>
-                              <p className="text-xs text-[#8E8E93]">Office Location</p>
+                              <p className="text-xs text-[#8E8E93]">Офис / Расположение</p>
                               <p className="text-sm text-[#1C1C1E]">{user.office_location}</p>
                             </div>
                           </div>
@@ -202,11 +203,11 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                   {/* Organization */}
                   {manager && (
                     <div>
-                      <h3 className="mb-4 text-sm font-semibold text-[#1C1C1E]">Organization</h3>
+                      <h3 className="mb-4 text-sm font-semibold text-[#1C1C1E]">Организация</h3>
                       <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
                         <UserIcon className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
                         <div>
-                          <p className="text-xs text-[#8E8E93]">Reports to</p>
+                          <p className="text-xs text-[#8E8E93]">Руководитель</p>
                           <p className="text-sm text-[#1C1C1E]">{manager.full_name}</p>
                           <p className="text-xs text-[#8E8E93]">{manager.job_title}</p>
                         </div>
@@ -224,7 +225,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                           onClick={handleSubmitChange}
                           className="flex-1 rounded-xl bg-[#007AFF] px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-[#0051D5]"
                         >
-                          Submit Change Request
+                          Отправить запрос на изменение
                         </button>
                         <button
                           onClick={() => {
@@ -234,7 +235,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                           }}
                           className="rounded-xl border border-black/10 bg-white/60 px-6 py-3 text-sm font-medium text-[#1C1C1E] transition-colors hover:bg-white/80"
                         >
-                          Cancel
+                          Отмена
                         </button>
                       </>
                     ) : (
@@ -243,7 +244,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                         className="flex items-center gap-2 rounded-xl border border-black/10 bg-white/60 px-6 py-3 text-sm font-medium text-[#1C1C1E] transition-colors hover:bg-white/80"
                       >
                         <Edit className="h-4 w-4" strokeWidth={1.5} />
-                        Edit Profile
+                        Редактировать профиль
                       </button>
                     )}
                   </div>

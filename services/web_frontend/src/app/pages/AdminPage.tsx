@@ -4,6 +4,7 @@ import { Check, X, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '../components/Sidebar';
 import { useAppStore } from '../../store/useAppStore';
+import { getAttributeLabel, getStatusLabel } from '../../lib/localization';
 
 type Tab = 'requests' | 'reports';
 
@@ -14,7 +15,7 @@ export function AdminPage() {
   const pendingRequests = changeRequests.filter((r) => r.status === 'pending');
 
   return (
-    <div className="flex min-h-screen" style={{ background: '#F5F5F7' }}>
+    <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
       <main className="ml-64 flex-1">
@@ -26,15 +27,15 @@ export function AdminPage() {
             className="mb-8"
           >
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] p-3 shadow-lg">
+              <div className="rounded-2xl bg-gradient-to-br from-primary to-accent p-3 shadow-lg">
                 <Shield className="h-6 w-6 text-white" strokeWidth={1.5} />
               </div>
               <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-[#1C1C1E]">
-                  Admin Panel
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                  Панель администратора
                 </h1>
-                <p className="mt-1 text-sm text-[#8E8E93]">
-                  Manage change requests and user reports
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Управление запросами на изменение и жалобами пользователей
                 </p>
               </div>
             </div>
@@ -45,25 +46,19 @@ export function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="mb-8 inline-flex rounded-xl p-1"
-            style={{
-              background: 'rgba(255, 255, 255, 0.6)',
-              backdropFilter: 'blur(40px)',
-              border: '0.5px solid rgba(255, 255, 255, 0.4)',
-            }}
+            className="mb-8 inline-flex rounded-xl p-1 glass-card"
           >
             <button
               onClick={() => setActiveTab('requests')}
               className="relative rounded-lg px-6 py-2 text-sm font-medium transition-colors"
               style={{
-                color: activeTab === 'requests' ? '#1C1C1E' : '#8E8E93',
+                color: activeTab === 'requests' ? 'var(--foreground)' : 'var(--muted-foreground)',
               }}
             >
               {activeTab === 'requests' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute inset-0 rounded-lg shadow-sm"
-                  style={{ background: 'rgba(255, 255, 255, 0.9)' }}
+                  className="absolute inset-0 rounded-lg bg-background/50 shadow-sm"
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 />
               )}
@@ -76,7 +71,7 @@ export function AdminPage() {
               onClick={() => setActiveTab('reports')}
               className="relative rounded-lg px-6 py-2 text-sm font-medium transition-colors"
               style={{
-                color: activeTab === 'reports' ? '#1C1C1E' : '#8E8E93',
+                color: activeTab === 'reports' ? 'var(--foreground)' : 'var(--muted-foreground)',
               }}
             >
               {activeTab === 'reports' && (
@@ -87,7 +82,7 @@ export function AdminPage() {
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 />
               )}
-              <span className="relative z-10">Reports ({reports.length})</span>
+              <span className="relative z-10">Жалобы ({reports.length})</span>
             </button>
           </motion.div>
 
@@ -96,20 +91,13 @@ export function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="overflow-hidden rounded-2xl shadow-lg"
-            style={{
-              background: 'rgba(255, 255, 255, 0.7)',
-              backdropFilter: 'blur(40px)',
-              border: '0.5px solid rgba(255, 255, 255, 0.4)',
-              boxShadow:
-                'inset 0.5px 0.5px 0 rgba(255, 255, 255, 0.4), 0 4px 16px rgba(0, 0, 0, 0.06), 0 16px 48px rgba(0, 0, 0, 0.08)',
-            }}
+            className="overflow-hidden glass-card p-0"
           >
             {activeTab === 'requests' ? (
               <div className="p-6">
                 {pendingRequests.length === 0 ? (
                   <div className="py-12 text-center">
-                    <p className="text-lg text-[#8E8E93]">No pending change requests</p>
+                    <p className="text-lg text-[#8E8E93]">Нет ожидающих запросов на изменение</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -118,28 +106,28 @@ export function AdminPage() {
                         key={request.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="rounded-xl border border-black/5 bg-white/50 p-5"
+                        className="rounded-xl border border-white/20 bg-white/30 backdrop-blur-sm p-5 shadow-sm"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <p className="font-medium text-[#1C1C1E]">{request.user_name}</p>
-                            <p className="mt-1 text-sm text-[#8E8E93]">
-                              Requesting to update{' '}
-                              <span className="font-medium text-[#1C1C1E]">
-                                {request.attribute_name.replace('_', ' ')}
+                            <p className="font-medium text-foreground">{request.user_name}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Запрос на изменение поля{' '}
+                              <span className="font-medium text-foreground">
+                                {getAttributeLabel(request.attribute_name)}
                               </span>
                             </p>
                             <div className="mt-3 space-y-1 text-sm">
-                              <p className="text-[#8E8E93]">
-                                <span className="font-medium">Old:</span>{' '}
+                              <p className="text-muted-foreground">
+                                <span className="font-medium">Старое:</span>{' '}
                                 <span className="line-through">{request.old_value}</span>
                               </p>
-                              <p className="text-[#007AFF]">
-                                <span className="font-medium">New:</span> {request.new_value}
+                              <p className="text-primary">
+                                <span className="font-medium">Новое:</span> {request.new_value}
                               </p>
                             </div>
-                            <p className="mt-2 text-xs text-[#8E8E93]">
-                              {new Date(request.requested_at).toLocaleDateString('en-US', {
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              {new Date(request.requested_at).toLocaleDateString('ru-RU', {
                                 month: 'long',
                                 day: 'numeric',
                                 year: 'numeric',
@@ -155,14 +143,14 @@ export function AdminPage() {
                               whileTap={{ scale: 0.95 }}
                               onClick={() => {
                                 approveChangeRequest(request.id);
-                                toast.success('Change approved', {
-                                  description: `${request.user_name}'s ${request.attribute_name.replace('_', ' ')} has been updated`,
+                                toast.success('Изменение одобрено', {
+                                  description: `Поле "${getAttributeLabel(request.attribute_name)}" пользователя ${request.user_name} обновлено`,
                                 });
                               }}
                               className="flex items-center gap-2 rounded-lg bg-[#34C759] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#2FB350]"
                             >
                               <Check className="h-4 w-4" strokeWidth={2} />
-                              Approve
+                              Одобрить
                             </motion.button>
 
                             <motion.button
@@ -170,14 +158,14 @@ export function AdminPage() {
                               whileTap={{ scale: 0.95 }}
                               onClick={() => {
                                 rejectChangeRequest(request.id);
-                                toast.error('Change rejected', {
-                                  description: `${request.user_name}'s request has been declined`,
+                                toast.error('Изменение отклонено', {
+                                  description: `Запрос пользователя ${request.user_name} был отклонен`,
                                 });
                               }}
                               className="flex items-center gap-2 rounded-lg bg-[#FF3B30] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#E6342A]"
                             >
                               <X className="h-4 w-4" strokeWidth={2} />
-                              Reject
+                              Отклонить
                             </motion.button>
                           </div>
                         </div>
@@ -190,7 +178,7 @@ export function AdminPage() {
               <div className="p-6">
                 {reports.length === 0 ? (
                   <div className="py-12 text-center">
-                    <p className="text-lg text-[#8E8E93]">No reports</p>
+                    <p className="text-lg text-[#8E8E93]">Жалоб нет</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -199,12 +187,12 @@ export function AdminPage() {
                         key={report.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="rounded-xl border border-black/5 bg-white/50 p-5"
+                        className="rounded-xl border border-white/20 bg-white/30 backdrop-blur-sm p-5 shadow-sm"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3">
-                              <p className="font-medium text-[#1C1C1E]">{report.user_name}</p>
+                              <p className="font-medium text-foreground">{report.user_name}</p>
                               <span
                                 className="rounded-full px-2.5 py-0.5 text-xs font-medium"
                                 style={{
@@ -212,25 +200,25 @@ export function AdminPage() {
                                     report.status === 'resolved'
                                       ? 'rgba(52, 199, 89, 0.15)'
                                       : report.status === 'in_progress'
-                                      ? 'rgba(0, 122, 255, 0.15)'
-                                      : 'rgba(255, 59, 48, 0.15)',
+                                      ? 'rgba(0, 147, 233, 0.15)'
+                                      : 'rgba(255, 77, 79, 0.15)',
                                   color:
                                     report.status === 'resolved'
-                                      ? '#34C759'
+                                      ? '#38A169'
                                       : report.status === 'in_progress'
-                                      ? '#007AFF'
-                                      : '#FF3B30',
+                                      ? 'var(--primary)'
+                                      : 'var(--destructive)',
                                 }}
                               >
-                                {report.status.replace('_', ' ')}
+                                {getStatusLabel(report.status)}
                               </span>
                             </div>
-                            <p className="mt-1 text-sm font-medium text-[#007AFF]">
+                            <p className="mt-1 text-sm font-medium text-primary">
                               {report.category}
                             </p>
-                            <p className="mt-2 text-sm text-[#1C1C1E]">{report.description}</p>
-                            <p className="mt-2 text-xs text-[#8E8E93]">
-                              {new Date(report.created_at).toLocaleDateString('en-US', {
+                            <p className="mt-2 text-sm text-foreground">{report.description}</p>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              {new Date(report.created_at).toLocaleDateString('ru-RU', {
                                 month: 'long',
                                 day: 'numeric',
                                 year: 'numeric',

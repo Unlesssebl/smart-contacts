@@ -59,15 +59,12 @@ export function LoginPage() {
     if (success) {
       navigate('/');
     } else {
-      setError('Invalid credentials. Try: jive, cfederighi, sprescott, jternus, dobrien, or ecue');
+      setError('Неверные учетные данные. Попробуйте: jive, cfederighi, sprescott, jternus, dobrien или ecue');
     }
   };
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center p-4"
-      style={{ background: '#F5F5F7' }}
-    >
+    <div className="flex min-h-screen items-center justify-center p-4 bg-transparent">
       <AnimatePresence mode="wait">
         {isSsoChecking ? (
           <motion.div
@@ -75,11 +72,10 @@ export function LoginPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.1 }}
-            className="flex flex-col items-center gap-4 rounded-3xl bg-white/80 p-12 shadow-2xl backdrop-blur-3xl"
-            style={{ border: '0.5px solid rgba(255, 255, 255, 0.5)' }}
+            className="flex flex-col items-center gap-4 p-12 glass-card"
           >
-            <Loader2 className="h-10 w-10 animate-spin text-[#007AFF]" />
-            <p className="text-lg font-medium text-[#1C1C1E]">Checking secure access...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-lg font-medium text-foreground">Проверка безопасного доступа...</p>
           </motion.div>
         ) : (
           <motion.div
@@ -87,57 +83,42 @@ export function LoginPage() {
             initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-md overflow-hidden rounded-3xl shadow-2xl"
-        style={{
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(60px)',
-          border: '0.5px solid rgba(255, 255, 255, 0.5)',
-          boxShadow:
-            'inset 0.5px 0.5px 0 rgba(255, 255, 255, 0.5), 0 8px 32px rgba(0, 0, 0, 0.12), 0 32px 64px rgba(0, 0, 0, 0.16)',
-        }}
+        className="w-full max-w-md overflow-hidden glass-card p-0"
       >
         <div className="p-10">
           {/* Logo */}
           <div className="text-center">
-            <h1 className="bg-gradient-to-r from-[#007AFF] to-[#5AC8FA] bg-clip-text text-4xl font-semibold tracking-tight text-transparent">
+            <h1 className="bg-gradient-to-r from-primary to-accent bg-clip-text text-4xl font-semibold tracking-tight text-transparent">
               Crystal
             </h1>
-            <p className="mt-2 text-sm text-[#8E8E93]">Corporate Directory</p>
+            <p className="mt-2 text-sm text-muted-foreground">Корпоративный справочник</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="mt-10 space-y-5">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#1C1C1E]">
-                SAM Account
+              <label className="mb-2 block text-sm font-medium text-foreground">
+                Учетная запись SAM
               </label>
               <input
                 type="text"
                 value={samAccount}
                 onChange={(e) => setSamAccount(e.target.value)}
-                placeholder="Enter your SAM account"
+                placeholder="Введите вашу учетную запись SAM"
                 required
-                className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm text-[#1C1C1E] outline-none transition-all focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/10"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.6)',
-                  backdropFilter: 'blur(10px)',
-                }}
+                className="w-full rounded-xl border border-border px-4 py-3 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-ring bg-input-background backdrop-blur-md"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#1C1C1E]">Password</label>
+              <label className="mb-2 block text-sm font-medium text-foreground">Пароль</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Введите ваш пароль"
                 required
-                className="w-full rounded-xl border border-black/10 px-4 py-3 text-sm text-[#1C1C1E] outline-none transition-all focus:border-[#007AFF] focus:ring-4 focus:ring-[#007AFF]/10"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.6)',
-                  backdropFilter: 'blur(10px)',
-                }}
+                className="w-full rounded-xl border border-border px-4 py-3 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-ring bg-input-background backdrop-blur-md"
               />
             </div>
 
@@ -155,18 +136,17 @@ export function LoginPage() {
               type="submit"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-6 py-3.5 font-medium text-white shadow-lg transition-all hover:bg-[#0051D5] hover:shadow-xl"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-3.5 font-medium text-white shadow-lg transition-all hover:shadow-xl opacity-90 hover:opacity-100"
             >
               <LogIn className="h-5 w-5" strokeWidth={1.5} />
-              Sign In
+              Войти
             </motion.button>
           </form>
 
           {/* Demo Hint */}
-          <div className="mt-6 rounded-xl bg-blue-50 p-4">
-            <p className="text-xs text-[#007AFF]">
-              <strong>Demo Accounts:</strong> Use any SAM account from the mock data (e.g., "jive",
-              "cfederighi") with any password.
+          <div className="mt-6 rounded-xl bg-white/20 p-4 border border-white/30 backdrop-blur-sm">
+            <p className="text-xs text-foreground/80">
+              <strong>Демо-аккаунты:</strong> Используйте любую учетную запись SAM из тестовых данных (например, "jive", "cfederighi") с любым паролем.
             </p>
           </div>
         </div>

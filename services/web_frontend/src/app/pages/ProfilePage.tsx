@@ -5,6 +5,7 @@ import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit } from 'lucide-r
 import { toast } from 'sonner';
 import { Sidebar } from '../components/Sidebar';
 import { useAppStore } from '../../store/useAppStore';
+import { getChangeWord } from '../../lib/localization';
 
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -49,8 +50,8 @@ export function ProfilePage() {
     }
 
     if (changeCount > 0) {
-      toast.success('Change request submitted', {
-        description: `${changeCount} change${changeCount > 1 ? 's' : ''} pending admin approval`,
+      toast.success('Запрос на изменение отправлен', {
+        description: `${changeCount} ${getChangeWord(changeCount)} на рассмотрении у администратора`,
       });
     }
 
@@ -58,7 +59,7 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="flex min-h-screen" style={{ background: '#F5F5F7' }}>
+    <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
       <main className="ml-64 flex-1">
@@ -66,20 +67,13 @@ export function ProfilePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden rounded-3xl shadow-2xl"
-            style={{
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(60px)',
-              border: '0.5px solid rgba(255, 255, 255, 0.5)',
-              boxShadow:
-                'inset 0.5px 0.5px 0 rgba(255, 255, 255, 0.5), 0 8px 32px rgba(0, 0, 0, 0.12), 0 32px 64px rgba(0, 0, 0, 0.16)',
-            }}
+            className="overflow-hidden glass-card p-0"
           >
             {/* Header */}
             <div className="border-b border-black/5 px-8 py-8">
               <div className="flex items-start gap-6">
                 <div className="relative">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] text-3xl font-medium text-white shadow-xl">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-3xl font-medium text-white shadow-xl">
                     {user.full_name
                       .split(' ')
                       .map((n) => n[0])
@@ -88,7 +82,7 @@ export function ProfilePage() {
                   {user.is_online && (
                     <motion.div
                       className="absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 border-white"
-                      style={{ background: '#34C759' }}
+                      style={{ background: 'var(--online-status)' }}
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{ repeat: Infinity, duration: 2 }}
                     />
@@ -96,9 +90,9 @@ export function ProfilePage() {
                 </div>
 
                 <div className="flex-1">
-                  <h1 className="text-3xl font-semibold text-[#1C1C1E]">{user.full_name}</h1>
-                  <p className="mt-1 text-lg text-[#8E8E93]">{user.job_title}</p>
-                  <div className="mt-3 flex items-center gap-2 text-sm text-[#8E8E93]">
+                  <h1 className="text-3xl font-semibold text-foreground">{user.full_name}</h1>
+                  <p className="mt-1 text-lg text-muted-foreground">{user.job_title}</p>
+                  <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                     <Building2 className="h-4 w-4" strokeWidth={1.5} />
                     <span>{user.department}</span>
                   </div>
@@ -110,69 +104,69 @@ export function ProfilePage() {
             <div className="p-8">
               <div className="space-y-6">
                 <div>
-                  <h3 className="mb-4 text-sm font-semibold text-[#1C1C1E]">
-                    Contact Information
+                  <h3 className="mb-4 text-sm font-semibold text-foreground">
+                    Контактная информация
                   </h3>
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
-                      <Mail className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
+                    <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                      <Mail className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
-                        <p className="text-xs text-[#8E8E93]">Email</p>
-                        <p className="text-sm text-[#1C1C1E]">{user.email}</p>
+                        <p className="text-xs text-muted-foreground">Email</p>
+                        <p className="text-sm text-foreground">{user.email}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
-                      <Phone className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
+                    <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                      <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
-                        <p className="text-xs text-[#8E8E93]">Internal Phone</p>
-                        <p className="text-sm text-[#1C1C1E]">{user.internal_phone}</p>
+                        <p className="text-xs text-muted-foreground">Внутренний телефон</p>
+                        <p className="text-sm text-foreground">{user.internal_phone}</p>
                       </div>
                     </div>
 
                     {isEditing ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
-                        <Phone className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
+                      <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                        <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div className="flex-1">
-                          <p className="mb-1 text-xs text-[#8E8E93]">Mobile Phone</p>
+                          <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
                           <input
                             type="text"
                             value={mobilePhone}
                             onChange={(e) => setMobilePhone(e.target.value)}
-                            className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-[#1C1C1E] outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20"
+                            className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
-                        <Phone className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
+                      <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                        <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div>
-                          <p className="text-xs text-[#8E8E93]">Mobile Phone</p>
-                          <p className="text-sm text-[#1C1C1E]">{user.mobile_phone}</p>
+                          <p className="text-xs text-muted-foreground">Мобильный телефон</p>
+                          <p className="text-sm text-foreground">{user.mobile_phone}</p>
                         </div>
                       </div>
                     )}
 
                     {isEditing ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
-                        <MapPin className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
+                      <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                        <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div className="flex-1">
-                          <p className="mb-1 text-xs text-[#8E8E93]">Office Location</p>
+                          <p className="mb-1 text-xs text-muted-foreground">Офис / Расположение</p>
                           <input
                             type="text"
                             value={officeLocation}
                             onChange={(e) => setOfficeLocation(e.target.value)}
-                            className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-[#1C1C1E] outline-none focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20"
+                            className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
                       </div>
                     ) : (
                       user.office_location && (
-                        <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
-                          <MapPin className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
+                        <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                          <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div>
-                            <p className="text-xs text-[#8E8E93]">Office Location</p>
-                            <p className="text-sm text-[#1C1C1E]">{user.office_location}</p>
+                            <p className="text-xs text-muted-foreground">Офис / Расположение</p>
+                            <p className="text-sm text-foreground">{user.office_location}</p>
                           </div>
                         </div>
                       )
@@ -182,13 +176,13 @@ export function ProfilePage() {
 
                 {manager && (
                   <div>
-                    <h3 className="mb-4 text-sm font-semibold text-[#1C1C1E]">Organization</h3>
-                    <div className="flex items-center gap-3 rounded-xl bg-white/50 p-4">
-                      <UserIcon className="h-5 w-5 text-[#007AFF]" strokeWidth={1.5} />
+                    <h3 className="mb-4 text-sm font-semibold text-foreground">Организация</h3>
+                    <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                      <UserIcon className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
-                        <p className="text-xs text-[#8E8E93]">Reports to</p>
-                        <p className="text-sm text-[#1C1C1E]">{manager.full_name}</p>
-                        <p className="text-xs text-[#8E8E93]">{manager.job_title}</p>
+                        <p className="text-xs text-muted-foreground">Руководитель</p>
+                        <p className="text-sm text-foreground">{manager.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{manager.job_title}</p>
                       </div>
                     </div>
                   </div>
@@ -201,9 +195,9 @@ export function ProfilePage() {
                     <>
                       <button
                         onClick={handleSubmitChange}
-                        className="flex-1 rounded-xl bg-[#007AFF] px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-[#0051D5]"
+                        className="flex-1 rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg transition-all hover:opacity-90"
                       >
-                        Submit Change Request
+                        Отправить запрос на изменение
                       </button>
                       <button
                         onClick={() => {
@@ -211,18 +205,18 @@ export function ProfilePage() {
                           setMobilePhone(user.mobile_phone);
                           setOfficeLocation(user.office_location || '');
                         }}
-                        className="rounded-xl border border-black/10 bg-white/60 px-6 py-3 text-sm font-medium text-[#1C1C1E] transition-colors hover:bg-white/80"
+                        className="rounded-xl border border-white/30 bg-white/30 backdrop-blur-md px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-white/50"
                       >
-                        Cancel
+                        Отмена
                       </button>
                     </>
                   ) : (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-2 rounded-xl border border-black/10 bg-white/60 px-6 py-3 text-sm font-medium text-[#1C1C1E] transition-colors hover:bg-white/80"
+                      className="flex items-center gap-2 rounded-xl border border-white/30 bg-white/30 backdrop-blur-md px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-white/50"
                     >
                       <Edit className="h-4 w-4" strokeWidth={1.5} />
-                      Edit Profile
+                      Редактировать профиль
                     </button>
                   )}
                 </div>

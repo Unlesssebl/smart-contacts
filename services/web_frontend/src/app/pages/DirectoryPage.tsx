@@ -5,7 +5,8 @@ import { SpotlightSearch } from '../components/SpotlightSearch';
 import { EmployeeCard } from '../components/EmployeeCard';
 import { ProfileModal } from '../components/ProfileModal';
 import { useAppStore } from '../../store/useAppStore';
-import { User } from '../../types';
+import type { User } from '../../types';
+import { getEmployeeWord } from '../../lib/localization';
 
 export function DirectoryPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -13,7 +14,7 @@ export function DirectoryPage() {
   const filteredUsers = getFilteredUsers();
 
   return (
-    <div className="flex min-h-screen" style={{ background: '#F5F5F7' }}>
+    <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
       <main className="ml-64 flex-1">
@@ -24,11 +25,11 @@ export function DirectoryPage() {
             animate={{ opacity: 1 }}
             className="mb-12 text-center"
           >
-            <h1 className="mb-3 text-4xl font-semibold tracking-tight text-[#1C1C1E]">
-              Employee Directory
+            <h1 className="mb-3 text-4xl font-semibold tracking-tight text-foreground">
+              Справочник сотрудников
             </h1>
-            <p className="text-lg text-[#8E8E93]">
-              Find and connect with colleagues across the organization
+            <p className="text-lg text-muted-foreground">
+              Находите коллег и связывайтесь с ними по всей организации
             </p>
           </motion.div>
 
@@ -47,16 +48,11 @@ export function DirectoryPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="rounded-2xl border p-12 text-center"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.6)',
-                  backdropFilter: 'blur(40px)',
-                  border: '0.5px solid rgba(255, 255, 255, 0.4)',
-                }}
+                className="rounded-2xl border p-12 text-center glass-card"
               >
-                <p className="text-lg text-[#8E8E93]">No employees found</p>
-                <p className="mt-2 text-sm text-[#8E8E93]">
-                  Try adjusting your search query
+                <p className="text-lg text-muted-foreground">Сотрудники не найдены</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Попробуйте изменить поисковый запрос
                 </p>
               </motion.div>
             ) : (
@@ -79,9 +75,9 @@ export function DirectoryPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-8 text-center text-sm text-[#8E8E93]"
+            className="mt-8 text-center text-sm text-muted-foreground"
           >
-            Showing {filteredUsers.length} {filteredUsers.length === 1 ? 'employee' : 'employees'}
+            Показано: {filteredUsers.length} {getEmployeeWord(filteredUsers.length)}
           </motion.div>
         </div>
       </main>

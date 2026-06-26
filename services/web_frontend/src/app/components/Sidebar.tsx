@@ -10,9 +10,9 @@ export function Sidebar() {
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'it_operator';
 
   const navItems = [
-    { icon: Home, label: 'Directory', path: '/' },
-    { icon: User, label: 'My Profile', path: `/profile/${currentUser?.id}` },
-    ...(isAdmin ? [{ icon: Shield, label: 'Admin Panel', path: '/admin' }] : []),
+    { icon: Home, label: 'Справочник', path: '/' },
+    { icon: User, label: 'Мой профиль', path: `/profile/${currentUser?.id}` },
+    ...(isAdmin ? [{ icon: Shield, label: 'Панель администратора', path: '/admin' }] : []),
   ];
 
   const isActive = (path: string) => {
@@ -25,12 +25,7 @@ export function Sidebar() {
       initial={{ x: -280 }}
       animate={{ x: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed left-0 top-0 h-screen w-64 border-r border-white/40 p-6"
-      style={{
-        background: 'rgba(255, 255, 255, 0.7)',
-        backdropFilter: 'blur(40px)',
-        boxShadow: 'inset 0.5px 0 0 rgba(255, 255, 255, 0.4), 1px 0 0 rgba(0, 0, 0, 0.05)',
-      }}
+      className="fixed left-0 top-0 h-screen w-64 p-6 glass border-y-0 border-l-0 rounded-none shadow-xl z-20"
     >
       <div className="flex h-full flex-col">
         {/* Logo */}
@@ -38,7 +33,7 @@ export function Sidebar() {
           <h1 className="bg-gradient-to-r from-[#007AFF] to-[#5AC8FA] bg-clip-text text-2xl font-semibold tracking-tight text-transparent">
             Crystal
           </h1>
-          <p className="mt-1 text-sm text-[#8E8E93]">Corporate Directory</p>
+          <p className="mt-1 text-sm text-[#8E8E93]">Корпоративный справочник</p>
         </div>
 
         {/* Navigation */}
@@ -53,15 +48,13 @@ export function Sidebar() {
                 to={item.path}
                 className="relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
                 style={{
-                  background: active ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
-                  color: active ? '#007AFF' : '#1C1C1E',
+                  color: active ? 'var(--primary)' : 'var(--foreground)',
                 }}
               >
                 {active && (
                   <motion.div
                     layoutId="activeNav"
-                    className="absolute inset-0 rounded-lg"
-                    style={{ background: 'rgba(0, 122, 255, 0.1)' }}
+                    className="absolute inset-0 rounded-lg bg-sidebar-accent"
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                   />
                 )}
@@ -77,7 +70,7 @@ export function Sidebar() {
           <div className="border-t border-black/5 pt-4">
             <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
               <div className="relative">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] text-sm font-medium text-white">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-medium text-white shadow-md">
                   {currentUser.full_name
                     .split(' ')
                     .map((n) => n[0])
@@ -93,10 +86,10 @@ export function Sidebar() {
                 )}
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-medium text-[#1C1C1E]">
+                <p className="truncate text-sm font-medium text-foreground">
                   {currentUser.full_name}
                 </p>
-                <p className="truncate text-xs text-[#8E8E93]">{currentUser.job_title}</p>
+                <p className="truncate text-xs text-muted-foreground">{currentUser.job_title}</p>
               </div>
             </div>
 
@@ -105,7 +98,7 @@ export function Sidebar() {
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#FF3B30] transition-colors hover:bg-red-50"
             >
               <LogOut className="h-4 w-4" strokeWidth={1.5} />
-              Logout
+              Выйти
             </button>
           </div>
         )}

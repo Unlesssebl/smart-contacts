@@ -41,7 +41,7 @@ export function SpotlightSearch() {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search employees by name, title, or department..."
+            placeholder="Поиск сотрудников по имени, должности или отделу..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 bg-transparent text-base text-[#1C1C1E] placeholder-[#8E8E93] outline-none"
@@ -62,8 +62,7 @@ export function SpotlightSearch() {
               className="overflow-hidden border-t border-black/5 bg-white/40 px-6 py-3"
             >
               <p className="text-sm text-[#8E8E93]">
-                Press <kbd className="rounded bg-white/60 px-1.5 py-0.5 text-xs">Enter</kbd> to focus
-                results
+                Нажмите <kbd className="rounded bg-white/60 px-1.5 py-0.5 text-xs">Enter</kbd>, чтобы перейти к результатам
               </p>
             </motion.div>
           )}
