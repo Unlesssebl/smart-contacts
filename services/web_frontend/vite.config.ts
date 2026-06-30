@@ -31,6 +31,10 @@ export default defineConfig({
     },
   },
 
+  server: {
+    host: '10.245.19.85',
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

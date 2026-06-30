@@ -2,7 +2,7 @@
 
 .login-page-wrapper {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #ffffff;
+    background: #09121c; /* Fallback dark background */
     color: #0f1923;
     display: flex;
     min-height: 100vh;
@@ -27,45 +27,58 @@
     --error: #ef4444;
 }
 
+/* Фоновый слой (минималистичные волны) */
+.login-page-wrapper::before {
+    content: '';
+    position: fixed;
+    inset: -2%;
+    background-image: linear-gradient(rgba(32, 92, 158, 0.45), rgba(32, 92, 158, 0.45)), url('/login_background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(4px) brightness(1.2); /* Легкое размытие для мягкости, увеличена яркость */
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Сетка (Dot Matrix) и виньетка поверх размытого фона */
+.login-page-wrapper::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 4px 4px;
+    box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.25); /* Осветлена виньетка */
+    pointer-events: none;
+}
+
 /* ─────────────────────────────────────────
     LEFT PANEL
 ───────────────────────────────────────── */
 .brand-panel {
     flex: 1;
-    background: linear-gradient(150deg, #0a1d36 0%, #0e2444 30%, #1a3f6f 70%, #1e4d85 100%);
+    background: transparent;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     padding: 48px 60px;
     position: relative;
+    z-index: 1;
     overflow: hidden;
     /* Мягкая тень перетекания на правую панель */
     box-shadow: 20px 0 60px -10px rgba(10, 29, 54, 0.25);
 }
 
-/* Тонкая горизонтальная сетка */
+/* Затемняющий оверлей для улучшения читаемости текста */
 .brand-panel::before {
     content: '';
     position: absolute;
     inset: 0;
-    background-image:
-        linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-    background-size: 100% 80px;
+    /* Тёмный градиент слева направо: текст читаем, фон остаётся декоративным */
+    background: linear-gradient(to right, rgba(13, 43, 79, 0.7) 0%, rgba(13, 43, 79, 0.1) 100%);
     pointer-events: none;
-    z-index: 0;
-}
-
-/* Диагональный световой акцент */
-.brand-panel::after {
-    content: '';
-    position: absolute;
-    bottom: -100px;
-    right: -80px;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(ellipse at center, rgba(32, 92, 158, 0.20) 0%, transparent 65%);
-    pointer-events: none;
-    z-index: 0;
+    z-index: 1;
 }
 
 /* Шапка: логотип */
@@ -181,11 +194,11 @@
 }
 
 .brand-description {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.75;
-    color: rgba(255, 255, 255, 0.65);
+    color: rgba(255, 255, 255, 0.7);
     font-weight: 300;
-    max-width: 340px;
+    max-width: 320px;
     opacity: 0;
     animation: descReveal 0.8s 1.0s ease forwards;
 }
@@ -200,10 +213,10 @@
 }
 
 .brand-bottom-text {
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.20);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* ─────────────────────────────────────────
@@ -212,13 +225,18 @@
 .form-panel {
     width: 500px;
     flex-shrink: 0;
-    background: var(--surface);
+    /* Градиентный стекломорфизм для идеальной гармонии с фоном */
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.70) 100%);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
     display: flex;
     flex-direction: column;
     justify-content: center;
     padding: 60px 80px;
     position: relative;
-    border-left: 1px solid var(--border);
+    z-index: 1;
+    border-left: 3px solid var(--brand-hover);
+    box-shadow: -8px 0 40px rgba(10, 29, 54, 0.2), inset 1px 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 /* ── Шапка ── */
@@ -351,23 +369,22 @@
     font-weight: 500;
 }
 
-/* ── Строгая кнопка ── */
+/* ── Элегантная кнопка (Apple/Linear style + Brand Colors) ── */
 .btn-submit {
     width: 100%;
-    margin-top: 8px;
-    padding: 22px 24px;
-    font-size: 13px;
-    font-weight: 600;
+    margin-top: 12px;
+    padding: 14px 24px;
+    font-size: 14px;
+    font-weight: 500;
     font-family: inherit;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    background: var(--brand);
+    letter-spacing: -0.2px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%), var(--brand);
     color: #ffffff;
-    border: none;
-    border-radius: 0;
+    border: 1px solid rgba(14, 36, 68, 0.9); /* Темно-синяя граница для четкости */
+    border-radius: 8px;
     cursor: pointer;
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 4px 16px rgba(26, 63, 111, 0.15);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(14, 36, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -376,12 +393,15 @@
 }
 
 .btn-submit:hover:not(:disabled) {
-    background: var(--brand-hover);
-    box-shadow: 0 8px 24px rgba(32, 92, 158, 0.3);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%), var(--brand-hover);
+    box-shadow: 0 4px 12px rgba(14, 36, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
 }
 
 .btn-submit:active:not(:disabled) {
-    transform: scale(0.98);
+    background: var(--brand-dark);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(0);
 }
 
 .btn-submit:disabled {

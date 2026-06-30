@@ -114,7 +114,7 @@ export function LoginPage() {
 
             {/* Подвал */}
             <div className="brand-bottom">
-              <div className="brand-bottom-text">ТЭМПО · Холдинг</div>
+              <div className="brand-bottom-text">© 2026 Холдинг · ТЭМПО</div>
             </div>
           </div>
 
@@ -180,9 +180,6 @@ export function LoginPage() {
               >
                 <span>
                   {isSuccess ? 'Успешно' : isSubmitting ? 'Авторизация...' : 'Войти в справочник'}
-                </span>
-                <span className="arrow" style={{ opacity: isSubmitting && !isSuccess ? 0 : 1 }}>
-                  {isSuccess ? '✓' : '→'}
                 </span>
               </button>
             </form>
