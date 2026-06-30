@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { checkSso } from '../../api/auth';
+import './LoginPage.css';
 
 export function LoginPage() {
   const [samAccount, setSamAccount] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSsoChecking, setIsSsoChecking] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const navigate = useNavigate();
   const { login, setAuth, isAuthenticated } = useAppStore();
 
@@ -37,7 +41,7 @@ export function LoginPage() {
             internal_phone: data.user.internal_phone || '',
             mobile_phone: data.user.mobile_phone || ''
           };
-          
+
           setAuth(mappedUser, data.access_token);
           navigate('/');
         }
@@ -54,105 +58,148 @@ export function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
-    const success = login(samAccount, password);
-    if (success) {
-      navigate('/');
-    } else {
-      setError('Неверные учетные данные. Попробуйте: jive, cfederighi, sprescott, jternus, dobrien или ecue');
-    }
+    // Simulate network delay for the smooth animation
+    setTimeout(() => {
+      const success = login(samAccount, password);
+      if (success) {
+        setIsSuccess(true);
+        setTimeout(() => navigate('/'), 800);
+      } else {
+        setError('Неверные учетные данные. Попробуйте: jive, cfederighi, sprescott...');
+        setIsSubmitting(false);
+      }
+    }, 1200);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-transparent">
-      <AnimatePresence mode="wait">
-        {isSsoChecking ? (
+    <AnimatePresence mode="wait">
+      {isSsoChecking ? (
+        <div key="loader" className="flex min-h-screen items-center justify-center bg-gray-50">
           <motion.div
-            key="sso-loader"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.1 }}
-            className="flex flex-col items-center gap-4 p-12 glass-card"
+            className="flex flex-col items-center gap-4 p-12 bg-white rounded-xl shadow-sm border border-gray-100"
           >
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-lg font-medium text-foreground">Проверка безопасного доступа...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-[#1a3f6f]" />
+            <p className="text-lg font-medium text-gray-900">Проверка безопасного доступа...</p>
           </motion.div>
-        ) : (
-          <motion.div
-            key="login-form"
-            initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-md overflow-hidden glass-card p-0"
-      >
-        <div className="p-10">
-          {/* Logo */}
-          <div className="text-center">
-            <h1 className="bg-gradient-to-r from-primary to-accent bg-clip-text text-4xl font-semibold tracking-tight text-transparent">
-              Crystal
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">Корпоративный справочник</p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="mt-10 space-y-5">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">
-                Учетная запись SAM
-              </label>
-              <input
-                type="text"
-                value={samAccount}
-                onChange={(e) => setSamAccount(e.target.value)}
-                placeholder="Введите вашу учетную запись SAM"
-                required
-                className="w-full rounded-xl border border-border px-4 py-3 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-ring bg-input-background backdrop-blur-md"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Пароль</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Введите ваш пароль"
-                required
-                className="w-full rounded-xl border border-border px-4 py-3 text-sm text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-ring bg-input-background backdrop-blur-md"
-              />
-            </div>
-
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-xl bg-red-50 p-3 text-sm text-red-600"
-              >
-                {error}
-              </motion.div>
-            )}
-
-            <motion.button
-              type="submit"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-3.5 font-medium text-white shadow-lg transition-all hover:shadow-xl opacity-90 hover:opacity-100"
-            >
-              <LogIn className="h-5 w-5" strokeWidth={1.5} />
-              Войти
-            </motion.button>
-          </form>
-
-          {/* Demo Hint */}
-          <div className="mt-6 rounded-xl bg-white/20 p-4 border border-white/30 backdrop-blur-sm">
-            <p className="text-xs text-foreground/80">
-              <strong>Демо-аккаунты:</strong> Используйте любую учетную запись SAM из тестовых данных (например, "jive", "cfederighi") с любым паролем.
-            </p>
-          </div>
         </div>
-      </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      ) : (
+        <motion.div
+          key="login"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="login-page-wrapper"
+        >
+          {/* ════════ LEFT: BRANDING ════════ */}
+          <div className="brand-panel animate-fade-in">
+            {/* Шапка с логотипом */}
+            <div className="brand-header">
+              <img src="/GK_logo.png" alt="ТЭМПО" className="brand-logo-img" />
+            </div>
+
+            {/* Центральный контент */}
+            <div className="brand-content">
+              <h1 className="brand-headline">Ваши коллеги</h1>
+              <div className="brand-headline-sub">Всегда на связи</div>
+              <div className="brand-divider"></div>
+              <p className="brand-description">
+                Справочная система для быстрого и лёгкого поиска контактов внутри холдинга.
+              </p>
+            </div>
+
+            {/* Подвал */}
+            <div className="brand-bottom">
+              <div className="brand-bottom-text">ТЭМПО · Холдинг</div>
+            </div>
+          </div>
+
+          {/* ════════ RIGHT: FORM ════════ */}
+          <div className="form-panel">
+            <div className="form-eyebrow animate-fade-up-1">— Авторизация</div>
+            <h2 className="form-title animate-fade-up-2">Добро пожаловать</h2>
+            <p className="form-subtitle animate-fade-up-3">Используйте данные вашей рабочей учётной записи Windows</p>
+
+            <form onSubmit={handleSubmit} noValidate>
+              <div className="form-group animate-fade-up-4">
+                <label className="form-label" htmlFor="login">Логин</label>
+                <div className="input-wrapper">
+                  <input
+                    type="text"
+                    id="login"
+                    className="form-input"
+                    placeholder="Например, belikov.a.a"
+                    autoComplete="username"
+                    value={samAccount}
+                    onChange={(e) => setSamAccount(e.target.value)}
+                    required
+                  />
+                  <div className="input-line"></div>
+                </div>
+              </div>
+
+              <div className="form-group animate-fade-up-5">
+                <label className="form-label" htmlFor="password">Пароль</label>
+                <div className="input-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    className="form-input"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <div className="input-line"></div>
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? 'Скрыть' : 'Показать'}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="form-error visible animate-fade-up-5">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="btn-submit animate-fade-up-6"
+                disabled={isSubmitting || isSuccess}
+                style={{ background: isSuccess ? '#0e2444' : '' }}
+              >
+                <span>
+                  {isSuccess ? 'Успешно' : isSubmitting ? 'Авторизация...' : 'Войти в справочник'}
+                </span>
+                <span className="arrow" style={{ opacity: isSubmitting && !isSuccess ? 0 : 1 }}>
+                  {isSuccess ? '✓' : '→'}
+                </span>
+              </button>
+            </form>
+
+            <div className="form-footer animate-fade-up-6" style={{ animationDelay: '0.5s' }}>
+              <a href="#">Обратиться в техническую поддержку</a>
+            </div>
+
+            {/* Demo Hint */}
+            <div className="absolute top-6 right-6 max-w-xs rounded bg-gray-50/80 p-3 border border-gray-200 shadow-sm opacity-50 hover:opacity-100 transition-opacity">
+              <p className="text-[10px] text-gray-500 leading-tight">
+                <strong>Демо:</strong> Используйте любую SAM УЗ (напр. "jive", "cfederighi") с любым паролем.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

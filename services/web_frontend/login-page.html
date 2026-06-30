@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — Справочник контактов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --brand: #1a3f6f;
+            --brand-dark: #0e2444;
+            --brand-mid: #1e4d85;
+
+            --ink: #0f1923;
+            --ink-2: #374151;
+            --ink-3: #6b7280;
+            --ink-4: #9ca3af;
+
+            --surface: #ffffff;
+            --border: #e5e7eb;
+            --error: #ef4444;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--surface);
+            color: var(--ink);
+            display: flex;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ─────────────────────────────────────────
+           LEFT PANEL
+        ───────────────────────────────────────── */
+        .brand-panel {
+            flex: 1;
+            background: linear-gradient(160deg, #0e2444 0%, #1a3f6f 55%, #1e4d85 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 52px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Тонкая горизонтальная сетка */
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+            background-size: 100% 72px;
+            pointer-events: none;
+        }
+
+        /* Один мягкий световой блик */
+        .brand-panel::after {
+            content: '';
+            position: absolute;
+            top: -160px;
+            right: -160px;
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(74, 127, 181, 0.18) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .brand-logo {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-logo-mark {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 6px 12px;
+            border-radius: 4px;
+        }
+
+        .brand-logo-text {
+            font-size: 15px;
+            font-weight: 300;
+            letter-spacing: 0.2px;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .brand-tag {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.40);
+            margin-bottom: 28px;
+        }
+
+        .brand-headline {
+            font-size: clamp(38px, 4vw, 54px);
+            font-weight: 600;
+            line-height: 1.08;
+            letter-spacing: -1.5px;
+            color: #ffffff;
+            margin-bottom: 14px;
+        }
+
+        .brand-headline-sub {
+            font-size: clamp(28px, 3vw, 40px);
+            font-weight: 300;
+            font-style: italic;
+            line-height: 1.15;
+            letter-spacing: -0.5px;
+            color: rgba(255, 255, 255, 0.50);
+            margin-bottom: 36px;
+        }
+
+        .brand-divider {
+            width: 32px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.25);
+            margin-bottom: 28px;
+        }
+
+        .brand-description {
+            font-size: 15px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.50);
+            font-weight: 300;
+            max-width: 360px;
+        }
+
+        .brand-bottom {
+            position: relative;
+            z-index: 2;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .brand-bottom-text {
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* ─────────────────────────────────────────
+           RIGHT PANEL — EDITORIAL FORM
+        ───────────────────────────────────────── */
+        .form-panel {
+            width: 500px;
+            flex-shrink: 0;
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 64px 72px;
+            position: relative;
+            border-left: 1px solid var(--border);
+        }
+
+        /* ── Шапка ── */
+        .form-eyebrow {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--ink-4);
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .form-eyebrow::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .form-title {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            color: var(--brand-dark);
+            margin-bottom: 12px;
+            line-height: 1.15;
+        }
+
+        .form-subtitle {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--ink-3);
+            font-weight: 400;
+            margin-bottom: 48px;
+        }
+
+        /* ── Поля ввода (Линии) ── */
+        .form-group {
+            margin-bottom: 36px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--ink-3);
+            margin-bottom: 12px;
+            transition: color 0.3s ease;
+        }
+
+        .form-group:focus-within .form-label {
+            color: var(--brand);
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 0 16px 0;
+            font-size: 16px;
+            font-family: inherit;
+            font-weight: 400;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            background: transparent;
+            color: var(--ink);
+            outline: none;
+            border-radius: 0;
+            -webkit-appearance: none;
+        }
+
+        .form-input::placeholder {
+            color: var(--ink-4);
+            font-weight: 300;
+        }
+
+        /* Выезжающая акцентная линия при фокусе */
+        .input-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 1px;
+            /* Можно сделать 2px для большей выразительности */
+            background: var(--brand);
+            transition: width 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .form-input:focus~.input-line {
+            width: 100%;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 0;
+            top: 40%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--ink-3);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: inherit;
+            padding: 4px 0 4px 8px;
+            transition: color 0.2s ease;
+        }
+
+        .password-toggle:hover {
+            color: var(--brand);
+        }
+
+        /* ── Сообщение об ошибке ── */
+        .form-error {
+            display: none;
+            margin-bottom: 24px;
+            padding: 12px 0;
+            font-size: 13px;
+            color: var(--error);
+            font-weight: 500;
+        }
+
+        .form-error.visible {
+            display: block;
+        }
+
+        /* ── Строгая кнопка ── */
+        .btn-submit {
+            width: 100%;
+            margin-top: 8px;
+            padding: 22px 24px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            background: var(--brand);
+            color: #ffffff;
+            border: none;
+            border-radius: 0;
+            /* Острые углы */
+            cursor: pointer;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 16px rgba(26, 63, 111, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .btn-submit:hover {
+            background: var(--brand-dark);
+            box-shadow: 0 8px 24px rgba(26, 63, 111, 0.25);
+        }
+
+        .btn-submit:active {
+            box-shadow: 0 2px 8px rgba(26, 63, 111, 0.15);
+        }
+
+        .btn-submit .arrow {
+            font-size: 16px;
+            font-weight: 400;
+            transition: transform 0.3s ease;
+        }
+
+        .btn-submit:hover .arrow {
+            transform: translateX(4px);
+        }
+
+        /* ── Футер формы ── */
+        .form-footer {
+            position: absolute;
+            bottom: 40px;
+            left: 72px;
+            right: 72px;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        .form-footer a {
+            color: var(--ink-4);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .form-footer a:hover {
+            color: var(--brand);
+        }
+
+        /* ─────────────────────────────────────────
+           АНИМАЦИИ ПОЯВЛЕНИЯ
+        ───────────────────────────────────────── */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .brand-panel {
+            animation: fadeIn 0.9s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .form-eyebrow {
+            animation: fadeUp 0.6s 0.10s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .form-title {
+            animation: fadeUp 0.6s 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .form-subtitle {
+            animation: fadeUp 0.6s 0.24s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .form-group:nth-child(1) {
+            animation: fadeUp 0.6s 0.30s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .form-group:nth-child(2) {
+            animation: fadeUp 0.6s 0.36s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .btn-submit {
+            animation: fadeUp 0.6s 0.42s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        /* ─────────────────────────────────────────
+           RESPONSIVE
+        ───────────────────────────────────────── */
+        @media (max-width: 960px) {
+            body {
+                flex-direction: column;
+                overflow-y: auto;
+            }
+
+            .brand-panel {
+                padding: 36px 32px;
+                min-height: auto;
+            }
+
+            .brand-headline {
+                font-size: 32px;
+            }
+
+            .brand-headline-sub {
+                font-size: 24px;
+            }
+
+            .brand-bottom {
+                display: none;
+            }
+
+            .form-panel {
+                width: 100%;
+                padding: 48px 32px 80px;
+                border-left: none;
+                border-top: 1px solid var(--border);
+            }
+
+            .form-footer {
+                left: 32px;
+                right: 32px;
+                bottom: 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ════════ LEFT: BRANDING ════════ -->
+    <div class="brand-panel">
+        <div class="brand-logo">
+            <div class="brand-logo-mark">ТЭМПО</div>
+            <div class="brand-logo-text">Справочник контактов</div>
+        </div>
+
+        <div class="brand-content">
+            <div class="brand-tag">Корпоративная сеть</div>
+            <h1 class="brand-headline">Ваши коллеги.</h1>
+            <div class="brand-headline-sub">Всегда на связи.</div>
+            <div class="brand-divider"></div>
+            <p class="brand-description">
+                Справочная система для быстрого и лёгкого поиска контактов внутри холдинга.
+            </p>
+        </div>
+
+        <div class="brand-bottom">
+            <div class="brand-bottom-text">ТЭМПО · Холдинг</div>
+        </div>
+    </div>
+
+    <!-- ════════ RIGHT: FORM ════════ -->
+    <div class="form-panel">
+
+        <div class="form-eyebrow">— Авторизация</div>
+        <h2 class="form-title">Добро пожаловать</h2>
+        <p class="form-subtitle">Используйте данные вашей рабочей учётной записи Windows</p>
+
+        <form id="loginForm" novalidate>
+
+            <div class="form-group">
+                <label class="form-label" for="login">Логин</label>
+                <div class="input-wrapper">
+                    <input type="text" id="login" class="form-input" placeholder="Например, belikov.a.a"
+                        autocomplete="username" required>
+                    <div class="input-line"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Пароль</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" class="form-input" placeholder="••••••••"
+                        autocomplete="current-password" required>
+                    <div class="input-line"></div>
+                    <button type="button" class="password-toggle" id="togglePassword">Показать</button>
+                </div>
+            </div>
+
+            <div class="form-error" id="formError">
+                Неверные учётные данные. Проверьте логин и пароль.
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                <span id="btnText">Войти в справочник</span>
+                <span class="arrow" id="btnArrow">→</span>
+            </button>
+
+        </form>
+
+        <div class="form-footer">
+            <a href="#">Обратиться в техническую поддержку</a>
+        </div>
+
+    </div>
+
+    <script>
+        // ── Показать / скрыть пароль
+        const toggleBtn = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        toggleBtn.addEventListener('click', function () {
+            const isHidden = passwordInput.type === 'password';
+            passwordInput.type = isHidden ? 'text' : 'password';
+            this.textContent = isHidden ? 'Скрыть' : 'Показать';
+        });
+
+        // ── Отправка формы
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const arrow = document.getElementById('btnArrow');
+            const error = document.getElementById('formError');
+            const originalText = btnText.textContent;
+
+            error.classList.remove('visible');
+            btn.disabled = true;
+            btnText.textContent = 'Авторизация...';
+            arrow.style.opacity = '0';
+
+            setTimeout(() => {
+                // Симуляция успешного входа
+                btnText.textContent = 'Успешно';
+                arrow.textContent = '✓';
+                arrow.style.opacity = '1';
+                btn.style.background = '#0e2444'; // brand-dark
+
+                setTimeout(() => {
+                    // Возврат в исходное (обычно тут редирект)
+                    btnText.textContent = originalText;
+                    arrow.textContent = '→';
+                    btn.style.background = '';
+                    btn.disabled = false;
+                }, 2000);
+            }, 1200);
+        });
+    </script>
+
+</body>
+
+</html>
