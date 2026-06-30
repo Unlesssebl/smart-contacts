@@ -67,7 +67,7 @@ export function EmployeeCard({ user, onClick }: EmployeeCardProps) {
 
       {/* Role Badge */}
       {(user.role === 'admin' || user.role === 'it_operator') && (
-        <div className="mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-sidebar-accent text-sidebar-accent-foreground">
+        <div className="mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-primary/10 text-primary">
           <div className="h-1.5 w-1.5 rounded-full bg-primary" />
           {user.role === 'admin' ? 'Администратор' : 'IT-Оператор'}
         </div>

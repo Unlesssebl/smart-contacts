@@ -188,12 +188,7 @@ export function LoginPage() {
               <a href="#">Обратиться в техническую поддержку</a>
             </div>
 
-            {/* Demo Hint */}
-            <div className="absolute top-6 right-6 max-w-xs rounded bg-gray-50/80 p-3 border border-gray-200 shadow-sm opacity-50 hover:opacity-100 transition-opacity">
-              <p className="text-[10px] text-gray-500 leading-tight">
-                <strong>Демо:</strong> Используйте любую SAM УЗ (напр. "jive", "cfederighi") с любым паролем.
-              </p>
-            </div>
+
           </div>
         </motion.div>
       )}

@@ -46,7 +46,7 @@ export function SpotlightSearch() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 bg-transparent text-base text-[#1C1C1E] placeholder-[#8E8E93] outline-none"
           />
-          <div className="flex items-center gap-1 rounded-lg bg-white/60 px-2 py-1 text-xs text-[#8E8E93]">
+          <div className="flex items-center gap-1 rounded-lg bg-black/5 px-2 py-1 text-xs text-[#8E8E93]">
             <Command className="h-3 w-3" strokeWidth={1.5} />
             <span>K</span>
           </div>
@@ -62,7 +62,7 @@ export function SpotlightSearch() {
               className="overflow-hidden border-t border-black/5 bg-white/40 px-6 py-3"
             >
               <p className="text-sm text-[#8E8E93]">
-                Нажмите <kbd className="rounded bg-white/60 px-1.5 py-0.5 text-xs">Enter</kbd>, чтобы перейти к результатам
+                Нажмите <kbd className="rounded bg-black/5 px-1.5 py-0.5 text-xs">Enter</kbd>, чтобы перейти к результатам
               </p>
             </motion.div>
           )}

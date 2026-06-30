@@ -106,7 +106,7 @@ export function AdminPage() {
                         key={request.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="rounded-xl border border-white/20 bg-white/30 backdrop-blur-sm p-5 shadow-sm"
+                        className="rounded-xl border border-black/5 bg-black/5 backdrop-blur-sm p-5 shadow-sm"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -187,7 +187,7 @@ export function AdminPage() {
                         key={report.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="rounded-xl border border-white/20 bg-white/30 backdrop-blur-sm p-5 shadow-sm"
+                        className="rounded-xl border border-black/5 bg-black/5 backdrop-blur-sm p-5 shadow-sm"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">

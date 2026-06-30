@@ -108,7 +108,7 @@ export function ProfilePage() {
                     Контактная информация
                   </h3>
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                    <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
                       <Mail className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
                         <p className="text-xs text-muted-foreground">Email</p>
@@ -116,7 +116,7 @@ export function ProfilePage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                    <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
                       <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
                         <p className="text-xs text-muted-foreground">Внутренний телефон</p>
@@ -125,7 +125,7 @@ export function ProfilePage() {
                     </div>
 
                     {isEditing ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
                         <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div className="flex-1">
                           <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
@@ -138,7 +138,7 @@ export function ProfilePage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
                         <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div>
                           <p className="text-xs text-muted-foreground">Мобильный телефон</p>
@@ -148,7 +148,7 @@ export function ProfilePage() {
                     )}
 
                     {isEditing ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
                         <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div className="flex-1">
                           <p className="mb-1 text-xs text-muted-foreground">Офис / Расположение</p>
@@ -162,7 +162,7 @@ export function ProfilePage() {
                       </div>
                     ) : (
                       user.office_location && (
-                        <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                        <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
                           <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div>
                             <p className="text-xs text-muted-foreground">Офис / Расположение</p>
@@ -177,7 +177,7 @@ export function ProfilePage() {
                 {manager && (
                   <div>
                     <h3 className="mb-4 text-sm font-semibold text-foreground">Организация</h3>
-                    <div className="flex items-center gap-3 rounded-xl bg-white/30 backdrop-blur-md p-4 shadow-sm border border-white/20">
+                    <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
                       <UserIcon className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
                         <p className="text-xs text-muted-foreground">Руководитель</p>
@@ -205,7 +205,7 @@ export function ProfilePage() {
                           setMobilePhone(user.mobile_phone);
                           setOfficeLocation(user.office_location || '');
                         }}
-                        className="rounded-xl border border-white/30 bg-white/30 backdrop-blur-md px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-white/50"
+                        className="rounded-xl border border-black/10 bg-black/5 px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-black/10"
                       >
                         Отмена
                       </button>
@@ -213,7 +213,7 @@ export function ProfilePage() {
                   ) : (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-2 rounded-xl border border-white/30 bg-white/30 backdrop-blur-md px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-white/50"
+                      className="flex items-center gap-2 rounded-xl border border-black/10 bg-black/5 px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-black/10"
                     >
                       <Edit className="h-4 w-4" strokeWidth={1.5} />
                       Редактировать профиль
