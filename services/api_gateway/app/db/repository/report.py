@@ -6,8 +6,10 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 
+from sqlalchemy.orm import Session, joinedload
+
 def get_reports(db: Session) -> List[Report]:
-    return db.query(Report).order_by(Report.created_at.desc()).all()
+    return db.query(Report).options(joinedload(Report.target_user), joinedload(Report.reporter)).order_by(Report.created_at.desc()).all()
 
 def get_report(db: Session, report_id: UUID) -> Optional[Report]:
     return db.query(Report).filter(Report.id == report_id).first()

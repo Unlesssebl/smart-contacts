@@ -10,7 +10,9 @@ class ReportCreate(BaseModel):
 class ReportRead(BaseModel):
     id: UUID
     user_id: UUID = Field(alias="target_user_guid")
+    target_user_name: Optional[str] = None
     reporter_user_guid: Optional[UUID] = None
+    reporter_user_name: Optional[str] = None
     description: str = Field(alias="reason")
     status: str
     created_at: datetime

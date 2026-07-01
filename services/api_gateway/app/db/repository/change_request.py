@@ -5,8 +5,10 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 
+from sqlalchemy.orm import Session, joinedload
+
 def get_change_requests(db: Session) -> List[ChangeRequest]:
-    return db.query(ChangeRequest).order_by(ChangeRequest.created_at.desc()).all()
+    return db.query(ChangeRequest).options(joinedload(ChangeRequest.user)).order_by(ChangeRequest.created_at.desc()).all()
 
 def get_change_request(db: Session, request_id: UUID) -> Optional[ChangeRequest]:
     return db.query(ChangeRequest).filter(ChangeRequest.id == request_id).first()

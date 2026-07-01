@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Check, X, Shield } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,7 +10,11 @@ type Tab = 'requests' | 'reports';
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>('requests');
-  const { changeRequests, reports, approveChangeRequest, rejectChangeRequest } = useAppStore();
+  const { changeRequests, reports, fetchAdminData, approveChangeRequest, rejectChangeRequest } = useAppStore();
+
+  useEffect(() => {
+    fetchAdminData();
+  }, [fetchAdminData]);
 
   const pendingRequests = changeRequests.filter((r) => r.status === 'pending');
 
@@ -109,7 +113,7 @@ export function AdminPage() {
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <p className="font-medium text-foreground">{request.user_name}</p>
+                            <p className="font-medium text-foreground">{request.user_name || 'Неизвестный'}</p>
                             <p className="mt-1 text-sm text-muted-foreground">
                               Запрос на изменение поля{' '}
                               <span className="font-medium text-foreground">
@@ -117,16 +121,12 @@ export function AdminPage() {
                               </span>
                             </p>
                             <div className="mt-3 space-y-1 text-sm">
-                              <p className="text-muted-foreground">
-                                <span className="font-medium">Старое:</span>{' '}
-                                <span className="line-through">{request.old_value}</span>
-                              </p>
                               <p className="text-primary">
                                 <span className="font-medium">Новое:</span> {request.new_value}
                               </p>
                             </div>
                             <p className="mt-2 text-xs text-muted-foreground">
-                              {new Date(request.requested_at).toLocaleDateString('ru-RU', {
+                              {new Date(request.created_at).toLocaleDateString('ru-RU', {
                                 month: 'long',
                                 day: 'numeric',
                                 year: 'numeric',
@@ -138,11 +138,8 @@ export function AdminPage() {
 
                           <div className="flex gap-2">
                             <button
-                              onClick={() => {
-                                approveChangeRequest(request.id);
-                                toast.success('Изменение одобрено', {
-                                  description: `Поле "${getAttributeLabel(request.attribute_name)}" пользователя ${request.user_name} обновлено`,
-                                });
+                              onClick={async () => {
+                                await approveChangeRequest(request.id);
                               }}
                               className="flex items-center gap-2 rounded-lg bg-[#34C759] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2FB350]"
                             >
@@ -151,11 +148,8 @@ export function AdminPage() {
                             </button>
 
                             <button
-                              onClick={() => {
-                                rejectChangeRequest(request.id);
-                                toast.error('Изменение отклонено', {
-                                  description: `Запрос пользователя ${request.user_name} был отклонен`,
-                                });
+                              onClick={async () => {
+                                await rejectChangeRequest(request.id);
                               }}
                               className="flex items-center gap-2 rounded-lg bg-[#FF3B30] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E6342A]"
                             >
@@ -187,20 +181,20 @@ export function AdminPage() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-3">
-                              <p className="font-medium text-foreground">{report.user_name}</p>
+                              <p className="font-medium text-foreground">{report.target_user_name || 'Неизвестный'}</p>
                               <span
                                 className="rounded-full px-2.5 py-0.5 text-xs font-medium"
                                 style={{
                                   background:
-                                    report.status === 'resolved'
+                                    report.status === 'processed'
                                       ? 'rgba(52, 199, 89, 0.15)'
-                                      : report.status === 'in_progress'
+                                      : report.status === 'pending'
                                       ? 'rgba(0, 147, 233, 0.15)'
                                       : 'rgba(255, 77, 79, 0.15)',
                                   color:
-                                    report.status === 'resolved'
+                                    report.status === 'processed'
                                       ? '#38A169'
-                                      : report.status === 'in_progress'
+                                      : report.status === 'pending'
                                       ? 'var(--primary)'
                                       : 'var(--destructive)',
                                 }}
@@ -209,9 +203,9 @@ export function AdminPage() {
                               </span>
                             </div>
                             <p className="mt-1 text-sm font-medium text-primary">
-                              {report.category}
+                              Жалоба от: {report.reporter_user_name || 'Неизвестный'}
                             </p>
-                            <p className="mt-2 text-sm text-foreground">{report.description}</p>
+                            <p className="mt-2 text-sm text-foreground">{report.reason}</p>
                             <p className="mt-2 text-xs text-muted-foreground">
                               {new Date(report.created_at).toLocaleDateString('ru-RU', {
                                 month: 'long',

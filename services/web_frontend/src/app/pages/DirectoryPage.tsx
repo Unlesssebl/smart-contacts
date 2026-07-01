@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sidebar } from '../components/Sidebar';
 import { SpotlightSearch } from '../components/SpotlightSearch';
@@ -10,8 +10,13 @@ import { getEmployeeWord } from '../../lib/localization';
 
 export function DirectoryPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const getFilteredUsers = useAppStore((state) => state.getFilteredUsers);
-  const filteredUsers = getFilteredUsers();
+  const { users, fetchUsers, isSearching } = useAppStore();
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const filteredUsers = users; // Since filtering is done server-side
 
   return (
     <div className="flex min-h-screen bg-transparent">

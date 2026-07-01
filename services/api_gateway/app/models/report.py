@@ -20,3 +20,11 @@ class Report(Base):
     target_user = relationship("User", foreign_keys=[target_user_guid], backref="reports_received")
     reporter = relationship("User", foreign_keys=[reporter_user_guid], backref="reports_made")
     processor = relationship("User", foreign_keys=[processed_by])
+
+    @property
+    def target_user_name(self) -> str | None:
+        return self.target_user.display_name if self.target_user else None
+
+    @property
+    def reporter_user_name(self) -> str | None:
+        return self.reporter.display_name if self.reporter else None

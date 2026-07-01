@@ -41,6 +41,7 @@ class ChangeRequestCreate(ChangeRequestBase):
 class ChangeRequestRead(ChangeRequestBase):
     id: UUID
     user_id: UUID = Field(alias="user_guid")
+    user_name: Optional[str] = None
     field_name: str = Field(alias="attribute_name")
     status: str
     created_at: datetime

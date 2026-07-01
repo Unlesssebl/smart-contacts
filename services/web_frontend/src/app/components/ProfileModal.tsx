@@ -20,37 +20,23 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
 
   const manager = user.manager_id ? getUserById(user.manager_id) : null;
 
-  const handleSubmitChange = () => {
+  const handleSubmitChange = async () => {
     let changeCount = 0;
 
     if (mobilePhone !== user.mobile_phone) {
-      addChangeRequest({
-        user_id: user.id,
-        user_name: user.full_name,
+      await addChangeRequest({
         attribute_name: 'mobile_phone',
-        old_value: user.mobile_phone,
-        new_value: mobilePhone,
-        status: 'pending',
+        new_value: mobilePhone || '',
       });
       changeCount++;
     }
 
     if (officeLocation !== (user.office_location || '')) {
-      addChangeRequest({
-        user_id: user.id,
-        user_name: user.full_name,
+      await addChangeRequest({
         attribute_name: 'office_location',
-        old_value: user.office_location || '',
         new_value: officeLocation,
-        status: 'pending',
       });
       changeCount++;
-    }
-
-    if (changeCount > 0) {
-      toast.success('Запрос на изменение отправлен', {
-        description: `${changeCount} ${getChangeWord(changeCount)} на рассмотрении у администратора`,
-      });
     }
 
     setIsEditing(false);

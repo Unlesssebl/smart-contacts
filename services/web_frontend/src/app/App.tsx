@@ -49,10 +49,13 @@ function AnimatedRoutes() {
   );
 }
 
+import { GatekeeperModal } from './components/GatekeeperModal';
+
 export default function App() {
   return (
     <BrowserRouter>
       <AnimatedRoutes />
+      <GatekeeperModal />
       <Toaster
         position="top-right"
         toastOptions={{

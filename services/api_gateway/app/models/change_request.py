@@ -21,3 +21,7 @@ class ChangeRequest(Base):
 
     user = relationship("User", foreign_keys=[user_guid], backref="change_requests")
     resolver = relationship("User", foreign_keys=[resolved_by])
+
+    @property
+    def user_name(self) -> str | None:
+        return self.user.display_name if self.user else None
