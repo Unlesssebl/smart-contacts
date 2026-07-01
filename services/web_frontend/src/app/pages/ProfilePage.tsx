@@ -62,8 +62,8 @@ export function ProfilePage() {
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
-      <main className="ml-64 flex-1">
-        <div className="mx-auto max-w-4xl px-8 py-12">
+      <main className="mr-80 flex-1 relative">
+        <div className="mx-auto max-w-4xl px-8 pt-48 pb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -104,11 +104,11 @@ export function ProfilePage() {
             <div className="p-8">
               <div className="space-y-6">
                 <div>
-                  <h3 className="mb-4 text-sm font-semibold text-foreground">
+                  <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Контактная информация
                   </h3>
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
+                    <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                       <Mail className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
                         <p className="text-xs text-muted-foreground">Email</p>
@@ -116,7 +116,7 @@ export function ProfilePage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
+                    <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                       <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
                         <p className="text-xs text-muted-foreground">Внутренний телефон</p>
@@ -125,7 +125,7 @@ export function ProfilePage() {
                     </div>
 
                     {isEditing ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
+                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                         <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div className="flex-1">
                           <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
@@ -138,7 +138,7 @@ export function ProfilePage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
+                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                         <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div>
                           <p className="text-xs text-muted-foreground">Мобильный телефон</p>
@@ -148,7 +148,7 @@ export function ProfilePage() {
                     )}
 
                     {isEditing ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
+                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                         <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div className="flex-1">
                           <p className="mb-1 text-xs text-muted-foreground">Офис / Расположение</p>
@@ -162,7 +162,7 @@ export function ProfilePage() {
                       </div>
                     ) : (
                       user.office_location && (
-                        <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
+                        <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                           <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div>
                             <p className="text-xs text-muted-foreground">Офис / Расположение</p>
@@ -176,8 +176,8 @@ export function ProfilePage() {
 
                 {manager && (
                   <div>
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">Организация</h3>
-                    <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4 shadow-sm border border-black/5">
+                    <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Организация</h3>
+                    <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                       <UserIcon className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
                         <p className="text-xs text-muted-foreground">Руководитель</p>
@@ -195,7 +195,7 @@ export function ProfilePage() {
                     <>
                       <button
                         onClick={handleSubmitChange}
-                        className="flex-1 rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg transition-all hover:opacity-90"
+                        className="flex-1 btn-primary py-3"
                       >
                         Отправить запрос на изменение
                       </button>
@@ -205,7 +205,7 @@ export function ProfilePage() {
                           setMobilePhone(user.mobile_phone);
                           setOfficeLocation(user.office_location || '');
                         }}
-                        className="rounded-xl border border-black/10 bg-black/5 px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-black/10"
+                        className="btn-secondary px-6 py-3"
                       >
                         Отмена
                       </button>
@@ -213,7 +213,7 @@ export function ProfilePage() {
                   ) : (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-2 rounded-xl border border-black/10 bg-black/5 px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-black/10"
+                      className="btn-secondary px-6 py-3 gap-2"
                     >
                       <Edit className="h-4 w-4" strokeWidth={1.5} />
                       Редактировать профиль

@@ -17,18 +17,18 @@ export function DirectoryPage() {
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
-      <main className="ml-64 flex-1">
-        <div className="mx-auto max-w-7xl px-8 py-12">
+      <main className="mr-80 flex-1 relative">
+        <div className="mx-auto max-w-7xl px-8 pt-48 pb-12">
           {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="mb-12 text-center"
           >
-            <h1 className="mb-3 text-4xl font-semibold tracking-tight text-foreground">
+            <h1 className="mb-3 text-4xl font-semibold tracking-tight text-white">
               Справочник сотрудников
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-white/80">
               Находите коллег и связывайтесь с ними по всей организации
             </p>
           </motion.div>
@@ -75,7 +75,7 @@ export function DirectoryPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-8 text-center text-sm text-muted-foreground"
+            className="mt-8 text-center text-sm text-white/80"
           >
             Показано: {filteredUsers.length} {getEmployeeWord(filteredUsers.length)}
           </motion.div>

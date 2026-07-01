@@ -26,27 +26,18 @@ export function SpotlightSearch() {
       transition={{ delay: 0.1 }}
       className="relative mx-auto w-full max-w-2xl"
     >
-      <div
-        className="relative overflow-hidden rounded-2xl border shadow-2xl transition-all focus-within:shadow-3xl"
-        style={{
-          background: 'rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(40px)',
-          border: '0.5px solid rgba(255, 255, 255, 0.5)',
-          boxShadow:
-            'inset 0.5px 0.5px 0 rgba(255, 255, 255, 0.5), 0 4px 16px rgba(0, 0, 0, 0.06), 0 16px 48px rgba(0, 0, 0, 0.08)',
-        }}
-      >
+      <div className="relative overflow-hidden glass-card p-0 shadow-2xl transition-all focus-within:shadow-3xl">
         <div className="flex items-center gap-4 px-6 py-4">
-          <Search className="h-5 w-5 text-[#8E8E93]" strokeWidth={1.5} />
+          <Search className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
           <input
             ref={inputRef}
             type="text"
             placeholder="Поиск сотрудников по имени, должности или отделу..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent text-base text-[#1C1C1E] placeholder-[#8E8E93] outline-none"
+            className="flex-1 bg-transparent text-base text-foreground placeholder-muted-foreground outline-none"
           />
-          <div className="flex items-center gap-1 rounded-lg bg-black/5 px-2 py-1 text-xs text-[#8E8E93]">
+          <div className="flex items-center gap-1 rounded-lg bg-black/5 px-2 py-1 text-xs text-muted-foreground">
             <Command className="h-3 w-3" strokeWidth={1.5} />
             <span>K</span>
           </div>
@@ -61,7 +52,7 @@ export function SpotlightSearch() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden border-t border-black/5 bg-white/40 px-6 py-3"
             >
-              <p className="text-sm text-[#8E8E93]">
+              <p className="text-sm text-muted-foreground">
                 Нажмите <kbd className="rounded bg-black/5 px-1.5 py-0.5 text-xs">Enter</kbd>, чтобы перейти к результатам
               </p>
             </motion.div>

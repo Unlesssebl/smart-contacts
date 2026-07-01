@@ -18,8 +18,8 @@ export function AdminPage() {
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
-      <main className="ml-64 flex-1">
-        <div className="mx-auto max-w-7xl px-8 py-12">
+      <main className="mr-80 flex-1 relative">
+        <div className="mx-auto max-w-7xl px-8 pt-48 pb-12">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -31,10 +31,10 @@ export function AdminPage() {
                 <Shield className="h-6 w-6 text-white" strokeWidth={1.5} />
               </div>
               <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                <h1 className="text-3xl font-semibold tracking-tight text-white">
                   Панель администратора
                 </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-sm text-white/80">
                   Управление запросами на изменение и жалобами пользователей
                 </p>
               </div>
@@ -58,12 +58,12 @@ export function AdminPage() {
               {activeTab === 'requests' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute inset-0 rounded-lg bg-background/50 shadow-sm"
+                  className="absolute inset-0 rounded-lg bg-white shadow-sm"
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 />
               )}
               <span className="relative z-10">
-                Change Requests {pendingRequests.length > 0 && `(${pendingRequests.length})`}
+                Запросы на изменения {pendingRequests.length > 0 && `(${pendingRequests.length})`}
               </span>
             </button>
 
@@ -77,8 +77,7 @@ export function AdminPage() {
               {activeTab === 'reports' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute inset-0 rounded-lg shadow-sm"
-                  style={{ background: 'rgba(255, 255, 255, 0.9)' }}
+                  className="absolute inset-0 rounded-lg bg-white shadow-sm"
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 />
               )}
@@ -97,7 +96,7 @@ export function AdminPage() {
               <div className="p-6">
                 {pendingRequests.length === 0 ? (
                   <div className="py-12 text-center">
-                    <p className="text-lg text-[#8E8E93]">Нет ожидающих запросов на изменение</p>
+                    <p className="text-lg text-muted-foreground">Нет ожидающих запросов на изменение</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -106,7 +105,7 @@ export function AdminPage() {
                         key={request.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="rounded-xl border border-black/5 bg-black/5 backdrop-blur-sm p-5 shadow-sm"
+                        className="rounded-xl border border-white/60 bg-white/60 p-5"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -138,35 +137,31 @@ export function AdminPage() {
                           </div>
 
                           <div className="flex gap-2">
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                            <button
                               onClick={() => {
                                 approveChangeRequest(request.id);
                                 toast.success('Изменение одобрено', {
                                   description: `Поле "${getAttributeLabel(request.attribute_name)}" пользователя ${request.user_name} обновлено`,
                                 });
                               }}
-                              className="flex items-center gap-2 rounded-lg bg-[#34C759] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#2FB350]"
+                              className="flex items-center gap-2 rounded-lg bg-[#34C759] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2FB350]"
                             >
                               <Check className="h-4 w-4" strokeWidth={2} />
                               Одобрить
-                            </motion.button>
+                            </button>
 
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                            <button
                               onClick={() => {
                                 rejectChangeRequest(request.id);
                                 toast.error('Изменение отклонено', {
                                   description: `Запрос пользователя ${request.user_name} был отклонен`,
                                 });
                               }}
-                              className="flex items-center gap-2 rounded-lg bg-[#FF3B30] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#E6342A]"
+                              className="flex items-center gap-2 rounded-lg bg-[#FF3B30] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E6342A]"
                             >
                               <X className="h-4 w-4" strokeWidth={2} />
                               Отклонить
-                            </motion.button>
+                            </button>
                           </div>
                         </div>
                       </motion.div>
@@ -178,7 +173,7 @@ export function AdminPage() {
               <div className="p-6">
                 {reports.length === 0 ? (
                   <div className="py-12 text-center">
-                    <p className="text-lg text-[#8E8E93]">Жалоб нет</p>
+                    <p className="text-lg text-muted-foreground">Жалоб нет</p>
                   </div>
                 ) : (
                   <div className="space-y-4">

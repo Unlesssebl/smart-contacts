@@ -174,13 +174,22 @@ export function LoginPage() {
 
               <button
                 type="submit"
-                className="btn-submit animate-fade-up-6"
+                className="btn-submit animate-fade-up-6 relative overflow-hidden"
                 disabled={isSubmitting || isSuccess}
-                style={{ background: isSuccess ? '#0e2444' : '' }}
+                style={{ background: isSuccess ? 'var(--brand-dark)' : '' }}
               >
-                <span>
-                  {isSuccess ? 'Успешно' : isSubmitting ? 'Авторизация...' : 'Войти в справочник'}
-                </span>
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={isSuccess ? 'success' : isSubmitting ? 'submitting' : 'idle'}
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -30, opacity: 0 }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                    className="flex items-center justify-center w-full"
+                  >
+                    {isSuccess ? 'Успешно' : isSubmitting ? 'Авторизация...' : 'Войти в справочник'}
+                  </motion.span>
+                </AnimatePresence>
               </button>
             </form>
 

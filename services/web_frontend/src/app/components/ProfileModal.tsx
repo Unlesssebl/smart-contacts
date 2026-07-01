@@ -76,14 +76,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-2xl overflow-hidden rounded-3xl shadow-2xl"
-              style={{
-                background: 'rgba(255, 255, 255, 0.85)',
-                backdropFilter: 'blur(60px)',
-                border: '0.5px solid rgba(255, 255, 255, 0.5)',
-                boxShadow:
-                  'inset 0.5px 0.5px 0 rgba(255, 255, 255, 0.5), 0 8px 32px rgba(0, 0, 0, 0.12), 0 32px 64px rgba(0, 0, 0, 0.16)',
-              }}
+              className="relative w-full max-w-2xl overflow-hidden glass-card p-0"
             >
               {/* Header */}
               <div className="relative border-b border-black/5 px-8 py-6">
@@ -91,7 +84,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                   onClick={onClose}
                   className="absolute right-6 top-6 rounded-full p-2 transition-colors hover:bg-black/5"
                 >
-                  <X className="h-5 w-5 text-[#8E8E93]" strokeWidth={1.5} />
+                  <X className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
                 </button>
 
                 <div className="flex items-start gap-6">
@@ -115,9 +108,9 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
 
                   {/* User Info */}
                   <div className="flex-1">
-                    <h2 className="text-2xl font-semibold text-[#1C1C1E]">{user.full_name}</h2>
-                    <p className="mt-1 text-lg text-[#8E8E93]">{user.job_title}</p>
-                    <div className="mt-3 flex items-center gap-2 text-sm text-[#8E8E93]">
+                    <h2 className="text-2xl font-semibold text-foreground">{user.full_name}</h2>
+                    <p className="mt-1 text-lg text-muted-foreground">{user.job_title}</p>
+                    <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                       <Building2 className="h-4 w-4" strokeWidth={1.5} />
                       <span>{user.department}</span>
                     </div>
@@ -130,69 +123,69 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                 <div className="space-y-6">
                   {/* Contact Information */}
                   <div>
-                    <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#1C1C1E]">
+                    <h3 className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                       Контактная информация
                     </h3>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4">
+                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                         <Mail className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div>
-                          <p className="text-xs text-[#8E8E93]">Email</p>
-                          <p className="text-sm text-[#1C1C1E]">{user.email}</p>
+                          <p className="text-xs text-muted-foreground">Email</p>
+                          <p className="text-sm text-foreground">{user.email}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4">
+                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                         <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div>
-                          <p className="text-xs text-[#8E8E93]">Внутренний телефон</p>
-                          <p className="text-sm text-[#1C1C1E]">{user.internal_phone}</p>
+                          <p className="text-xs text-muted-foreground">Внутренний телефон</p>
+                          <p className="text-sm text-foreground">{user.internal_phone}</p>
                         </div>
                       </div>
 
                       {isEditing ? (
-                        <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4">
+                        <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                           <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div className="flex-1">
-                            <p className="mb-1 text-xs text-[#8E8E93]">Мобильный телефон</p>
+                            <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
                             <input
                               type="text"
                               value={mobilePhone}
                               onChange={(e) => setMobilePhone(e.target.value)}
-                              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-[#1C1C1E] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4">
+                        <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                           <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div>
-                            <p className="text-xs text-[#8E8E93]">Мобильный телефон</p>
-                            <p className="text-sm text-[#1C1C1E]">{user.mobile_phone}</p>
+                            <p className="text-xs text-muted-foreground">Мобильный телефон</p>
+                            <p className="text-sm text-foreground">{user.mobile_phone}</p>
                           </div>
                         </div>
                       )}
 
                       {isEditing ? (
-                        <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4">
+                        <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                           <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div className="flex-1">
-                            <p className="mb-1 text-xs text-[#8E8E93]">Офис / Расположение</p>
+                            <p className="mb-1 text-xs text-muted-foreground">Офис / Расположение</p>
                             <input
                               type="text"
                               value={officeLocation}
                               onChange={(e) => setOfficeLocation(e.target.value)}
-                              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-[#1C1C1E] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
                           </div>
                         </div>
                       ) : (
                         user.office_location && (
-                          <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4">
+                          <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                             <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                             <div>
-                              <p className="text-xs text-[#8E8E93]">Офис / Расположение</p>
-                              <p className="text-sm text-[#1C1C1E]">{user.office_location}</p>
+                              <p className="text-xs text-muted-foreground">Офис / Расположение</p>
+                              <p className="text-sm text-foreground">{user.office_location}</p>
                             </div>
                           </div>
                         )
@@ -203,13 +196,13 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                   {/* Organization */}
                   {manager && (
                     <div>
-                      <h3 className="mb-4 text-sm font-semibold text-[#1C1C1E]">Организация</h3>
-                      <div className="flex items-center gap-3 rounded-xl bg-black/5 p-4">
+                      <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Организация</h3>
+                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                         <UserIcon className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div>
-                          <p className="text-xs text-[#8E8E93]">Руководитель</p>
-                          <p className="text-sm text-[#1C1C1E]">{manager.full_name}</p>
-                          <p className="text-xs text-[#8E8E93]">{manager.job_title}</p>
+                          <p className="text-xs text-muted-foreground">Руководитель</p>
+                          <p className="text-sm text-foreground">{manager.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{manager.job_title}</p>
                         </div>
                       </div>
                     </div>
@@ -223,7 +216,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                       <>
                         <button
                           onClick={handleSubmitChange}
-                          className="flex-1 rounded-xl bg-primary px-6 py-3 text-sm font-medium text-white shadow-lg transition-all hover:bg-primary/90"
+                          className="flex-1 btn-primary py-3"
                         >
                           Отправить запрос на изменение
                         </button>
@@ -233,7 +226,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                             setMobilePhone(user.mobile_phone);
                             setOfficeLocation(user.office_location || '');
                           }}
-                          className="rounded-xl border border-black/10 bg-black/5 px-6 py-3 text-sm font-medium text-[#1C1C1E] transition-colors hover:bg-black/10"
+                          className="btn-secondary px-6 py-3"
                         >
                           Отмена
                         </button>
@@ -241,7 +234,7 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                     ) : (
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-2 rounded-xl border border-black/10 bg-black/5 px-6 py-3 text-sm font-medium text-[#1C1C1E] transition-colors hover:bg-black/10"
+                        className="btn-secondary px-6 py-3 gap-2"
                       >
                         <Edit className="h-4 w-4" strokeWidth={1.5} />
                         Редактировать профиль
