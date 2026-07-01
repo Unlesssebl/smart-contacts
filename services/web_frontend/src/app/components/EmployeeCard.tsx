@@ -13,6 +13,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
     return (
       <motion.div
         ref={ref}
+        layoutId={user.id}
         layout
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

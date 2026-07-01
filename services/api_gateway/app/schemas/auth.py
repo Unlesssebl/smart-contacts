@@ -16,15 +16,16 @@ class UserAuthResponse(BaseModel):
     is_verified: bool
     grace_period_left: int
 
-class LoginResponse(Token):
+class LoginResponse(BaseModel):
     user: UserAuthResponse
+
+class AuthResult(BaseModel):
+    user: UserAuthResponse
+    tokens: Token
 
 class LoginRequest(BaseModel):
     username: str
     password: str
-
-class RefreshRequest(BaseModel):
-    refresh_token: str
 
 class UserProfile(BaseModel):
     id: UUID

@@ -24,7 +24,7 @@ def is_brute_force_blocked(ip: str) -> bool:
 
 LUA_RECORD_ATTEMPT = """
 local attempts = redis.call('INCR', KEYS[1])
-if attempts == 1 or attempts >= 5 then
+if attempts == 1 then
     redis.call('EXPIRE', KEYS[1], 900)
 end
 return attempts

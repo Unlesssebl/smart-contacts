@@ -18,6 +18,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import Request
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+        return response
+
 # Set specific origins for development
 origins = [
     "http://localhost",
@@ -30,12 +43,14 @@ origins = [
     "http://127.0.0.1:8000",
 ]
 
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "Accept"],
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)

@@ -8,11 +8,10 @@ import { getChangeWord } from '../../lib/localization';
 
 interface ProfileModalProps {
   user: User;
-  isOpen: boolean;
   onClose: () => void;
 }
 
-export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
+export function ProfileModal({ user, onClose }: ProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [mobilePhone, setMobilePhone] = useState(user.mobile_phone);
   const [officeLocation, setOfficeLocation] = useState(user.office_location || '');
@@ -43,10 +42,8 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
+    <>
+      {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -231,8 +228,6 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
               </div>
             </motion.div>
           </div>
-        </>
-      )}
-    </AnimatePresence>
+    </>
   );
 }

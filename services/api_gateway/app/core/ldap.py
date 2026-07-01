@@ -9,7 +9,16 @@ logger = logging.getLogger(__name__)
 
 # 2.2. Пул соединений LDAP
 # Настройка TLS
-tls_config = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLSv1_2)
+if settings.AD_INSECURE_SKIP_VERIFY:
+    logger.warning("LDAP TLS certificate verification is DISABLED (AD_INSECURE_SKIP_VERIFY=True). This is insecure for production!")
+    tls_config = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLSv1_2)
+else:
+    tls_config = Tls(
+        validate=ssl.CERT_REQUIRED, 
+        version=ssl.PROTOCOL_TLSv1_2,
+        ca_certs_file=settings.AD_CA_CERT_PATH
+    )
+
 use_ssl = settings.AD_SERVER.startswith("ldaps://")
 
 # Создаем пул серверов

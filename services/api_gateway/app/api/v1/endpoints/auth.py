@@ -1,12 +1,44 @@
 from fastapi import APIRouter, Depends, Request, Response, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.schemas.auth import LoginRequest, LoginResponse, RefreshRequest, Token, UserProfile
+from app.schemas.auth import LoginRequest, LoginResponse, Token, UserProfile
 from app.services.auth_service import AuthService
 from app.db.repository.user import get_user_by_guid
 from app.core.spnego import validate_kerberos_ticket
+from app.core.config import settings
+import secrets
 
 from app.api import deps
+
+def set_auth_cookies(response: Response, tokens: Token):
+    # CSRF token
+    csrf_token = secrets.token_hex(32)
+    response.set_cookie(
+        key="csrf_token",
+        value=csrf_token,
+        httponly=False,
+        secure=False, # Should be True in prod with HTTPS
+        samesite="lax"
+    )
+    # Access token
+    response.set_cookie(
+        key="access_token",
+        value=tokens.access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=tokens.expires_in
+    )
+    # Refresh token
+    if tokens.refresh_token:
+        response.set_cookie(
+            key="refresh_token",
+            value=tokens.refresh_token,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        )
 
 router = APIRouter()
 
@@ -20,16 +52,33 @@ async def login_sso(request: Request, response: Response, db: Session = Depends(
         response.headers["WWW-Authenticate"] = "Negotiate"
         return response
         
-    return AuthService.login_sso(db, username)
+    auth_result = AuthService.login_sso(db, username)
+    set_auth_cookies(response, auth_result.tokens)
+    return LoginResponse(user=auth_result.user)
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
+async def login(request: Request, response: Response, data: LoginRequest, db: Session = Depends(get_db)):
     client_ip = request.client.host
-    return AuthService.login(db, data.username, data.password, client_ip)
+    auth_result = AuthService.login(db, data.username, data.password, client_ip)
+    set_auth_cookies(response, auth_result.tokens)
+    return LoginResponse(user=auth_result.user)
 
-@router.post("/refresh", response_model=Token)
-async def refresh(data: RefreshRequest, db: Session = Depends(get_db)):
-    return AuthService.refresh(db, data.refresh_token)
+@router.post("/refresh")
+async def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token provided")
+    
+    new_tokens = AuthService.refresh(db, refresh_token)
+    set_auth_cookies(response, new_tokens)
+    return {"detail": "Tokens refreshed"}
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    response.delete_cookie("csrf_token")
+    return {"detail": "Logged out"}
 
 @router.get("/me", response_model=UserProfile)
 async def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Session = Depends(get_db)):

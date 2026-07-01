@@ -1,5 +1,4 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Request
 from jose import jwt
 from sqlalchemy.orm import Session
 from app.core.config import settings
@@ -7,9 +6,30 @@ from app.db.session import get_db
 from app.db.repository.user import get_user_by_guid
 from app.models.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+async def get_current_user_guid(request: Request) -> str:
+    # 1. Get token from cookies or Authorization header (fallback for Swagger)
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
-async def get_current_user_guid(token: str = Depends(oauth2_scheme)) -> str:
+    # 2. CSRF Protection for state-changing methods
+    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+        csrf_cookie = request.cookies.get("csrf_token")
+        csrf_header = request.headers.get("X-CSRF-Token")
+        
+        # Bypass CSRF if using Bearer token (for non-browser clients / scripts)
+        is_bearer = request.headers.get("Authorization", "").startswith("Bearer ")
+        
+        if not is_bearer:
+            if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF token validation failed")
+
+    # 3. Validate JWT
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_guid = payload.get("sub")
@@ -26,4 +46,9 @@ async def get_current_user(
     user = get_user_by_guid(db, user_guid)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # 4. Enforce user status (immediate revocation)
+    if user.status != "ACTIVE":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
+        
     return user

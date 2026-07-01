@@ -88,13 +88,15 @@ export function DirectoryPage() {
       </main>
 
       {/* Profile Modal */}
-      {selectedUser && (
-        <ProfileModal
-          user={selectedUser}
-          isOpen={!!selectedUser}
-          onClose={() => setSelectedUser(null)}
-        />
-      )}
+      <AnimatePresence>
+        {selectedUser && (
+          <ProfileModal
+            key="profile-modal"
+            user={selectedUser}
+            onClose={() => setSelectedUser(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

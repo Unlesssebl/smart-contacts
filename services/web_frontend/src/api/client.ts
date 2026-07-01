@@ -5,13 +5,21 @@ import { toast } from 'sonner';
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: 10000,
+  withCredentials: true,
 });
 
-// Request interceptor: add Bearer token
+// Helper to read cookie by name
+function getCookie(name: string) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+}
+
+// Request interceptor: add CSRF token
 apiClient.interceptors.request.use((config) => {
-  const token = useAppStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const csrfToken = getCookie('csrf_token');
+  if (csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken;
   }
   return config;
 });

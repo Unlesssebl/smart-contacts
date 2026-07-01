@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 import type { User, UserProfile, ChangeRequest, Report } from '../types';
 import { usersApi } from '../api/users';
 import { changeRequestsApi } from '../api/changeRequests';
@@ -12,7 +12,6 @@ interface AppState {
   // Auth
   currentUser: UserProfile | null;
   isAuthenticated: boolean;
-  accessToken: string | null;
   login: (samAccount: string, password: string) => Promise<boolean>;
   logout: () => void;
   fetchMe: () => Promise<void>;
@@ -49,12 +48,11 @@ export const useAppStore = create<AppState>()(
       // Auth
       currentUser: null,
       isAuthenticated: false,
-      accessToken: null,
 
       login: async (samAccount: string, password: string) => {
         try {
-          const authData = await login(samAccount, password);
-          set({ accessToken: authData.access_token, isAuthenticated: true });
+          await login(samAccount, password);
+          set({ isAuthenticated: true });
           await get().fetchMe();
           return true;
         } catch (error: any) {
@@ -68,8 +66,13 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      logout: () => {
-        set({ currentUser: null, isAuthenticated: false, accessToken: null, users: [], changeRequests: [], reports: [] });
+      logout: async () => {
+        set({ currentUser: null, isAuthenticated: false, users: [], changeRequests: [], reports: [] });
+        try {
+          await import('../api/client').then(m => m.default.post('/auth/logout'));
+        } catch (e) {
+          console.error('Logout API failed', e);
+        }
       },
 
       fetchMe: async () => {
@@ -193,7 +196,6 @@ export const useAppStore = create<AppState>()(
     {
       name: 'smart-contacts-storage',
       partialize: (state) => ({ 
-        accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
         currentUser: state.currentUser,
         adSyncUnavailable: state.adSyncUnavailable

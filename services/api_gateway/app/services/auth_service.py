@@ -6,12 +6,12 @@ from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_b
 from app.db.repository.token import create_refresh_token, verify_refresh_token, revoke_refresh_token
 from app.core.config import settings
 from app.core.redis import is_brute_force_blocked, reset_brute_force
-from app.schemas.auth import LoginResponse, Token, UserAuthResponse
+from app.schemas.auth import LoginResponse, Token, UserAuthResponse, AuthResult
 import uuid
 
 class AuthService:
     @staticmethod
-    def login(db: Session, username: str, password: str, client_ip: str) -> LoginResponse:
+    def login(db: Session, username: str, password: str, client_ip: str) -> AuthResult:
         # 1. Brute-force protection
         if is_brute_force_blocked(client_ip):
             raise HTTPException(
@@ -62,11 +62,13 @@ class AuthService:
         )
         refresh_token = create_refresh_token(db, user.object_guid)
 
-        return LoginResponse(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            refresh_token=refresh_token,
+        return AuthResult(
+            tokens=Token(
+                access_token=access_token,
+                token_type="bearer",
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                refresh_token=refresh_token
+            ),
             user=UserAuthResponse(
                 id=user.object_guid,
                 sam_account_name=user.sam_account_name,
@@ -78,7 +80,7 @@ class AuthService:
         )
 
     @staticmethod
-    def login_sso(db: Session, full_username: str) -> LoginResponse:
+    def login_sso(db: Session, full_username: str) -> AuthResult:
         """
         Handles SSO login after successful Kerberos ticket validation.
         """
@@ -115,11 +117,13 @@ class AuthService:
         )
         refresh_token = create_refresh_token(db, user.object_guid)
 
-        return LoginResponse(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            refresh_token=refresh_token,
+        return AuthResult(
+            tokens=Token(
+                access_token=access_token,
+                token_type="bearer",
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                refresh_token=refresh_token
+            ),
             user=UserAuthResponse(
                 id=user.object_guid,
                 sam_account_name=user.sam_account_name,
