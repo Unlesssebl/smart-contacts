@@ -48,6 +48,10 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    volumes:
+      - ./services/api_gateway:/app
+      - ./services/shared:/app/shared
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
       - "127.0.0.1:8000:8000"
     dns:
@@ -75,6 +79,8 @@ services:
     env_file:
       - .env
     volumes:
+      - ./services/ad_sync_worker:/app
+      - ./services/shared:/app/shared
       - ./docs:/app/docs:ro
     dns:
       - 10.244.0.11
@@ -87,17 +93,20 @@ services:
       - smart_net
 
   web_frontend:
-    build:
-      context: ./services/web_frontend
-      dockerfile: Dockerfile
+    image: node:20-alpine
     container_name: smart_contacts_web
     restart: always
+    working_dir: /app
+    volumes:
+      - ./services/web_frontend:/app
+    # Запуск npm install для установки зависимостей перед запуском Vite
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 80"
     ports:
       - "127.0.0.1:80:80"
     depends_on:
       - api_gateway
     environment:
-      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://127.0.0.1:8000/api/v1}
     networks:
       - smart_net
 
