@@ -1,3 +1,4 @@
+import React from 'react';
 import type { User } from '../../types';
 import { motion } from 'motion/react';
 import { Mail, Phone, MapPin } from 'lucide-react';
@@ -7,17 +8,19 @@ interface EmployeeCardProps {
   onClick: () => void;
 }
 
-export function EmployeeCard({ user, onClick }: EmployeeCardProps) {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      whileHover={{ y: -4 }}
-      onClick={onClick}
-      className="group cursor-pointer p-6 glass-card hover:border-primary/30"
-    >
+export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
+  ({ user, onClick }, ref) => {
+    return (
+      <motion.div
+        ref={ref}
+        layout
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        whileHover={{ y: -4 }}
+        onClick={onClick}
+        className="group cursor-pointer p-6 glass-card hover:border-primary/30"
+      >
       <div className="flex items-start gap-4">
         {/* Avatar with online status */}
         <div className="relative flex-shrink-0">
@@ -74,4 +77,4 @@ export function EmployeeCard({ user, onClick }: EmployeeCardProps) {
       )}
     </motion.div>
   );
-}
+});

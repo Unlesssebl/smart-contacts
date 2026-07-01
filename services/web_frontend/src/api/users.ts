@@ -9,11 +9,21 @@ export const usersApi = {
     params.append('limit', limit.toString());
     
     const response = await apiClient.get(`/users?${params.toString()}`);
-    return response.data;
+    const data = response.data;
+    if (data && data.items) {
+      data.items = data.items.map((item: any) => ({
+        ...item,
+        id: item.object_guid || item.id,
+      }));
+    }
+    return data;
   },
 
   getUserByGuid: async (guid: string): Promise<User> => {
     const response = await apiClient.get(`/users/${guid}`);
-    return response.data;
+    return {
+      ...response.data,
+      id: response.data.object_guid || response.data.id,
+    };
   }
 };
