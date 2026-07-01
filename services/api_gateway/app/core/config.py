@@ -36,8 +36,6 @@ class Settings(BaseSettings):
     # LDAP / AD
     AD_SERVER: str
     AD_BASE_DN: str
-    AD_USER: Optional[str] = None
-    AD_PASSWORD: Optional[str] = None
     AD_CA_CERT_PATH: Optional[str] = None
     AD_INSECURE_SKIP_VERIFY: bool = False
     

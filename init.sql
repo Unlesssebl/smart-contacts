@@ -103,3 +103,10 @@ CREATE UNIQUE INDEX idx_reports_unique_new
 
 CREATE INDEX idx_reports_target   ON reports (target_user_guid);
 CREATE INDEX idx_reports_status   ON reports (status);
+
+-- 7. Таблица system_settings (Системные настройки)
+CREATE TABLE system_settings (
+    key VARCHAR(64) PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

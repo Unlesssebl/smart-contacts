@@ -1,20 +1,144 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Check, X, Shield } from 'lucide-react';
+import { Check, X, Shield, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '../components/Sidebar';
 import { useAppStore } from '../../store/useAppStore';
 import { getAttributeLabel, getStatusLabel } from '../../lib/localization';
 
-type Tab = 'requests' | 'reports';
+type Tab = 'requests' | 'reports' | 'settings' | 'ou-mapping';
+
+function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string, string>, updateOUMapping: (mapping: Record<string, string>) => Promise<void> }) {
+  const [localMapping, setLocalMapping] = useState<{ou: string, org: string}[]>(() => 
+    Object.entries(ouMapping || {}).map(([ou, org]) => ({ou, org}))
+  );
+  
+  const [newOu, setNewOu] = useState('');
+  const [newOrg, setNewOrg] = useState('');
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalMapping(Object.entries(ouMapping || {}).map(([ou, org]) => ({ou, org})));
+  }, [ouMapping]);
+
+  const handleAdd = () => {
+    if (!newOu.trim() || !newOrg.trim()) {
+      toast.error('Заполните оба поля');
+      return;
+    }
+    if (localMapping.some(m => m.ou === newOu.trim())) {
+      toast.error('Такой OU уже существует в маппинге');
+      return;
+    }
+    setLocalMapping([...localMapping, { ou: newOu.trim(), org: newOrg.trim() }]);
+    setNewOu('');
+    setNewOrg('');
+  };
+
+  const handleRemove = (ouToRemove: string) => {
+    setLocalMapping(localMapping.filter(m => m.ou !== ouToRemove));
+  };
+
+  const handleSave = async () => {
+    const mappingObj = localMapping.reduce((acc, curr) => {
+      acc[curr.ou] = curr.org;
+      return acc;
+    }, {} as Record<string, string>);
+    await updateOUMapping(mappingObj);
+  };
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h3 className="text-lg font-medium">Маппинг Организаций (OU)</h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Здесь вы можете связать названия организационных единиц (OU) из Active Directory с названиями компаний, которые будут отображаться в профиле сотрудника.
+        </p>
+      </div>
+
+      <div className="space-y-4 max-w-3xl">
+        {/* Table Header */}
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-4 px-4 py-2 bg-muted/50 rounded-lg text-sm font-medium text-muted-foreground">
+          <div>OU в Active Directory</div>
+          <div>Название в системе</div>
+          <div className="w-10"></div>
+        </div>
+
+        {/* Rows */}
+        <div className="space-y-2">
+          {localMapping.map((item, index) => (
+            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center px-4 py-3 bg-card border rounded-lg shadow-sm">
+              <div className="font-medium">{item.ou}</div>
+              <div>{item.org}</div>
+              <button 
+                onClick={() => handleRemove(item.ou)}
+                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                title="Удалить"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          
+          {localMapping.length === 0 && (
+            <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
+              Нет ни одной записи. Добавьте первую ниже.
+            </div>
+          )}
+        </div>
+
+        {/* Add New Row */}
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-start mt-6 p-4 border border-dashed rounded-lg bg-muted/10">
+          <div>
+            <input 
+              type="text" 
+              placeholder="Например, IT Department" 
+              value={newOu}
+              onChange={e => setNewOu(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+          </div>
+          <div>
+            <input 
+              type="text" 
+              placeholder="Например, АйТи ТЭМПО" 
+              value={newOrg}
+              onChange={e => setNewOrg(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdd()}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+          </div>
+          <button 
+            onClick={handleAdd}
+            className="flex items-center gap-2 h-10 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 font-medium text-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Добавить
+          </button>
+        </div>
+
+        <div className="pt-6 border-t mt-8">
+          <button
+            onClick={handleSave}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6 py-2"
+          >
+            Сохранить настройки
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>('requests');
-  const { changeRequests, reports, fetchAdminData, approveChangeRequest, rejectChangeRequest } = useAppStore();
+  const { changeRequests, reports, fetchAdminData, approveChangeRequest, rejectChangeRequest, ldapSettings, fetchLDAPSettings, updateLDAPSettings, ouMapping, fetchOUMapping, updateOUMapping } = useAppStore();
 
   useEffect(() => {
     fetchAdminData();
-  }, [fetchAdminData]);
+    fetchLDAPSettings();
+    fetchOUMapping();
+  }, [fetchAdminData, fetchLDAPSettings, fetchOUMapping]);
 
   const pendingRequests = changeRequests.filter((r) => r.status === 'pending');
 
@@ -86,6 +210,39 @@ export function AdminPage() {
                 />
               )}
               <span className="relative z-10">Жалобы ({reports.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('settings')}
+              className="relative rounded-lg px-6 py-2 text-sm font-medium transition-colors"
+              style={{
+                color: activeTab === 'settings' ? 'var(--foreground)' : 'var(--muted-foreground)',
+              }}
+            >
+              {activeTab === 'settings' && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                />
+              )}
+              <span className="relative z-10">Настройки LDAP</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('ou-mapping')}
+              className="relative rounded-lg px-6 py-2 text-sm font-medium transition-colors"
+              style={{
+                color: activeTab === 'ou-mapping' ? 'var(--foreground)' : 'var(--muted-foreground)',
+              }}
+            >
+              {activeTab === 'ou-mapping' && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                />
+              )}
+              <span className="relative z-10">Организации (OU)</span>
             </button>
           </motion.div>
 
@@ -163,7 +320,7 @@ export function AdminPage() {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : activeTab === 'reports' ? (
               <div className="p-6">
                 {reports.length === 0 ? (
                   <div className="py-12 text-center">
@@ -222,7 +379,73 @@ export function AdminPage() {
                   </div>
                 )}
               </div>
-            )}
+            ) : activeTab === 'settings' ? (
+              <div className="p-6">
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const ad_user = formData.get('ad_user') as string;
+                    const ad_password = formData.get('ad_password') as string;
+                    
+                    const payload: import('../../api/settings').LDAPSettings = {};
+                    if (ad_user !== null) payload.ad_user = ad_user;
+                    if (ad_password) payload.ad_password = ad_password;
+                    
+                    await updateLDAPSettings(payload);
+                  }}
+                  className="space-y-6 max-w-xl"
+                >
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium">Учетная запись Active Directory</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Сервисная учетная запись для чтения пользователей из AD. Эти данные сохраняются в зашифрованном виде.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label htmlFor="ad_user" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Имя пользователя (UPN или DN)
+                      </label>
+                      <input
+                        id="ad_user"
+                        name="ad_user"
+                        type="text"
+                        defaultValue={ldapSettings?.ad_user || ''}
+                        placeholder="Например, service_account@corporate.loc"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label htmlFor="ad_password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Пароль {ldapSettings?.is_password_set && '(Уже установлен)'}
+                      </label>
+                      <input
+                        id="ad_password"
+                        name="ad_password"
+                        type="password"
+                        placeholder={ldapSettings?.is_password_set ? '•••••••• (оставьте пустым, чтобы не менять)' : 'Введите пароль'}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                  
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                  >
+                    Сохранить настройки
+                  </button>
+                </form>
+              </div>
+            ) : activeTab === 'ou-mapping' ? (
+              <OUMappingTab 
+                ouMapping={ouMapping} 
+                updateOUMapping={updateOUMapping} 
+              />
+            ) : null}
           </motion.div>
         </div>
       </main>

@@ -25,7 +25,7 @@ export function ProfilePage() {
   const handleSubmitChange = async () => {
     let changeCount = 0;
 
-    if (mobilePhone !== user.mobile_phone) {
+    if (mobilePhone !== (user.mobile_phone || '')) {
       await addChangeRequest({
         attribute_name: 'mobile_phone',
         new_value: mobilePhone || '',
@@ -113,15 +113,15 @@ export function ProfilePage() {
                     {isEditing ? (
                       <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
                         <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                        <div className="flex-1">
-                          <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
-                          <input
-                            type="text"
-                            value={mobilePhone}
-                            onChange={(e) => setMobilePhone(e.target.value)}
-                            className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
+                          <div className="flex-1">
+                            <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
+                            <input
+                              type="text"
+                              value={mobilePhone || ''}
+                              onChange={(e) => setMobilePhone(e.target.value)}
+                              className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
                       </div>
                     ) : (
                       <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
@@ -188,7 +188,7 @@ export function ProfilePage() {
                       <button
                         onClick={() => {
                           setIsEditing(false);
-                          setMobilePhone(user.mobile_phone);
+                          setMobilePhone(user.mobile_phone || '');
                           setOfficeLocation(user.office_location || '');
                         }}
                         className="btn-secondary px-6 py-3"

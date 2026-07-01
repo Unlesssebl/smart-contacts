@@ -90,23 +90,24 @@ class AuthService:
         # 2. User lookup
         user = get_user_by_sam(db, username)
         
-        if not user:
-            # If user not in DB, we could try to fetch them from LDAP to get the GUID
+        # If user not in DB or missing key fields, fetch from LDAP
+        if not user or not getattr(user, 'department', None):
             try:
                 from app.core.ldap import search_user_by_sam
                 ldap_info = search_user_by_sam(username)
                 if ldap_info:
                     user = AuthService._ensure_user_from_ldap(db, username, ldap_info)
-                else:
+                elif not user:
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail=f"User {username} not found in Active Directory"
                     )
             except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=f"SSO authentication failed: {str(e)}"
-                )
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail=f"SSO authentication failed: {str(e)}"
+                    )
 
         # 3. Generate tokens
         access_token = create_access_token(
@@ -144,7 +145,7 @@ class AuthService:
         ldap_guid = ldap_user.get("object_guid")
 
         if not user:
-            return create_user_stub(
+            user = create_user_stub(
                 db, 
                 username, 
                 guid=ldap_guid,
@@ -155,6 +156,28 @@ class AuthService:
         if ldap_guid and str(user.object_guid) != ldap_guid:
             update_user_guid(db, username, ldap_guid)
             user = get_user_by_guid(db, ldap_guid)
+            
+        # Update empty fields from LDAP to ensure users outside of the standard sync OU
+        # still get their profiles populated upon login.
+        user_updated = False
+        fields_to_sync = {
+            "full_name": "full_name",
+            "department": "department",
+            "job_title": "job_title",
+            "mobile_phone": "mobile_phone",
+            "internal_phone": "internal_phone",
+            "office_location": "office_location"
+        }
+        
+        for ldap_key, db_key in fields_to_sync.items():
+            ldap_val = ldap_user.get(ldap_key)
+            if ldap_val and not getattr(user, db_key):
+                setattr(user, db_key, ldap_val)
+                user_updated = True
+                
+        if user_updated:
+            db.commit()
+            db.refresh(user)
             
         return user
 

@@ -13,7 +13,7 @@ interface ProfileModalProps {
 
 export function ProfileModal({ user, onClose }: ProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [mobilePhone, setMobilePhone] = useState(user.mobile_phone);
+  const [mobilePhone, setMobilePhone] = useState(user.mobile_phone || '');
   const [officeLocation, setOfficeLocation] = useState(user.office_location || '');
   const { addChangeRequest, currentUser, getUserById } = useAppStore();
 
@@ -22,7 +22,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
   const handleSubmitChange = async () => {
     let changeCount = 0;
 
-    if (mobilePhone !== user.mobile_phone) {
+    if (mobilePhone !== (user.mobile_phone || '')) {
       await addChangeRequest({
         attribute_name: 'mobile_phone',
         new_value: mobilePhone || '',
@@ -133,7 +133,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                             <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
                             <input
                               type="text"
-                              value={mobilePhone}
+                              value={mobilePhone || ''}
                               onChange={(e) => setMobilePhone(e.target.value)}
                               className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             />
@@ -206,7 +206,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                         <button
                           onClick={() => {
                             setIsEditing(false);
-                            setMobilePhone(user.mobile_phone);
+                            setMobilePhone(user.mobile_phone || '');
                             setOfficeLocation(user.office_location || '');
                           }}
                           className="btn-secondary px-6 py-3"

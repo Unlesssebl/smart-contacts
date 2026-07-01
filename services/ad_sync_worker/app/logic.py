@@ -31,49 +31,54 @@ def determine_status(uac: int, sam_account_name: str) -> str:
     return "ACTIVE"
 
 
-def parse_cn(dn: str) -> str:
-    """Extracts CN from a DN string."""
-    match = re.search(r"CN=([^,]+)", dn)
-    if match:
-        return match.group(1)
-    return dn
+from sqlalchemy import select
+from .db import SystemSetting
+import json
 
+_ou_mapping_cache: Optional[dict[str, str]] = None
+_ou_mapping_cache_time: float = 0
 
-# 3.1. Кэширование бизнес-логики (CN List)
-_valid_cns_cache: Optional[List[str]] = None
-
-def get_valid_cns() -> List[str]:
-    """Возвращает список разрешенных CN из кэша или загружает его."""
-    global _valid_cns_cache
-    if _valid_cns_cache is None:
+def get_ou_mapping(session) -> dict[str, str]:
+    """Returns OU mapping from DB, cached for 60 seconds."""
+    global _ou_mapping_cache, _ou_mapping_cache_time
+    import time
+    
+    current_time = time.time()
+    if _ou_mapping_cache is not None and current_time - _ou_mapping_cache_time < 60:
+        return _ou_mapping_cache
+        
+    setting = session.get(SystemSetting, "OU_MAPPING")
+    mapping = {}
+    if setting and setting.value:
         try:
-            with open(settings.CN_LIST_PATH, "r", encoding="utf-8") as f:
-                _valid_cns_cache = [line.strip() for line in f if line.strip()]
-                logger.info(f"Loaded {len(_valid_cns_cache)} organizations from {settings.CN_LIST_PATH}")
-        except Exception as e:
-            logger.error(f"Failed to read CN list from {settings.CN_LIST_PATH}: {e}")
-            return []
-    return _valid_cns_cache
+            mapping = json.loads(setting.value)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse OU_MAPPING JSON from DB")
+            mapping = {}
+            
+    _ou_mapping_cache = mapping
+    _ou_mapping_cache_time = current_time
+    return _ou_mapping_cache
 
-def match_organization(member_of: List[str]) -> Tuple[Optional[str], List[str]]:
+def match_organization_by_ou(dn: str, session) -> Tuple[Optional[str], List[str]]:
     """
-    Сопоставляет группы пользователя со списком разрешенных организаций.
+    Matches the user's AD Organizational Units (OU) against the mapping in DB.
     """
-    valid_cns = get_valid_cns()
-    if not valid_cns:
-        return None, ["CN list is empty or could not be loaded."]
+    mapping = get_ou_mapping(session)
+    if not mapping:
+        return None, ["OU mapping is empty or could not be loaded."]
 
-    user_cns = [parse_cn(dn) for dn in member_of]
+    user_ous = re.findall(r"OU=([^,]+)", dn)
     
     # Priority 1: Exact case-sensitive match
-    exact_matches = [cn for cn in user_cns if cn in valid_cns]
+    exact_matches = [ou for ou in user_ous if ou in mapping]
     
     # Priority 2: Case-insensitive match
     case_insensitive_matches = []
-    valid_cns_lower = {cn.lower(): cn for cn in valid_cns}
-    for cn in user_cns:
-        if cn.lower() in valid_cns_lower:
-            case_insensitive_matches.append(valid_cns_lower[cn.lower()])
+    mapping_lower = {k.lower(): v for k, v in mapping.items()}
+    for ou in user_ous:
+        if ou.lower() in mapping_lower:
+            case_insensitive_matches.append(ou)
 
     matches = list(dict.fromkeys(exact_matches + case_insensitive_matches))
     
@@ -81,10 +86,14 @@ def match_organization(member_of: List[str]) -> Tuple[Optional[str], List[str]]:
         return None, []
     
     if len(matches) == 1:
-        return matches[0], []
+        # Get the actual organization name from mapping
+        key = matches[0]
+        org_name = mapping.get(key) or mapping_lower.get(key.lower())
+        return org_name, []
     
     # Multiple matches found
     # Try to pick exact case match if exists, otherwise first match
-    selected = exact_matches[0] if exact_matches else matches[0]
-    warning = f"Warning: Multiple organizations found in memberOf: {matches}. Using {selected}."
-    return selected, [warning]
+    selected_ou = exact_matches[0] if exact_matches else matches[0]
+    org_name = mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower())
+    warning = f"Warning: Multiple OUs matched in DN: {matches}. Using {selected_ou} -> {org_name}."
+    return org_name, [warning]

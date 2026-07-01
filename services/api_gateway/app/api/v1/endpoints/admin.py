@@ -73,3 +73,61 @@ def process_report(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
+
+from app.schemas.setting import LDAPSettingsRead, LDAPSettingsUpdate
+from app.core import settings_manager
+
+@router.get("/settings/ldap", response_model=LDAPSettingsRead)
+def get_ldap_settings(
+    db: Session = Depends(get_db),
+    admin: User = Depends(check_admin_auth)
+):
+    ad_user = settings_manager.get_setting(db, "AD_USER")
+    ad_password = settings_manager.get_setting(db, "AD_PASSWORD")
+    return LDAPSettingsRead(
+        ad_user=ad_user,
+        is_password_set=bool(ad_password)
+    )
+
+@router.post("/settings/ldap", response_model=LDAPSettingsRead)
+def update_ldap_settings(
+    settings_data: LDAPSettingsUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(check_admin_auth)
+):
+    if settings_data.ad_user is not None:
+        settings_manager.set_setting(db, "AD_USER", settings_data.ad_user)
+    
+    if settings_data.ad_password is not None:
+        settings_manager.set_setting(db, "AD_PASSWORD", settings_data.ad_password, encrypt=True)
+        
+    settings_manager.bump_ldap_credentials_version()
+    
+    return get_ldap_settings(db, admin)
+
+import json
+from app.schemas.setting import OuMappingUpdate
+
+@router.get("/settings/ou-mapping", response_model=OuMappingUpdate)
+def get_ou_mapping(
+    db: Session = Depends(get_db),
+    admin: User = Depends(check_admin_auth)
+):
+    mapping_str = settings_manager.get_setting(db, "OU_MAPPING")
+    mapping = {}
+    if mapping_str:
+        try:
+            mapping = json.loads(mapping_str)
+        except json.JSONDecodeError:
+            mapping = {}
+    return OuMappingUpdate(mapping=mapping)
+
+@router.post("/settings/ou-mapping", response_model=OuMappingUpdate)
+def update_ou_mapping(
+    data: OuMappingUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(check_admin_auth)
+):
+    mapping_str = json.dumps(data.mapping, ensure_ascii=False)
+    settings_manager.set_setting(db, "OU_MAPPING", mapping_str)
+    return get_ou_mapping(db, admin)

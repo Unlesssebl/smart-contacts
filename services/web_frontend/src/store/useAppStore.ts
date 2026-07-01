@@ -40,6 +40,15 @@ interface AppState {
   // Infrastructure
   adSyncUnavailable: boolean;
   setAdSyncStatus: (status: boolean) => void;
+
+  // Settings
+  ldapSettings: import('../api/settings').LDAPSettings | null;
+  fetchLDAPSettings: () => Promise<void>;
+  updateLDAPSettings: (settings: import('../api/settings').LDAPSettings) => Promise<void>;
+
+  ouMapping: Record<string, string>;
+  fetchOUMapping: () => Promise<void>;
+  updateOUMapping: (mapping: Record<string, string>) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>()(
@@ -192,6 +201,53 @@ export const useAppStore = create<AppState>()(
       // Infrastructure
       adSyncUnavailable: false,
       setAdSyncStatus: (status: boolean) => set({ adSyncUnavailable: status }),
+
+      // Settings
+      ldapSettings: null,
+      fetchLDAPSettings: async () => {
+        try {
+          const { settingsApi } = await import('../api/settings');
+          const settings = await settingsApi.getLDAPSettings();
+          set({ ldapSettings: settings });
+        } catch (error) {
+          console.error('Failed to fetch LDAP settings', error);
+          toast.error('Не удалось загрузить настройки LDAP');
+        }
+      },
+      updateLDAPSettings: async (newSettings) => {
+        try {
+          const { settingsApi } = await import('../api/settings');
+          const settings = await settingsApi.updateLDAPSettings(newSettings);
+          set({ ldapSettings: settings });
+          toast.success('Настройки LDAP успешно сохранены');
+        } catch (error) {
+          console.error('Failed to update LDAP settings', error);
+          toast.error('Ошибка при сохранении настроек LDAP');
+        }
+      },
+
+      ouMapping: {},
+      fetchOUMapping: async () => {
+        try {
+          const { settingsApi } = await import('../api/settings');
+          const mapping = await settingsApi.getOUMapping();
+          set({ ouMapping: mapping });
+        } catch (error) {
+          console.error('Failed to fetch OU mapping', error);
+          toast.error('Не удалось загрузить маппинг OU');
+        }
+      },
+      updateOUMapping: async (mapping) => {
+        try {
+          const { settingsApi } = await import('../api/settings');
+          const newMapping = await settingsApi.updateOUMapping(mapping);
+          set({ ouMapping: newMapping });
+          toast.success('Маппинг OU успешно сохранен');
+        } catch (error) {
+          console.error('Failed to update OU mapping', error);
+          toast.error('Ошибка при сохранении маппинга OU');
+        }
+      },
     }),
     {
       name: 'smart-contacts-storage',

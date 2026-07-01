@@ -4,6 +4,9 @@ import logging
 import queue
 from ldap3 import Server, Connection, ALL, SIMPLE, Tls, ServerPool, ROUND_ROBIN, REUSABLE
 from app.core.config import settings
+from app.core.redis import redis_client
+from app.db.session import SessionLocal
+from app.core.settings_manager import get_setting
 
 logger = logging.getLogger(__name__)
 
@@ -32,31 +35,70 @@ ldap_server = Server(
 server_pool = ServerPool([ldap_server], ROUND_ROBIN, active=True, exhaust=True)
 
 # Глобальный пул соединений для сервисного аккаунта (поиск пользователей)
-search_pool_conn = None
+_search_pool_conn = None
+_current_pool_version = None
+
 # Пул соединений для аутентификации (проверки пароля)
 auth_pool = queue.Queue(maxsize=20)
 
-if settings.AD_USER and settings.AD_PASSWORD:
-    search_pool_conn = Connection(
-        server_pool,
-        user=settings.AD_USER,
-        password=settings.AD_PASSWORD,
-        client_strategy=REUSABLE,
-        pool_size=5,
-        pool_lifetime=3600,
-        check_names=True,
-        raise_exceptions=True
-    )
+def _create_search_pool(ad_user: str, ad_password: str) -> Optional[Connection]:
+    if not ad_user or not ad_password:
+        return None
+    try:
+        conn = Connection(
+            server_pool,
+            user=ad_user,
+            password=ad_password,
+            client_strategy=REUSABLE,
+            pool_size=5,
+            pool_lifetime=3600,
+            check_names=True,
+            raise_exceptions=True
+        )
+        conn.open()
+        return conn
+    except Exception as e:
+        logger.error(f"Failed to create LDAP search pool: {e}")
+        return None
+
+def get_search_pool() -> Optional[Connection]:
+    global _search_pool_conn, _current_pool_version
+    
+    redis_version = redis_client.get("ldap_credentials_version")
+    if redis_version:
+        redis_version = int(redis_version)
+    else:
+        redis_version = 0
+
+    if _search_pool_conn is None or _current_pool_version != redis_version:
+        logger.info(f"LDAP credentials version changed from {_current_pool_version} to {redis_version}. Reloading...")
+        db = SessionLocal()
+        try:
+            ad_user = get_setting(db, "AD_USER")
+            ad_password = get_setting(db, "AD_PASSWORD", decrypt=True)
+            
+            # Close existing if exists
+            if _search_pool_conn:
+                try:
+                    _search_pool_conn.unbind()
+                except Exception:
+                    pass
+            
+            _search_pool_conn = _create_search_pool(ad_user, ad_password)
+            _current_pool_version = redis_version
+        finally:
+            db.close()
+            
+    return _search_pool_conn
 
 def init_ldap_pool():
     """Инициализация и проверка LDAP"""
     try:
-        if search_pool_conn:
-            logger.info("Initializing LDAP search pool...")
-            search_pool_conn.open()
-            logger.info("LDAP search pool initialized")
+        pool = get_search_pool()
+        if pool:
+            logger.info("LDAP search pool initialized from DB settings.")
         else:
-            logger.warning("AD_USER/AD_PASSWORD not set, search pool disabled")
+            logger.warning("AD_USER/AD_PASSWORD not set in DB, search pool disabled")
             # Простая проверка связи
             with Connection(server_pool, receive_timeout=5) as conn:
                 if conn.open():
@@ -70,21 +112,26 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
     if not password:
         return None
 
-    # 1. Поиск пользователя через сервисный аккаунт (если настроен)
-    # Важно: читаем entries локально сразу после search, чтобы избежать
-    # race condition при параллельных запросах к общему REUSABLE-соединению.
+    search_pool_conn = get_search_pool()
     search_filter = f"(sAMAccountName={username})"
     user_dn: Optional[str] = None
     user_data: Optional[Dict[str, Any]] = None
+    ad_user_for_domain = None
 
     try:
         if search_pool_conn:
+            # We need to get the AD_USER to extract the domain for bind fallback later
+            db = SessionLocal()
+            try:
+                ad_user_for_domain = get_setting(db, "AD_USER")
+            finally:
+                db.close()
+                
             search_pool_conn.search(
                 search_base=settings.AD_BASE_DN,
                 search_filter=search_filter,
-                attributes=["objectGUID", "displayName", "department", "title", "distinguishedName"]
+                attributes=["objectGUID", "displayName", "department", "title", "distinguishedName", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
             )
-            # Захватываем локальную копию до следующего вызова search
             entries = list(search_pool_conn.entries)
             if entries:
                 entry = entries[0]
@@ -93,16 +140,19 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
                     "object_guid": ad_guid_to_uuid(entry.objectGUID.value),
                     "full_name": entry.displayName.value if entry.displayName else username,
                     "department": entry.department.value if entry.department else None,
-                    "job_title": entry.title.value if entry.title else None
+                    "job_title": entry.title.value if entry.title else None,
+                    "mobile_phone": entry.mobile.value if entry.mobile else None,
+                    "internal_phone": entry.telephoneNumber.value if entry.telephoneNumber else None,
+                    "office_location": entry.physicalDeliveryOfficeName.value if entry.physicalDeliveryOfficeName else None
                 }
 
-        # 2. Bind: предпочитаем DN (точный); fallback — UPN
-        ad_domain = settings.AD_USER.split("@")[-1] if settings.AD_USER and "@" in settings.AD_USER else "corporate.loc"
+        # Bind: fallback — UPN
+        ad_domain = ad_user_for_domain.split("@")[-1] if ad_user_for_domain and "@" in ad_user_for_domain else "corporate.loc"
         user_bind_value = user_dn if user_dn else (
             username if "@" in username else f"{username}@{ad_domain}"
         )
 
-        # 3. Проверка пароля — используем пул соединений
+        # Проверка пароля — используем пул соединений
         try:
             auth_conn = auth_pool.get_nowait()
             auth_conn.user = user_bind_value
@@ -125,12 +175,11 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
 
             logger.info(f"Successfully authenticated user: {username}")
 
-            # 4. Если сервисного аккаунта нет — получаем данные через auth-соединение
             if not user_data:
                 auth_conn.search(
                     search_base=settings.AD_BASE_DN,
                     search_filter=search_filter,
-                    attributes=["objectGUID", "displayName", "department", "title"]
+                    attributes=["objectGUID", "displayName", "department", "title", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
                 )
                 entries = list(auth_conn.entries)
                 if entries:
@@ -139,7 +188,10 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
                         "object_guid": ad_guid_to_uuid(entry.objectGUID.value),
                         "full_name": entry.displayName.value if entry.displayName else username,
                         "department": entry.department.value if entry.department else None,
-                        "job_title": entry.title.value if entry.title else None
+                        "job_title": entry.title.value if entry.title else None,
+                        "mobile_phone": entry.mobile.value if entry.mobile else None,
+                        "internal_phone": entry.telephoneNumber.value if entry.telephoneNumber else None,
+                        "office_location": entry.physicalDeliveryOfficeName.value if entry.physicalDeliveryOfficeName else None
                     }
                 else:
                     user_data = {"object_guid": None, "full_name": username}
@@ -147,7 +199,6 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
             return user_data
 
         finally:
-            # Возвращаем соединение в пул для повторного использования (rebind)
             try:
                 auth_pool.put_nowait(auth_conn)
             except queue.Full:
@@ -158,10 +209,7 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
         return None
 
 def search_user_by_sam(username: str) -> Optional[Dict[str, Any]]:
-    """
-    Searches for a user in AD by sAMAccountName using the service account.
-    Returns user data if found, None otherwise.
-    """
+    search_pool_conn = get_search_pool()
     if not search_pool_conn:
         logger.warning("LDAP search pool not configured. Cannot search user by SAM.")
         return None
@@ -171,7 +219,7 @@ def search_user_by_sam(username: str) -> Optional[Dict[str, Any]]:
         search_pool_conn.search(
             search_base=settings.AD_BASE_DN,
             search_filter=search_filter,
-            attributes=["objectGUID", "displayName", "department", "title"]
+            attributes=["objectGUID", "displayName", "department", "title", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
         )
         entries = list(search_pool_conn.entries)
         if entries:
@@ -180,7 +228,10 @@ def search_user_by_sam(username: str) -> Optional[Dict[str, Any]]:
                 "object_guid": ad_guid_to_uuid(entry.objectGUID.value),
                 "full_name": entry.displayName.value if entry.displayName else username,
                 "department": entry.department.value if entry.department else None,
-                "job_title": entry.title.value if entry.title else None
+                "job_title": entry.title.value if entry.title else None,
+                "mobile_phone": entry.mobile.value if entry.mobile else None,
+                "internal_phone": entry.telephoneNumber.value if entry.telephoneNumber else None,
+                "office_location": entry.physicalDeliveryOfficeName.value if entry.physicalDeliveryOfficeName else None
             }
     except Exception as e:
         logger.error(f"Error searching user by SAM: {e}")

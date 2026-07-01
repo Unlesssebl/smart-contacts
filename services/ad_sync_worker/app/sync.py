@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from .config import settings
 from .db import SessionLocal, User, ChangeRequest
 from .ldap import LDAPClient
-from .logic import determine_status, match_organization
+from .logic import determine_status, match_organization_by_ou
 from shared.utils import ad_guid_to_uuid
 from .utils import with_retry
 
@@ -41,7 +41,7 @@ class SyncWorker:
         attributes = [
             "objectGUID", "sAMAccountName", "displayName", "mobile", 
             "telephoneNumber", "department", "physicalDeliveryOfficeName", 
-            "userAccountControl", "uSNChanged", "memberOf", "title"
+            "userAccountControl", "uSNChanged", "memberOf", "title", "distinguishedName"
         ]
 
         max_usn = self.last_usn
@@ -78,7 +78,8 @@ class SyncWorker:
         uac = int(entry.get("userAccountControl", 0))
         
         status = determine_status(uac, sam)
-        org, warnings = match_organization(entry.get("memberOf", []))
+        dn = str(entry.get("distinguishedName", ""))
+        org, warnings = match_organization_by_ou(dn, session)
         
         # 1. User lookup/linking (Extracted)
         user = self._find_or_link_user(session, sam, guid_str)
@@ -136,11 +137,12 @@ class SyncWorker:
         """
         Updates user fields while respecting pending change requests.
         """
-        # We check for 'pending' or 'conflict' status
+        # We check for 'pending', 'conflict', or 'approved' status
+        # to prevent overwriting local DB before the push is applied and synced back.
         pending_cr = session.execute(
             select(ChangeRequest).where(
                 ChangeRequest.user_guid == user.object_guid,
-                ChangeRequest.status.in_(["pending", "conflict"])
+                ChangeRequest.status.in_(["pending", "conflict", "approved"])
             )
         ).scalars().all()
         
