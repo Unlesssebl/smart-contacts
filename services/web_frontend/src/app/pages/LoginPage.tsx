@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { checkSso } from '../../api/auth';
 import './LoginPage.css';
@@ -11,83 +10,53 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [isSsoChecking, setIsSsoChecking] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const navigate = useNavigate();
-  const { login, setAuth, isAuthenticated } = useAppStore();
+  const { login, fetchMe, isAuthenticated } = useAppStore();
 
+  // Тихая проверка Kerberos SSO при загрузке страницы.
+  // Бэкенд НЕ возвращает WWW-Authenticate: Negotiate, поэтому
+  // браузер не показывает системный попап — просто получаем 401
+  // и показываем форму входа.
   useEffect(() => {
-    const performSso = async () => {
-      if (isAuthenticated) {
-        navigate('/');
-        return;
-      }
+    if (isAuthenticated) {
+      navigate('/');
+      return;
+    }
 
+    const trySso = async () => {
       try {
-        const data = await checkSso();
-        if (data && data.access_token) {
-          // Map API user to Frontend User type
-          const mappedUser = {
-            id: data.user.id,
-            full_name: data.user.full_name,
-            sam_account: data.user.sam_account_name,
-            role: data.user.role,
-            // Fallback for other fields
-            job_title: data.user.job_title || 'Employee',
-            department: data.user.department || 'General',
-            email: data.user.email || `${data.user.sam_account_name}@company.com`,
-            is_online: true,
-            internal_phone: data.user.internal_phone || '',
-            mobile_phone: data.user.mobile_phone || ''
-          };
-
-          setAuth(mappedUser, data.access_token);
-          navigate('/');
-        }
-      } catch (err) {
-        console.log('SSO not available or failed, showing login form');
-      } finally {
-        setIsSsoChecking(false);
+        await checkSso();
+        // Если SSO успешно — обновляем профиль и переходим на главную
+        await fetchMe();
+        navigate('/');
+      } catch {
+        // SSO не сработал (нет Kerberos-токена или не домен) — показываем форму
       }
     };
 
-    performSso();
-  }, [isAuthenticated, navigate, setAuth]);
+    trySso();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
 
-    // Simulate network delay for the smooth animation
-    setTimeout(() => {
-      const success = login(samAccount, password);
-      if (success) {
-        setIsSuccess(true);
-        setTimeout(() => navigate('/'), 800);
-      } else {
-        setError('Неверные учетные данные. Попробуйте: jive, cfederighi, sprescott...');
-        setIsSubmitting(false);
-      }
-    }, 1200);
+    const success = await login(samAccount, password);
+    if (success) {
+      setIsSuccess(true);
+      setTimeout(() => navigate('/'), 800);
+    } else {
+      setError('Неверный логин или пароль. Используйте данные вашей учётной записи Windows.');
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <AnimatePresence mode="wait">
-      {isSsoChecking ? (
-        <div key="loader" className="flex min-h-screen items-center justify-center bg-gray-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            className="flex flex-col items-center gap-4 p-12 bg-white rounded-xl shadow-sm border border-gray-100"
-          >
-            <Loader2 className="h-10 w-10 animate-spin text-[#1a3f6f]" />
-            <p className="text-lg font-medium text-gray-900">Проверка безопасного доступа...</p>
-          </motion.div>
-        </div>
-      ) : (
+      (
         <motion.div
           key="login"
           initial={{ opacity: 0 }}
@@ -200,7 +169,7 @@ export function LoginPage() {
 
           </div>
         </motion.div>
-      )}
+      )
     </AnimatePresence>
   );
 }

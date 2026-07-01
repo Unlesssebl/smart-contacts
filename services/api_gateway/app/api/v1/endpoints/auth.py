@@ -48,9 +48,13 @@ async def login_sso(request: Request, response: Response, db: Session = Depends(
     username = validate_kerberos_ticket(auth_header)
     
     if not username:
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        response.headers["WWW-Authenticate"] = "Negotiate"
-        return response
+        # Не возвращаем WWW-Authenticate: Negotiate — иначе браузер показывает
+        # системный попап с запросом пароля. Фронтенд получит 401 и сам
+        # перенаправит пользователя на страницу авторизации.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Kerberos authentication failed or not available"
+        )
         
     auth_result = AuthService.login_sso(db, username)
     set_auth_cookies(response, auth_result.tokens)

@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, Generator
-from ldap3 import Server, Connection, ALL, SUBTREE
+from ldap3 import Server, Connection, ALL, SUBTREE, Tls
+import ssl
 import logging
 
 from .config import settings
@@ -9,7 +10,20 @@ logger = logging.getLogger(__name__)
 
 class LDAPClient:
     def __init__(self):
-        self.server = Server(settings.AD_SERVER, get_info=ALL)
+        tls_config = None
+        if settings.AD_SERVER.startswith("ldaps://"):
+            if settings.AD_INSECURE_SKIP_VERIFY:
+                logger.warning("LDAP TLS certificate verification is DISABLED (AD_INSECURE_SKIP_VERIFY=True).")
+                tls_config = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLSv1_2)
+            else:
+                tls_config = Tls(validate=ssl.CERT_REQUIRED, version=ssl.PROTOCOL_TLSv1_2)
+
+        self.server = Server(
+            settings.AD_SERVER, 
+            get_info=ALL,
+            use_ssl=settings.AD_SERVER.startswith("ldaps://"),
+            tls=tls_config
+        )
         self.conn = Connection(
             self.server,
             user=settings.AD_USER,

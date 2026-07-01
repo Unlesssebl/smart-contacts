@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     AD_USER: str = Field(..., description="Service account DN")
     AD_PASSWORD: str = Field(..., description="Service account password")
     AD_BASE_DN: str = Field(..., description="Base DN for search")
+    AD_INSECURE_SKIP_VERIFY: bool = False
     
     AD_PULL_INTERVAL_SECONDS: int = 3600
     AD_MAX_RETRIES: int = 5

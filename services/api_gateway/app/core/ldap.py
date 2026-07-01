@@ -97,7 +97,7 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
                 }
 
         # 2. Bind: предпочитаем DN (точный); fallback — UPN
-        ad_domain = settings.AD_SERVER.split("//")[-1].rstrip("/")
+        ad_domain = settings.AD_USER.split("@")[-1] if settings.AD_USER and "@" in settings.AD_USER else "corporate.loc"
         user_bind_value = user_dn if user_dn else (
             username if "@" in username else f"{username}@{ad_domain}"
         )
