@@ -16,7 +16,7 @@ export function EmployeeCard({ user, onClick }: EmployeeCardProps) {
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ y: -4 }}
       onClick={onClick}
-      className="group cursor-pointer p-6 glass-card"
+      className="group cursor-pointer p-6 glass-card hover:border-primary/30"
     >
       <div className="flex items-start gap-4">
         {/* Avatar with online status */}

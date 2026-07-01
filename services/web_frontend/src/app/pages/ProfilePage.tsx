@@ -62,8 +62,8 @@ export function ProfilePage() {
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
-      <main className="mr-80 flex-1 relative">
-        <div className="mx-auto max-w-4xl px-8 pt-48 pb-12">
+      <main className="ml-72 flex-1 relative">
+        <div className="mx-auto max-w-4xl px-8 pt-12 pb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

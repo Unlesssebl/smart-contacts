@@ -30,15 +30,20 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed right-0 top-0 h-screen w-80 p-8 glass-card border-none rounded-none z-20 flex flex-col"
-      style={{
-        boxShadow: '-8px 0 40px rgba(10, 29, 54, 0.15)',
-        borderRadius: 0,
-      }}
+      className="fixed left-0 top-0 h-screen w-72 bg-white border-r border-border z-20 flex flex-col"
     >
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col px-6 py-6">
+        {/* Logo */}
+        <div className="mb-8 flex items-center justify-start">
+          <img
+            src="/GK_logo.png"
+            alt="ТЭМПО"
+            className="h-10 w-auto object-contain"
+          />
+        </div>
+
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 pt-24">
+        <nav className="flex-1 space-y-2 mt-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);

@@ -26,7 +26,10 @@ export function SpotlightSearch() {
       transition={{ delay: 0.1 }}
       className="relative mx-auto w-full max-w-2xl"
     >
-      <div className="relative overflow-hidden glass-card p-0 shadow-2xl transition-all focus-within:shadow-3xl">
+      <div 
+        className="relative overflow-hidden border border-black/5 bg-white/60 backdrop-blur-xl p-0 shadow-sm transition-all focus-within:shadow-md focus-within:bg-white focus-within:border-primary/20"
+        style={{ borderRadius: 'var(--radius)' }}
+      >
         <div className="flex items-center gap-4 px-6 py-4">
           <Search className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
           <input

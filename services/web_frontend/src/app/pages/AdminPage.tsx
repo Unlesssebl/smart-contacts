@@ -18,8 +18,8 @@ export function AdminPage() {
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
-      <main className="mr-80 flex-1 relative">
-        <div className="mx-auto max-w-7xl px-8 pt-48 pb-12">
+      <main className="ml-72 flex-1 relative">
+        <div className="mx-auto max-w-7xl px-8 pt-12 pb-12">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -31,10 +31,10 @@ export function AdminPage() {
                 <Shield className="h-6 w-6 text-white" strokeWidth={1.5} />
               </div>
               <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-white">
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
                   Панель администратора
                 </h1>
-                <p className="mt-1 text-sm text-white/80">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Управление запросами на изменение и жалобами пользователей
                 </p>
               </div>
