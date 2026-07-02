@@ -26,4 +26,9 @@ export const settingsApi = {
     const response = await apiClient.post<{ mapping: Record<string, string> }>('/admin/settings/ou-mapping', { mapping });
     return response.data.mapping || {};
   },
+
+  getADOus: async (): Promise<Record<string, any>> => {
+    const response = await apiClient.get<Record<string, any>>('/admin/ldap/ous');
+    return response.data || {};
+  },
 };

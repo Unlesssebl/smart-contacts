@@ -9,6 +9,12 @@ export interface User {
   mobile_phone?: string | null;
   department?: string | null;
   office_location?: string | null;
+  organization?: string | null;
+  job_title?: string | null;
+  tg_id?: number | null;
+  email?: string | null;
+  manager_id?: string | null;
+  presence?: 'online' | 'away' | 'offline';
 }
 
 export interface UserProfile extends User {

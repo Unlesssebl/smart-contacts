@@ -1,7 +1,15 @@
 import redis
+import redis.asyncio as aioredis
 from app.core.config import settings
 
 redis_client = redis.Redis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=0,
+    decode_responses=True
+)
+
+async_redis_client = aioredis.Redis(
     host=settings.REDIS_HOST,
     port=settings.REDIS_PORT,
     db=0,

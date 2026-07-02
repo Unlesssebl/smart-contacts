@@ -16,3 +16,8 @@ export const checkSso = async () => {
   const response = await apiClient.get('/auth/sso', { _skipAuthRedirect: true });
   return response.data;
 };
+
+export const getWsToken = async () => {
+  const response = await apiClient.get('/auth/ws-token');
+  return response.data.ws_token;
+};

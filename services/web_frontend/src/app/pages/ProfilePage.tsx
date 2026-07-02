@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit } from 'lucide-react';
@@ -7,14 +7,65 @@ import { Sidebar } from '../components/Sidebar';
 import { useAppStore } from '../../store/useAppStore';
 import { getChangeWord } from '../../lib/localization';
 
+import type { User } from '../../types';
+
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
   const { getUserById, currentUser, addChangeRequest } = useAppStore();
+  
+  const storeUser = id ? getUserById(id) : null;
+  const [user, setUser] = useState<User | null>(storeUser || null);
+  const [isLoading, setIsLoading] = useState(!storeUser);
 
-  const user = id ? getUserById(id) : null;
+  useEffect(() => {
+    if (storeUser) {
+      setUser(storeUser);
+      setIsLoading(false);
+    } else if (id) {
+      setIsLoading(true);
+      import('../../api/users').then(({ usersApi }) => {
+        usersApi.getUserByGuid(id)
+          .then(data => setUser(data))
+          .catch(() => setUser(null))
+          .finally(() => setIsLoading(false));
+      });
+    }
+  }, [id, storeUser]);
+  const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
+
   const [isEditing, setIsEditing] = useState(false);
-  const [mobilePhone, setMobilePhone] = useState(user?.mobile_phone || '');
-  const [officeLocation, setOfficeLocation] = useState(user?.office_location || '');
+  const [mobilePhone, setMobilePhone] = useState(cleanValue(user?.mobile_phone));
+  const [officeLocation, setOfficeLocation] = useState(cleanValue(user?.office_location));
+
+  useEffect(() => {
+    if (user) {
+      setMobilePhone(cleanValue(user.mobile_phone));
+      setOfficeLocation(cleanValue(user.office_location));
+    }
+  }, [user]);
+
+  const displayValue = (val: string | null | undefined) => {
+    const cleaned = cleanValue(val);
+    if (!cleaned.trim()) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-black/5 px-2.5 py-0.5 text-xs font-medium text-muted-foreground/70">
+          Не указано
+        </span>
+      );
+    }
+    return cleaned;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-transparent">
+        <Sidebar />
+        <main className="ml-72 flex-1 flex items-center justify-center">
+          <div className="text-muted-foreground">Загрузка профиля...</div>
+        </main>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -65,22 +116,23 @@ export function ProfilePage() {
                       .map((n) => n[0])
                       .join('')}
                   </div>
-                  {user.is_online && (
-                    <motion.div
-                      className="absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 border-white"
-                      style={{ background: 'var(--online-status)' }}
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                    />
-                  )}
+                  <motion.div
+                    className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 ${
+                      user.presence === 'online' ? 'border-white bg-emerald-500' :
+                      user.presence === 'away' ? 'border-white bg-amber-400' :
+                      'border-slate-300 bg-white'
+                    }`}
+                    animate={user.presence === 'online' ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                    transition={user.presence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
+                  />
                 </div>
 
                 <div className="flex-1">
                   <h1 className="text-3xl font-semibold text-foreground">{user.full_name}</h1>
-                  <p className="mt-1 text-lg text-muted-foreground">{user.job_title}</p>
+                  <p className="mt-1 text-lg text-muted-foreground">{displayValue(user.job_title)}</p>
                   <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                     <Building2 className="h-4 w-4" strokeWidth={1.5} />
-                    <span>{user.department}</span>
+                    <span>{displayValue([cleanValue(user.organization), cleanValue(user.department)].filter(Boolean).join(' • '))}</span>
                   </div>
                 </div>
               </div>
@@ -98,7 +150,7 @@ export function ProfilePage() {
                       <Mail className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
                         <p className="text-xs text-muted-foreground">Email</p>
-                        <p className="text-sm text-foreground">{user.email}</p>
+                        <p className="text-sm text-foreground">{displayValue(user.email)}</p>
                       </div>
                     </div>
 
@@ -106,7 +158,7 @@ export function ProfilePage() {
                       <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                       <div>
                         <p className="text-xs text-muted-foreground">Внутренний телефон</p>
-                        <p className="text-sm text-foreground">{user.internal_phone}</p>
+                        <p className="text-sm text-foreground">{displayValue(user.internal_phone)}</p>
                       </div>
                     </div>
 
@@ -117,9 +169,10 @@ export function ProfilePage() {
                             <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
                             <input
                               type="text"
-                              value={mobilePhone || ''}
+                              value={mobilePhone}
                               onChange={(e) => setMobilePhone(e.target.value)}
-                              className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              placeholder="Не указано"
+                              className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
                             />
                           </div>
                       </div>
@@ -128,7 +181,7 @@ export function ProfilePage() {
                         <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                         <div>
                           <p className="text-xs text-muted-foreground">Мобильный телефон</p>
-                          <p className="text-sm text-foreground">{user.mobile_phone}</p>
+                          <p className="text-sm text-foreground">{displayValue(user.mobile_phone)}</p>
                         </div>
                       </div>
                     )}
@@ -142,20 +195,19 @@ export function ProfilePage() {
                             type="text"
                             value={officeLocation}
                             onChange={(e) => setOfficeLocation(e.target.value)}
-                            className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            placeholder="Не указано"
+                            className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
                           />
                         </div>
                       </div>
                     ) : (
-                      user.office_location && (
-                        <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                          <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Офис / Расположение</p>
-                            <p className="text-sm text-foreground">{user.office_location}</p>
-                          </div>
+                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                        <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Офис / Расположение</p>
+                          <p className="text-sm text-foreground">{displayValue(user.office_location)}</p>
                         </div>
-                      )
+                      </div>
                     )}
                   </div>
                 </div>
@@ -168,7 +220,7 @@ export function ProfilePage() {
                       <div>
                         <p className="text-xs text-muted-foreground">Руководитель</p>
                         <p className="text-sm text-foreground">{manager.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{manager.job_title}</p>
+                        <p className="text-xs text-muted-foreground">{displayValue(manager.job_title)}</p>
                       </div>
                     </div>
                   </div>
@@ -188,8 +240,8 @@ export function ProfilePage() {
                       <button
                         onClick={() => {
                           setIsEditing(false);
-                          setMobilePhone(user.mobile_phone || '');
-                          setOfficeLocation(user.office_location || '');
+                          setMobilePhone(cleanValue(user.mobile_phone));
+                          setOfficeLocation(cleanValue(user.office_location));
                         }}
                         className="btn-secondary px-6 py-3"
                       >

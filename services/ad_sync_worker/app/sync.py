@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from .config import settings
 from .db import SessionLocal, User, ChangeRequest
 from .ldap import LDAPClient
-from .logic import determine_status, match_organization_by_ou
+from .logic import determine_status, match_organization_by_ou, save_known_ous
 from shared.utils import ad_guid_to_uuid
 from .utils import with_retry
 
@@ -45,6 +45,7 @@ class SyncWorker:
         ]
 
         max_usn = self.last_usn
+        collected_ous: set = set()
 
         with LDAPClient() as ldap:
             # 2.4. Одна сессия на весь цикл Pull
@@ -55,6 +56,15 @@ class SyncWorker:
                         current_usn = int(entry.get("uSNChanged", 0))
                         if current_usn > max_usn:
                             max_usn = current_usn
+                        
+                        # Collect OUs from distinguishedName
+                        dn = str(entry.get("distinguishedName", ""))
+                        if dn:
+                            import re
+                            ous = re.findall(r"OU=([^,]+)", dn)
+                            if ous:
+                                path = tuple(reversed(ous))
+                                collected_ous.add(path)
                     except Exception as e:
                         logger.error(f"Error processing entry {entry.get('sAMAccountName')}: {e}")
                         session.rollback()
@@ -62,6 +72,11 @@ class SyncWorker:
                 
                 # Финальный коммит если остались изменения
                 session.commit()
+                
+                # Save collected OUs to DB for use in admin UI
+                if collected_ous:
+                    save_known_ous(session, collected_ous)
+                    logger.info(f"Saved {len(collected_ous)} unique OUs to DB.")
 
         if max_usn > self.last_usn:
             self._save_last_usn(max_usn + 1)

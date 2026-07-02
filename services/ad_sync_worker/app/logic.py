@@ -38,6 +38,46 @@ import json
 _ou_mapping_cache: Optional[dict[str, str]] = None
 _ou_mapping_cache_time: float = 0
 
+
+def save_known_ous(session, paths: set):
+    """Saves the tree of known OUs to system_settings."""
+    setting = session.get(SystemSetting, "KNOWN_OUS")
+    if setting and setting.value:
+        try:
+            tree = json.loads(setting.value)
+            if not isinstance(tree, dict):
+                tree = {}
+        except json.JSONDecodeError:
+            tree = {}
+    else:
+        tree = {}
+    
+    for path in paths:
+        current = tree
+        for node in path:
+            if node not in current:
+                current[node] = {}
+            current = current[node]
+            
+    merged_json = json.dumps(tree, ensure_ascii=False)
+    
+    if setting:
+        setting.value = merged_json
+    else:
+        session.add(SystemSetting(key="KNOWN_OUS", value=merged_json))
+    session.commit()
+
+
+def get_known_ous(session) -> list[str]:
+    """Returns the list of known OU names from system_settings."""
+    setting = session.get(SystemSetting, "KNOWN_OUS")
+    if setting and setting.value:
+        try:
+            return json.loads(setting.value)
+        except json.JSONDecodeError:
+            return []
+    return []
+
 def get_ou_mapping(session) -> dict[str, str]:
     """Returns OU mapping from DB, cached for 60 seconds."""
     global _ou_mapping_cache, _ou_mapping_cache_time

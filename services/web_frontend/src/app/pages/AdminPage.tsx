@@ -15,6 +15,27 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
   
   const [newOu, setNewOu] = useState('');
   const [newOrg, setNewOrg] = useState('');
+  const [adOusTree, setAdOusTree] = useState<Record<string, any>>({});
+  const [isLoadingOus, setIsLoadingOus] = useState(false);
+  const [ouLoadError, setOuLoadError] = useState<string | null>(null);
+
+  // Fetch OU list from AD on mount
+  useEffect(() => {
+    const loadOus = async () => {
+      setIsLoadingOus(true);
+      setOuLoadError(null);
+      try {
+        const { settingsApi } = await import('../../api/settings');
+        const ousTree = await settingsApi.getADOus();
+        setAdOusTree(ousTree);
+      } catch (e) {
+        setOuLoadError('Не удалось загрузить список OU из AD. Введите вручную.');
+      } finally {
+        setIsLoadingOus(false);
+      }
+    };
+    loadOus();
+  }, []);
 
   // Update local state when prop changes
   useEffect(() => {
@@ -47,6 +68,24 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
     await updateOUMapping(mappingObj);
   };
 
+  // Flatten the tree into an array of options with indentation
+  const flattenedOus: { value: string, label: string }[] = [];
+  const flattenTree = (node: Record<string, any>, depth: number) => {
+    const keys = Object.keys(node).sort();
+    for (const key of keys) {
+      // Use non-breaking spaces for indentation
+      const indent = '\u00A0\u00A0\u00A0\u00A0'.repeat(depth);
+      const prefix = depth > 0 ? '— ' : '';
+      flattenedOus.push({ value: key, label: `${indent}${prefix}${key}` });
+      flattenTree(node[key], depth + 1);
+    }
+  };
+  flattenTree(adOusTree, 0);
+
+  // OUs already used in the mapping (to exclude from dropdown)
+  const usedOus = new Set(localMapping.map(m => m.ou));
+  const availableOus = flattenedOus.filter(ou => !usedOus.has(ou.value));
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -68,7 +107,7 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
         <div className="space-y-2">
           {localMapping.map((item, index) => (
             <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center px-4 py-3 bg-card border rounded-lg shadow-sm">
-              <div className="font-medium">{item.ou}</div>
+              <div className="font-mono text-sm font-medium">{item.ou}</div>
               <div>{item.org}</div>
               <button 
                 onClick={() => handleRemove(item.ou)}
@@ -88,29 +127,56 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
         </div>
 
         {/* Add New Row */}
-        <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-start mt-6 p-4 border border-dashed rounded-lg bg-muted/10">
-          <div>
-            <input 
-              type="text" 
-              placeholder="Например, IT Department" 
-              value={newOu}
-              onChange={e => setNewOu(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end mt-6 p-4 border border-dashed rounded-lg bg-muted/10">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">OU в Active Directory</label>
+            {isLoadingOus ? (
+              <div className="flex h-10 items-center px-3 text-sm text-muted-foreground border border-input rounded-md bg-background">
+                Загрузка OU из AD...
+              </div>
+            ) : ouLoadError || flattenedOus.length === 0 ? (
+              // Fallback: text input if AD is unavailable
+              <div className="space-y-1">
+                <input 
+                  type="text" 
+                  placeholder="Например, IT Department" 
+                  value={newOu}
+                  onChange={e => setNewOu(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+                {ouLoadError && <p className="text-xs text-amber-600">{ouLoadError}</p>}
+              </div>
+            ) : (
+              <select
+                value={newOu}
+                onChange={e => setNewOu(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">— Выберите OU —</option>
+                {availableOus.map(ou => (
+                  <option key={ou.value} value={ou.value}>{ou.label}</option>
+                ))}
+                {availableOus.length === 0 && flattenedOus.length > 0 && (
+                  <option disabled>Все OU уже добавлены</option>
+                )}
+              </select>
+            )}
           </div>
-          <div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Название в системе</label>
             <input 
               type="text" 
               placeholder="Например, АйТи ТЭМПО" 
               value={newOrg}
               onChange={e => setNewOrg(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAdd()}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </div>
           <button 
             onClick={handleAdd}
-            className="flex items-center gap-2 h-10 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 font-medium text-sm transition-colors"
+            disabled={!newOu || !newOrg}
+            className="flex items-center gap-2 h-10 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" />
             Добавить
@@ -279,7 +345,12 @@ export function AdminPage() {
                             </p>
                             <div className="mt-3 space-y-1 text-sm">
                               <p className="text-primary">
-                                <span className="font-medium">Новое:</span> {request.new_value}
+                                <span className="font-medium">Новое:</span>{' '}
+                                {(!request.new_value || request.new_value === '[]') ? (
+                                  <span className="text-muted-foreground/70 italic">Не указано</span>
+                                ) : (
+                                  request.new_value
+                                )}
                               </p>
                             </div>
                             <p className="mt-2 text-xs text-muted-foreground">

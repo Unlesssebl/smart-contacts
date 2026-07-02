@@ -237,3 +237,32 @@ def search_user_by_sam(username: str) -> Optional[Dict[str, Any]]:
         logger.error(f"Error searching user by SAM: {e}")
         
     return None
+
+def get_all_ous() -> list[str]:
+    """Fetches all unique OU names from the AD tree."""
+    search_pool_conn = get_search_pool()
+    if not search_pool_conn:
+        logger.warning("LDAP search pool not configured. Cannot fetch OUs.")
+        return []
+
+    try:
+        search_pool_conn.search(
+            search_base=settings.AD_BASE_DN,
+            search_filter="(objectClass=organizationalUnit)",
+            attributes=["ou", "distinguishedName"]
+        )
+        ou_names = []
+        for entry in search_pool_conn.entries:
+            if entry.ou:
+                val = entry.ou.value
+                if isinstance(val, list):
+                    ou_names.extend(val)
+                elif val:
+                    ou_names.append(val)
+
+        # Deduplicate and sort
+        return sorted(list(set(ou_names)))
+    except Exception as e:
+        logger.error(f"Error fetching OUs from AD: {e}")
+        return []
+

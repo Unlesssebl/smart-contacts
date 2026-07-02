@@ -1,16 +1,20 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 import { AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
+import { useEffect } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { DirectoryPage } from './pages/DirectoryPage';
 import { AdminPage } from './pages/AdminPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAppStore } from '../store/useAppStore';
+import { usePresence } from '../hooks/usePresence';
 
 function AnimatedRoutes() {
   const location = useLocation();
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
+
+  usePresence();
 
   return (
     <AnimatePresence mode="wait">

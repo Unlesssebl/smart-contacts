@@ -93,19 +93,23 @@ export function Sidebar() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-medium text-white shadow-md">
                   {getInitials(currentUser.full_name)}
                 </div>
-                {currentUser.is_online && (
-                  <motion.div
-                    className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-online-status"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                  />
-                )}
+                <motion.div
+                  className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border ${
+                    currentUser.presence === 'online' ? 'border-white bg-emerald-500' :
+                    currentUser.presence === 'away' ? 'border-white bg-amber-400' :
+                    'border-slate-300 bg-white'
+                  }`}
+                  animate={currentUser.presence === 'online' ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                  transition={currentUser.presence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
+                />
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="truncate text-sm font-medium text-foreground">
                   {currentUser.full_name}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">{currentUser.job_title}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {(!currentUser.job_title || currentUser.job_title === '[]') ? 'Не указано' : currentUser.job_title}
+                </p>
               </div>
             </div>
 

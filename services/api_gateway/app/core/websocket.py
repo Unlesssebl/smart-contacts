@@ -1,0 +1,70 @@
+import json
+import asyncio
+import logging
+from typing import Dict, Any
+from fastapi import WebSocket
+from app.core.redis import async_redis_client
+
+logger = logging.getLogger(__name__)
+
+class ConnectionManager:
+    def __init__(self):
+        # Local connections for this worker: object_guid -> WebSocket
+        self.active_connections: Dict[str, WebSocket] = {}
+        self.redis_channel = "presence_updates"
+        self.pubsub = async_redis_client.pubsub()
+        self.listener_task = None
+
+    async def connect(self, websocket: WebSocket, user_id: str):
+        await websocket.accept()
+        self.active_connections[user_id] = websocket
+        
+        # Start listening to Redis if not already started
+        if self.listener_task is None:
+            await self.pubsub.subscribe(self.redis_channel)
+            self.listener_task = asyncio.create_task(self._listen_to_redis())
+            
+        logger.info(f"User {user_id} connected to local WS.")
+
+    def disconnect(self, user_id: str):
+        if user_id in self.active_connections:
+            del self.active_connections[user_id]
+            logger.info(f"User {user_id} disconnected from local WS.")
+
+    async def broadcast_status(self, user_id: str, status: str):
+        """
+        Publish the status change to Redis so all workers receive it.
+        status should be 'online', 'away', or 'offline'.
+        """
+        # Save to a global redis hash to maintain the current state for newly connected clients
+        if status == "offline":
+            await async_redis_client.hdel("global_presence", user_id)
+        else:
+            await async_redis_client.hset("global_presence", user_id, status)
+        
+        message = json.dumps({"type": "presence_update", "user_id": user_id, "status": status})
+        await async_redis_client.publish(self.redis_channel, message)
+
+    async def send_full_state(self, websocket: WebSocket):
+        """Send the current global presence state to a newly connected client"""
+        global_presence = await async_redis_client.hgetall("global_presence")
+        await websocket.send_json({"type": "full_state", "data": global_presence})
+
+    async def _listen_to_redis(self):
+        """Background task that listens to Redis and broadcasts to local connections."""
+        try:
+            async for message in self.pubsub.listen():
+                if message["type"] == "message":
+                    data = json.loads(message["data"])
+                    # Send to all local connections
+                    for ws in self.active_connections.values():
+                        try:
+                            await ws.send_json(data)
+                        except Exception as e:
+                            logger.error(f"Error sending WS message: {e}")
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Redis PubSub listener error: {e}")
+
+manager = ConnectionManager()

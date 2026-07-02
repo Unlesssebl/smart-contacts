@@ -7,8 +7,9 @@ from app.db.repository import change_request as cr_repo
 from app.db.repository import report as report_repo
 from app.schemas.change_request import ChangeRequestRead
 from app.schemas.report import ReportRead
-from typing import List
+from typing import List, Dict, Any
 from uuid import UUID
+import json
 
 router = APIRouter()
 
@@ -131,3 +132,19 @@ def update_ou_mapping(
     mapping_str = json.dumps(data.mapping, ensure_ascii=False)
     settings_manager.set_setting(db, "OU_MAPPING", mapping_str)
     return get_ou_mapping(db, admin)
+
+@router.get("/ldap/ous", response_model=Dict[str, Any])
+def list_ad_ous(
+    db: Session = Depends(get_db),
+    admin: User = Depends(check_admin_auth)
+):
+    """Returns list of known OUs collected by the sync worker during the last sync cycle."""
+    from app.models.system_setting import SystemSetting
+    setting = db.get(SystemSetting, "KNOWN_OUS")
+    if setting and setting.value:
+        try:
+            return json.loads(setting.value)
+        except json.JSONDecodeError:
+            return {}
+    return {}
+

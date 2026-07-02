@@ -23,6 +23,9 @@ interface AppState {
   setSearchQuery: (query: string) => void;
   fetchUsers: (query?: string) => Promise<void>;
   getUserById: (id: string) => User | undefined;
+  globalPresence: Record<string, 'online' | 'away' | 'offline'>;
+  setPresence: (id: string, presence: 'online' | 'away' | 'offline') => void;
+  setBulkPresence: (presences: Record<string, 'online' | 'away' | 'offline'>) => void;
 
   // Change Requests
   changeRequests: ChangeRequest[];
@@ -111,7 +114,15 @@ export const useAppStore = create<AppState>()(
         try {
           // Add debouncing at component level, but here we just fetch
           const response = await usersApi.getUsers(query || get().searchQuery);
-          set({ users: response.items, isSearching: false });
+          
+          // Merge global presence
+          const presences = get().globalPresence;
+          const updatedUsers = response.items.map(u => ({
+            ...u,
+            presence: presences[u.id] || u.presence
+          }));
+          
+          set({ users: updatedUsers, isSearching: false });
         } catch (error) {
           console.error('Failed to fetch users', error);
           set({ isSearching: false });
@@ -120,6 +131,26 @@ export const useAppStore = create<AppState>()(
 
       getUserById: (id: string) => {
         return get().users.find(u => u.id === id);
+      },
+
+      globalPresence: {},
+
+      setPresence: (id, presence) => {
+        set((state) => ({
+          globalPresence: { ...state.globalPresence, [id]: presence },
+          users: state.users.map((u) => (u.id === id ? { ...u, presence } : u)),
+          currentUser: state.currentUser?.id === id ? { ...state.currentUser, presence } : state.currentUser,
+        }));
+      },
+
+      setBulkPresence: (presences) => {
+        set((state) => ({
+          globalPresence: { ...state.globalPresence, ...presences },
+          users: state.users.map((u) => (presences[u.id] ? { ...u, presence: presences[u.id] } : u)),
+          currentUser: state.currentUser && presences[state.currentUser.id] 
+            ? { ...state.currentUser, presence: presences[state.currentUser.id] } 
+            : state.currentUser,
+        }));
       },
 
       // Change Requests

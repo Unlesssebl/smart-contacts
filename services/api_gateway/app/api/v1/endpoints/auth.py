@@ -7,6 +7,8 @@ from app.db.repository.user import get_user_by_guid
 from app.core.spnego import validate_kerberos_ticket
 from app.core.config import settings
 import secrets
+from jose import jwt
+from datetime import datetime, timedelta
 
 from app.api import deps
 
@@ -104,3 +106,12 @@ async def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Sessi
         grace_period_left=user.grace_period_left,
         last_sync_timestamp=user.last_sync_timestamp.isoformat() if user.last_sync_timestamp else None
     )
+
+@router.get("/ws-token")
+async def get_ws_token(user_guid: str = Depends(deps.get_current_user_guid)):
+    # Generate a short-lived token to be passed in the WebSocket URL query param
+    # (Because WebSockets can't send HttpOnly cookies cross-origin)
+    expire = datetime.utcnow() + timedelta(minutes=5)
+    to_encode = {"sub": str(user_guid), "exp": expire}
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return {"ws_token": encoded_jwt}

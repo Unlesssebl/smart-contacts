@@ -31,7 +31,8 @@ def with_retry(func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
             
             logger.warning(
                 f"Attempt {n} failed for {func.__name__}: {e}. "
-                f"Retrying in {delay:.2f} seconds..."
+                f"Retrying in {delay:.2f} seconds...",
+                exc_info=True
             )
             time.sleep(delay)
     
