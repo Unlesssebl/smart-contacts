@@ -1,12 +1,83 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Check, X, Shield, Plus, Trash2 } from 'lucide-react';
+import { Check, X, Shield, Plus, Trash2, ChevronDown, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '../components/Sidebar';
 import { useAppStore } from '../../store/useAppStore';
 import { getAttributeLabel, getStatusLabel } from '../../lib/localization';
+import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../components/ui/collapsible';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/tooltip';
 
 type Tab = 'requests' | 'reports' | 'settings' | 'ou-mapping';
+
+function TreeNode({ 
+  name, 
+  path, 
+  node, 
+  usedOus, 
+  onSelect, 
+  selectedPath 
+}: { 
+  name: string, 
+  path: string, 
+  node: Record<string, any>, 
+  usedOus: Set<string>, 
+  onSelect: (path: string) => void,
+  selectedPath: string
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const childrenKeys = Object.keys(node).sort();
+  const hasChildren = childrenKeys.length > 0;
+  const isUsed = usedOus.has(name);
+  const isSelected = selectedPath === path;
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div 
+        className={`flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors ${isSelected ? 'bg-primary/10 text-primary font-medium' : ''} ${isUsed ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
+        onClick={() => {
+          if (!isUsed) onSelect(path);
+        }}
+      >
+        {hasChildren ? (
+          <button 
+            type="button"
+            className="p-1 hover:bg-muted rounded-sm transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+          >
+            {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+          </button>
+        ) : (
+          <div className="w-5 h-5 shrink-0" /> 
+        )}
+        <span className="text-sm truncate select-none">{name}</span>
+        {isSelected && <Check className="w-3.5 h-3.5 ml-auto text-primary shrink-0" />}
+      </div>
+      
+      {hasChildren && (
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+          <div className="pl-4 border-l ml-2.5 mt-0.5 space-y-0.5">
+            {childrenKeys.map(key => (
+              <TreeNode 
+                key={key} 
+                name={key} 
+                path={path ? `${path}/${key}` : key} 
+                node={node[key]} 
+                usedOus={usedOus} 
+                onSelect={onSelect}
+                selectedPath={selectedPath}
+              />
+            ))}
+          </div>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
+  );
+}
 
 function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string, string>, updateOUMapping: (mapping: Record<string, string>) => Promise<void> }) {
   const [localMapping, setLocalMapping] = useState<{ou: string, org: string}[]>(() => 
@@ -18,6 +89,7 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
   const [adOusTree, setAdOusTree] = useState<Record<string, any>>({});
   const [isLoadingOus, setIsLoadingOus] = useState(false);
   const [ouLoadError, setOuLoadError] = useState<string | null>(null);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   // Fetch OU list from AD on mount
   useEffect(() => {
@@ -43,15 +115,16 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
   }, [ouMapping]);
 
   const handleAdd = () => {
-    if (!newOu.trim() || !newOrg.trim()) {
+    const shortName = newOu.split('/').pop()?.trim() || '';
+    if (!shortName || !newOrg.trim()) {
       toast.error('Заполните оба поля');
       return;
     }
-    if (localMapping.some(m => m.ou === newOu.trim())) {
+    if (localMapping.some(m => m.ou === shortName)) {
       toast.error('Такой OU уже существует в маппинге');
       return;
     }
-    setLocalMapping([...localMapping, { ou: newOu.trim(), org: newOrg.trim() }]);
+    setLocalMapping([...localMapping, { ou: shortName, org: newOrg.trim() }]);
     setNewOu('');
     setNewOrg('');
   };
@@ -68,23 +141,8 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
     await updateOUMapping(mappingObj);
   };
 
-  // Flatten the tree into an array of options with indentation
-  const flattenedOus: { value: string, label: string }[] = [];
-  const flattenTree = (node: Record<string, any>, depth: number) => {
-    const keys = Object.keys(node).sort();
-    for (const key of keys) {
-      // Use non-breaking spaces for indentation
-      const indent = '\u00A0\u00A0\u00A0\u00A0'.repeat(depth);
-      const prefix = depth > 0 ? '— ' : '';
-      flattenedOus.push({ value: key, label: `${indent}${prefix}${key}` });
-      flattenTree(node[key], depth + 1);
-    }
-  };
-  flattenTree(adOusTree, 0);
-
-  // OUs already used in the mapping (to exclude from dropdown)
-  const usedOus = new Set(localMapping.map(m => m.ou));
-  const availableOus = flattenedOus.filter(ou => !usedOus.has(ou.value));
+  const rootKeys = Object.keys(adOusTree).sort();
+  const usedOus = useMemo(() => new Set(localMapping.map(m => m.ou)), [localMapping]);
 
   return (
     <div className="p-6">
@@ -128,13 +186,13 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
 
         {/* Add New Row */}
         <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end mt-6 p-4 border border-dashed rounded-lg bg-muted/10">
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             <label className="text-xs font-medium text-muted-foreground">OU в Active Directory</label>
             {isLoadingOus ? (
               <div className="flex h-10 items-center px-3 text-sm text-muted-foreground border border-input rounded-md bg-background">
                 Загрузка OU из AD...
               </div>
-            ) : ouLoadError || flattenedOus.length === 0 ? (
+            ) : ouLoadError || rootKeys.length === 0 ? (
               // Fallback: text input if AD is unavailable
               <div className="space-y-1">
                 <input 
@@ -147,22 +205,51 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
                 {ouLoadError && <p className="text-xs text-amber-600">{ouLoadError}</p>}
               </div>
             ) : (
-              <select
-                value={newOu}
-                onChange={e => setNewOu(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="">— Выберите OU —</option>
-                {availableOus.map(ou => (
-                  <option key={ou.value} value={ou.value}>{ou.label}</option>
-                ))}
-                {availableOus.length === 0 && flattenedOus.length > 0 && (
-                  <option disabled>Все OU уже добавлены</option>
-                )}
-              </select>
+              <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-full min-w-0">
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-left overflow-hidden"
+                        >
+                          <span className="truncate flex-1 min-w-0 block">
+                            {newOu ? newOu.split('/').pop() : '— Выберите OU —'}
+                          </span>
+                          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+                        </button>
+                      </PopoverTrigger>
+                    </div>
+                  </TooltipTrigger>
+                  {newOu && (
+                    <TooltipContent side="bottom" className="max-w-[400px] break-all font-mono text-xs">
+                      {newOu}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+                <PopoverContent className="w-[300px] p-2 max-h-[350px] overflow-y-auto" align="start">
+                  <div className="space-y-0.5">
+                    {rootKeys.map(key => (
+                      <TreeNode 
+                        key={key} 
+                        name={key} 
+                        path={key} 
+                        node={adOusTree[key]} 
+                        usedOus={usedOus} 
+                        onSelect={(path) => {
+                          setNewOu(path);
+                          setIsPopoverOpen(false);
+                        }}
+                        selectedPath={newOu}
+                      />
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             <label className="text-xs font-medium text-muted-foreground">Название в системе</label>
             <input 
               type="text" 

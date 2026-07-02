@@ -65,11 +65,10 @@
 ```
 
 **Ответ 200:**
+В ответе устанавливаются Cookies: `access_token` (HttpOnly), `refresh_token` (HttpOnly), `csrf_token`.
+Тело ответа:
 ```json
 {
-  "access_token": "<jwt>",
-  "token_type": "bearer",
-  "expires_in": 1800,
   "user": {
     "id": "uuid",
     "sam_account_name": "ivanov_ii",
@@ -88,15 +87,27 @@
 
 ---
 
+### `GET /auth/sso`
+Тихая аутентификация через Kerberos/SPNEGO. Используется фронтендом для автоматического входа.
+Если Kerberos-билет отсутствует или невалиден, API возвращает 401 Unauthorized **БЕЗ** заголовка `WWW-Authenticate: Negotiate`, чтобы избежать появления системного окна ввода пароля у пользователей вне домена.
+
+**Ответ 200:** Устанавливает Cookies. Тело ответа аналогично `/auth/login`.
+**Ответ 401**: `{ "detail": "Kerberos authentication failed or not available" }`
+
+---
+
 ### `POST /auth/refresh`
-Обновление access token.
+Обновление access token. Токен читается из куки `refresh_token`.
 
-**Тело запроса:**
-```json
-{ "refresh_token": "<token>" }
-```
+**Ответ 200:** `{"detail": "Tokens refreshed"}` + новые Cookies `access_token` и `refresh_token`.
+**Ответ 401**: `{ "detail": "No refresh token provided" }` или `{ "detail": "Invalid or expired refresh token" }`
 
-**Ответ 200:** Аналогично `/auth/login`, только поле `user` отсутствует.
+---
+
+### `POST /auth/logout`
+Удаление сессии (очистка кук).
+
+**Ответ 200:** `{"detail": "Logged out"}` + заголовки на удаление кук.
 
 ---
 
@@ -368,6 +379,56 @@
 
 **Ответ 202:** `{ "message": "Force sync initiated" }`
 **Ответ 503:** `{ "detail": "AD Sync Worker is unavailable" }`
+
+---
+
+### `GET /admin/settings/ou-mapping`
+Получить текущий маппинг OU -> Название организации. **Доступ**: IT-Operator.
+
+**Ответ 200:**
+```json
+{
+  "mapping": {
+    "IT": "ООО Технологии",
+    "HQ": "Головной офис"
+  }
+}
+```
+
+---
+
+### `POST /admin/settings/ou-mapping`
+Обновить маппинг OU -> Название организации. После обновления маппинга запускается фоновая задача (background task), которая обновляет поле `organization` у всех существующих пользователей. **Доступ**: IT-Operator.
+
+**Тело запроса:**
+```json
+{
+  "mapping": {
+    "IT": "ООО Технологии",
+    "HQ": "Головной офис"
+  }
+}
+```
+
+**Ответ 200:** Обновленный маппинг.
+
+---
+
+### `GET /admin/ldap/ous`
+Получить иерархическое дерево всех организационных подразделений (OU) из Active Directory для настройки маппинга на клиенте. **Доступ**: IT-Operator.
+
+**Ответ 200:**
+```json
+{
+  "company.local": {
+    "HQ": {
+      "IT": {},
+      "HR": {}
+    },
+    "Branch": {}
+  }
+}
+```
 
 ---
 

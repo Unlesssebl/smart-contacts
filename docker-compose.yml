@@ -53,7 +53,7 @@ services:
       - ./services/shared:/app/shared
     command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8000"
     dns:
       - 10.244.0.11
       - 8.8.8.8
@@ -106,7 +106,7 @@ services:
     depends_on:
       - api_gateway
     environment:
-      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://127.0.0.1:8000/api/v1}
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://127.0.0.1:8001/api/v1}
     networks:
       - smart_net
 

@@ -39,6 +39,7 @@ class User(Base):
     department: Mapped[Optional[str]] = mapped_column(String(256))
     office_location: Mapped[Optional[str]] = mapped_column(String(256))
     organization: Mapped[Optional[str]] = mapped_column(String(256))
+    ad_dn: Mapped[Optional[str]] = mapped_column(String(512))
     job_title: Mapped[Optional[str]] = mapped_column(String(256))
     role: Mapped[str] = mapped_column(String(32), default="employee")
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)

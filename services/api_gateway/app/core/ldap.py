@@ -141,6 +141,7 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
                     "full_name": entry.displayName.value if entry.displayName else username,
                     "department": entry.department.value if entry.department else None,
                     "job_title": entry.title.value if entry.title else None,
+                    "ad_dn": entry.distinguishedName.value if entry.distinguishedName else None,
                     "mobile_phone": entry.mobile.value if entry.mobile else None,
                     "internal_phone": entry.telephoneNumber.value if entry.telephoneNumber else None,
                     "office_location": entry.physicalDeliveryOfficeName.value if entry.physicalDeliveryOfficeName else None
@@ -179,7 +180,7 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
                 auth_conn.search(
                     search_base=settings.AD_BASE_DN,
                     search_filter=search_filter,
-                    attributes=["objectGUID", "displayName", "department", "title", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
+                    attributes=["objectGUID", "displayName", "department", "title", "distinguishedName", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
                 )
                 entries = list(auth_conn.entries)
                 if entries:
@@ -189,6 +190,7 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[Dict[str, An
                         "full_name": entry.displayName.value if entry.displayName else username,
                         "department": entry.department.value if entry.department else None,
                         "job_title": entry.title.value if entry.title else None,
+                        "ad_dn": entry.distinguishedName.value if entry.distinguishedName else None,
                         "mobile_phone": entry.mobile.value if entry.mobile else None,
                         "internal_phone": entry.telephoneNumber.value if entry.telephoneNumber else None,
                         "office_location": entry.physicalDeliveryOfficeName.value if entry.physicalDeliveryOfficeName else None
@@ -219,7 +221,7 @@ def search_user_by_sam(username: str) -> Optional[Dict[str, Any]]:
         search_pool_conn.search(
             search_base=settings.AD_BASE_DN,
             search_filter=search_filter,
-            attributes=["objectGUID", "displayName", "department", "title", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
+            attributes=["objectGUID", "displayName", "department", "title", "distinguishedName", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
         )
         entries = list(search_pool_conn.entries)
         if entries:
@@ -229,6 +231,7 @@ def search_user_by_sam(username: str) -> Optional[Dict[str, Any]]:
                 "full_name": entry.displayName.value if entry.displayName else username,
                 "department": entry.department.value if entry.department else None,
                 "job_title": entry.title.value if entry.title else None,
+                "ad_dn": entry.distinguishedName.value if entry.distinguishedName else None,
                 "mobile_phone": entry.mobile.value if entry.mobile else None,
                 "internal_phone": entry.telephoneNumber.value if entry.telephoneNumber else None,
                 "office_location": entry.physicalDeliveryOfficeName.value if entry.physicalDeliveryOfficeName else None

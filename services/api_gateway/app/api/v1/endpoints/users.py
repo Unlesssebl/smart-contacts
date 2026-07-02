@@ -36,7 +36,8 @@ async def list_users(
                 or_(
                     User.full_name.op("%")(clean_q),
                     User.department.op("%")(clean_q),
-                    User.office_location.op("%")(clean_q)
+                    User.office_location.op("%")(clean_q),
+                    User.organization.op("%")(clean_q)
                 )
             )
     

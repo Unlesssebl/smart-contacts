@@ -109,6 +109,7 @@ class SyncWorker:
                 department=str(entry.get("department", "")),
                 office_location=str(entry.get("physicalDeliveryOfficeName", "")),
                 organization=org,
+                ad_dn=dn,
                 internal_phone=str(entry.get("telephoneNumber", "")),
                 mobile_phone=str(entry.get("mobile", "")),
                 sync_error_log="\n".join(warnings) if warnings else None,
@@ -120,6 +121,7 @@ class SyncWorker:
             # 2. Update existing user (Extracted)
             self._resolve_conflicts_and_update(session, user, entry, org, warnings, status)
             user.sam_account_name = sam
+            user.ad_dn = dn
             logger.info(f"Updated user: {sam}")
 
         # Частичный коммит для сохранения прогресса

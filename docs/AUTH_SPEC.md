@@ -4,8 +4,8 @@
 
 | Уровень | Технология |
 |---------|-----------|
-| Аутентификация | **LDAP BIND** через корпоративный AD (библиотека `ldap3`) |
-| Сессия | **JWT** (access token, 30 мин) + **Refresh Token** (JSON body, 7 дней, хранится в БД) |
+| Аутентификация | **LDAP BIND** через корпоративный AD (библиотека `ldap3`) / **SSO** (Kerberos) |
+| Сессия | **JWT** (access token, 30 мин) + **Refresh Token** (7 дней, хранится в БД). Передаются в **HttpOnly Cookies**. Дополнительно используется `csrf_token` в cookie. |
 | Статус сотрудника | Парсится из суффикса `sAMAccountName` в AD Sync Worker (`-uv` → `RESIGNED`, `-time` → `ON_LEAVE`) |
 
 ---
@@ -13,16 +13,20 @@
 ## Flow аутентификации
 
 ```
-[Браузер/Бот] → POST /auth/login {username, password}
-                      ↓
-              [API Gateway] → LDAP BIND к AD с переданными кредами
-                      ↓ (успех)
-              Найти/создать запись в таблице users по sam_account_name
-                      ↓
-              Создать JWT (payload: object_guid, role, sam_account_name)
-              Создать Refresh Token (UUID v4, сохранить SHA-256 хэш в таблице refresh_tokens)
-                      ↓
-              Вернуть { access_token, refresh_token } в теле JSON
+[Браузер/Бот] → GET /auth/sso (Kerberos-билет в заголовке Authorization)
+                       ↓
+               [API Gateway] → Если билета нет, вернуть 401 (БЕЗ WWW-Authenticate, чтобы избежать нативного окна браузера)
+                       ↓
+[Браузер/Бот] → POST /auth/login {username, password} (если SSO недоступен)
+                       ↓
+               [API Gateway] → LDAP BIND к AD с переданными кредами
+                       ↓ (успех)
+               Найти/создать запись в таблице users по sam_account_name
+                       ↓
+               Создать JWT (payload: object_guid, role, sam_account_name)
+               Создать Refresh Token (UUID v4, сохранить SHA-256 хэш в таблице refresh_tokens)
+                       ↓
+               Вернуть { user: {...} } в теле JSON и установить Cookies: access_token, refresh_token, csrf_token
 ```
 
 **Важно**: API Gateway **не хранит** пароль пользователя. LDAP BIND — единственная точка проверки. Пароли пользователей никогда не логируются и не сохраняются даже во временных переменных воркера.

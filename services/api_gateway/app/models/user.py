@@ -17,6 +17,7 @@ class User(Base):
     department = Column(String(256))
     office_location = Column(String(256))
     organization = Column(String(256))
+    ad_dn = Column(String(512))
     job_title = Column(String(256))
     role = Column(String(32), nullable=False, default="employee")
     is_verified = Column(Boolean, nullable=False, default=False)

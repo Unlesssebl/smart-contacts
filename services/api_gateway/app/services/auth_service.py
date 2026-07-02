@@ -175,6 +175,11 @@ class AuthService:
                 setattr(user, db_key, ldap_val)
                 user_updated = True
                 
+        # Always sync ad_dn if it changed
+        if ldap_user.get("ad_dn") and user.ad_dn != ldap_user.get("ad_dn"):
+            user.ad_dn = ldap_user.get("ad_dn")
+            user_updated = True
+                
         if user_updated:
             db.commit()
             db.refresh(user)
