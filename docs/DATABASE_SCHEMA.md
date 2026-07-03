@@ -48,6 +48,8 @@ CONSTRAINT users_grace_check CHECK (grace_period_left >= 0 AND grace_period_left
 CREATE INDEX idx_users_fullname_trgm    ON users USING GIN (full_name gin_trgm_ops);
 CREATE INDEX idx_users_department_trgm  ON users USING GIN (department gin_trgm_ops);
 CREATE INDEX idx_users_office_trgm      ON users USING GIN (office_location gin_trgm_ops);
+CREATE INDEX idx_users_internal_phone_trgm ON users USING GIN (regexp_replace(internal_phone, '[^0-9]', '', 'g') gin_trgm_ops);
+CREATE INDEX idx_users_mobile_phone_trgm   ON users USING GIN (regexp_replace(mobile_phone, '[^0-9]', '', 'g') gin_trgm_ops);
 
 
 

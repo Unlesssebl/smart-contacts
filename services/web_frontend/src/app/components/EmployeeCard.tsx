@@ -2,6 +2,40 @@ import React from 'react';
 import type { User } from '../../types';
 import { motion } from 'motion/react';
 import { Mail, Phone, MapPin } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
+
+const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
+  if (!highlight.trim()) {
+    return <span>{text}</span>;
+  }
+  
+  const terms = highlight.split(' ').filter(Boolean);
+  if (terms.length === 0) return <span>{text}</span>;
+
+  const regexParts = terms.map(t => {
+    // Если запрос состоит только из цифр, разрешаем любые нецифровые символы между ними
+    // Например, "4987" превратится в "4\D*9\D*8\D*7", что найдет "49-87" или "+7 (498) 7..."
+    if (/^\d+$/.test(t)) {
+      return t.split('').join('\\D*');
+    }
+    return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  });
+
+  const regex = new RegExp(`(${regexParts.join('|')})`, 'gi');
+  const parts = text.split(regex);
+
+  return (
+    <span className="truncate">
+      {parts.map((part, i) => 
+        regex.test(part) ? (
+          <mark key={i} className="bg-primary/20 text-foreground rounded-[2px]">{part}</mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </span>
+  );
+};
 
 interface EmployeeCardProps {
   user: User;
@@ -10,6 +44,8 @@ interface EmployeeCardProps {
 
 export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
   ({ user, onClick }, ref) => {
+    const searchQuery = useAppStore(state => state.searchQuery);
+    
     const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
     const displayValue = (val: string | null | undefined) => {
       const cleaned = cleanValue(val);
@@ -20,7 +56,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
           </span>
         );
       }
-      return <span className="truncate">{cleaned}</span>;
+      return <HighlightedText text={cleaned} highlight={searchQuery} />;
     };
 
     return (
@@ -58,7 +94,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
         {/* Info */}
         <div className="flex-1 overflow-hidden">
           <h3 className="truncate font-semibold text-foreground transition-colors group-hover:text-primary">
-            {user.full_name}
+            <HighlightedText text={user.full_name} highlight={searchQuery} />
           </h3>
           {user.job_title && user.job_title !== '[]' && (
             <p className="mt-0.5 truncate text-sm text-muted-foreground">{user.job_title}</p>

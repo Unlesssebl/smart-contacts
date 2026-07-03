@@ -66,6 +66,8 @@ interface AppState {
   updateOUMapping: (mapping: Record<string, string>) => Promise<void>;
 }
 
+let searchAbortController: AbortController | null = null;
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -152,6 +154,11 @@ export const useAppStore = create<AppState>()(
       },
 
       fetchUsers: async (query?: string, pageOverride?: number) => {
+        if (searchAbortController) {
+          searchAbortController.abort();
+        }
+        searchAbortController = new AbortController();
+
         set({ isSearching: true });
         try {
           const currentPage = pageOverride ?? get().page;
@@ -161,7 +168,8 @@ export const useAppStore = create<AppState>()(
             query ?? get().searchQuery, 
             get().filters, 
             currentPage, 
-            currentLimit
+            currentLimit,
+            searchAbortController.signal
           );
           
           // Merge global presence
@@ -176,7 +184,10 @@ export const useAppStore = create<AppState>()(
             isSearching: false,
             totalUsers: response.total 
           });
-        } catch (error) {
+        } catch (error: any) {
+          if (error.name === 'CanceledError' || error.message?.includes('abort') || error.name === 'AbortError') {
+            return; // Игнорируем отмененные запросы
+          }
           console.error('Failed to fetch users', error);
           set({ isSearching: false });
         }

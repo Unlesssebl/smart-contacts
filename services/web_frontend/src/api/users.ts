@@ -10,7 +10,7 @@ export interface UserFilters {
 }
 
 export const usersApi = {
-  getUsers: async (q?: string, filters?: UserFilters, page: number = 1, limit: number = 100): Promise<PaginatedUsers> => {
+  getUsers: async (q?: string, filters?: UserFilters, page: number = 1, limit: number = 100, signal?: AbortSignal): Promise<PaginatedUsers> => {
     const params = new URLSearchParams();
     if (q) params.append('q', q);
     
@@ -25,7 +25,7 @@ export const usersApi = {
     params.append('page', page.toString());
     params.append('limit', limit.toString());
     
-    const response = await apiClient.get(`/users?${params.toString()}`);
+    const response = await apiClient.get(`/users?${params.toString()}`, { signal });
     const data = response.data;
     if (data && data.items) {
       data.items = data.items.map((item: any) => ({

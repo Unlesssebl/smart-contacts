@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from typing import Optional, List
 from app.db.session import get_db
 from app.api import deps
@@ -56,15 +56,35 @@ async def list_users(
         # Оставляем только буквы, цифры, пробелы, точки и дефисы
         clean_q = re.sub(r'[^\w\s\.-]', '', q).strip()
         if clean_q:
-            # Используем оператор % для pg_trgm (fuzzy search)
-            query = query.filter(
-                or_(
-                    User.full_name.op("%")(clean_q),
-                    User.department.op("%")(clean_q),
-                    User.office_location.op("%")(clean_q),
-                    User.organization.op("%")(clean_q)
-                )
-            )
+            # Разделяем запрос на отдельные слова
+            terms = clean_q.split()
+            term_conditions = []
+            
+            for term in terms:
+                # Очищаем слово от всего, кроме цифр, для поиска по телефонам
+                phone_term = re.sub(r'\D', '', term)
+                
+                conditions = [User.full_name.ilike(f"%{term}%")]
+                
+                if phone_term:
+                    # Ищем очищенные от дефисов/пробелов телефоны по очищенному запросу
+                    conditions.append(func.regexp_replace(User.internal_phone, '[^0-9]', '', 'g').ilike(f"%{phone_term}%"))
+                    conditions.append(func.regexp_replace(User.mobile_phone, '[^0-9]', '', 'g').ilike(f"%{phone_term}%"))
+                else:
+                    conditions.append(User.internal_phone.ilike(f"%{term}%"))
+                    conditions.append(User.mobile_phone.ilike(f"%{term}%"))
+
+                term_conditions.append(or_(*conditions))
+            
+            # Все введенные слова должны присутствовать в результатах
+            query = query.filter(and_(*term_conditions))
+            
+            # Ранжирование по релевантности: карточки с бОльшим совпадением идут первыми
+            query = query.order_by(func.similarity(User.full_name, clean_q).desc(), User.full_name.asc())
+        else:
+            query = query.order_by(User.full_name.asc())
+    else:
+        query = query.order_by(User.full_name.asc())
     
     total = query.count()
     items = query.offset((page - 1) * limit).limit(limit).all()

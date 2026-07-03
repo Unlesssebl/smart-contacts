@@ -71,7 +71,7 @@ export function SpotlightSearch() {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Поиск сотрудников по имени, должности или отделу..."
+            placeholder="Поиск сотрудников по имени или номеру телефона..."
             value={localQuery}
             onChange={(e) => setLocalQuery(e.target.value)}
             className="flex-1 bg-transparent text-base text-foreground placeholder-muted-foreground outline-none"
@@ -146,21 +146,7 @@ export function SpotlightSearch() {
           )}
         </AnimatePresence>
 
-        {/* Search hint */}
-        <AnimatePresence>
-          {searchQuery && !showFilters && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-black/5 bg-white/40 px-6 py-3"
-            >
-              <p className="text-sm text-muted-foreground">
-                Нажмите <kbd className="rounded bg-black/5 px-1.5 py-0.5 text-xs">Enter</kbd>, чтобы перейти к результатам
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
       </div>
     </motion.div>
   );

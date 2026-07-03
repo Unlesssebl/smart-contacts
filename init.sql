@@ -82,6 +82,8 @@ CREATE TABLE refresh_tokens (
 CREATE INDEX idx_users_fullname_trgm    ON users USING GIN (full_name gin_trgm_ops);
 CREATE INDEX idx_users_department_trgm  ON users USING GIN (department gin_trgm_ops);
 CREATE INDEX idx_users_office_trgm      ON users USING GIN (office_location gin_trgm_ops);
+CREATE INDEX idx_users_internal_phone_trgm ON users USING GIN (regexp_replace(internal_phone, '[^0-9]', '', 'g') gin_trgm_ops);
+CREATE INDEX idx_users_mobile_phone_trgm   ON users USING GIN (regexp_replace(mobile_phone, '[^0-9]', '', 'g') gin_trgm_ops);
 
 -- Поиск по Telegram ID
 CREATE INDEX idx_users_tg_id ON users (tg_id) WHERE tg_id IS NOT NULL;
