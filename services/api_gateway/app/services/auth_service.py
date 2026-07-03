@@ -141,8 +141,14 @@ class AuthService:
         Ensures a user exists in the local database based on LDAP info.
         Handles stub creation and GUID migration.
         """
-        user = get_user_by_sam(db, username)
         ldap_guid = ldap_user.get("object_guid")
+        
+        user = None
+        if ldap_guid:
+            user = get_user_by_guid(db, ldap_guid)
+            
+        if not user:
+            user = get_user_by_sam(db, username)
 
         if not user:
             user = create_user_stub(
@@ -154,12 +160,15 @@ class AuthService:
         
         # If user exists but GUID is different (e.g. random UUID stub), update it
         if ldap_guid and str(user.object_guid) != ldap_guid:
-            update_user_guid(db, username, ldap_guid)
+            update_user_guid(db, user.sam_account_name, ldap_guid)
             user = get_user_by_guid(db, ldap_guid)
             
-        # Update empty fields from LDAP to ensure users outside of the standard sync OU
-        # still get their profiles populated upon login.
         user_updated = False
+        
+        # Sync SAM account name if it changed (e.g. case sensitivity or rename)
+        if user.sam_account_name != username:
+            user.sam_account_name = username
+            user_updated = True
         fields_to_sync = {
             "full_name": "full_name",
             "department": "department",

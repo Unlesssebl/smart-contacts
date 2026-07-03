@@ -32,7 +32,13 @@ export default defineConfig({
   },
 
   server: {
-    host: '127.0.0.1',
+    host: '10.245.19.85', // Listen on specific network interface
+    proxy: {
+      '/api': {
+        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080', // Support Docker and local dev
+        changeOrigin: true,
+      }
+    }
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.

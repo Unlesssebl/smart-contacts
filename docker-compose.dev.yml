@@ -11,3 +11,5 @@ services:
       # Изолируем node_modules в анонимном томе, чтобы локальная папка 
       # не затирала установленные внутри контейнера пакеты
       - /app/node_modules
+    environment:
+      - VITE_PROXY_TARGET=http://api_gateway:8000

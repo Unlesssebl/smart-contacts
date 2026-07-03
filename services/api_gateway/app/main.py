@@ -40,7 +40,11 @@ origins = [
     "http://127.0.0.1",
     "http://127.0.0.1:80",
     "http://127.0.0.1:5173",
-    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8080",
+    "http://10.245.19.85",
+    "http://10.245.19.85:80",
+    "http://10.245.19.85:5173",
+    "http://10.245.19.85:8080",
 ]
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -49,8 +53,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "Accept"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
@@ -58,3 +62,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="10.245.19.85", port=8080, reload=True)

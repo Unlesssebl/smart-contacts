@@ -21,10 +21,10 @@ if (Test-Path $envFilePath) {
 $env:DB_HOST = "127.0.0.1"
 $env:REDIS_HOST = "127.0.0.1"
 $env:PYTHONPATH = ".."
-$env:VITE_API_BASE_URL = "http://127.0.0.1:8000/api/v1"
+$env:VITE_API_BASE_URL = "/api/v1"
 
 Write-Host "Установка зависимостей и запуск API Gateway..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd services\api_gateway; Write-Host 'Запуск API Gateway...'; uv sync; uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd services\api_gateway; Write-Host 'Запуск API Gateway...'; uv sync; uv run uvicorn app.main:app --host 127.0.0.1 --port 8080 --reload"
 
 Write-Host "Установка зависимостей и запуск AD Sync Worker..." -ForegroundColor Yellow
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd services\ad_sync_worker; Write-Host 'Запуск AD Sync Worker...'; uv sync; uv run python main.py"
@@ -33,5 +33,5 @@ Write-Host "Установка зависимостей и запуск Web Fron
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd services\web_frontend; Write-Host 'Запуск Web Frontend...'; npm install; npm run dev"
 
 Write-Host "Все сервисы запущены!" -ForegroundColor Green
-Write-Host "API Gateway: http://127.0.0.1:8000" -ForegroundColor Green
-Write-Host "Web Frontend: http://localhost:5173 (по умолчанию для Vite)" -ForegroundColor Green
+Write-Host "API Gateway: http://127.0.0.1:8080" -ForegroundColor Green
+Write-Host "Web Frontend: http://localhost:5173" -ForegroundColor Green

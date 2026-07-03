@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, UserProfile, ChangeRequest, Report } from '../types';
-import { usersApi } from '../api/users';
+import { usersApi, type UserFilters } from '../api/users';
 import { changeRequestsApi } from '../api/changeRequests';
 import { adminApi } from '../api/admin';
 import { reportsApi } from '../api/reports';
@@ -20,8 +20,20 @@ interface AppState {
   users: User[];
   searchQuery: string;
   isSearching: boolean;
+  filters: UserFilters;
   setSearchQuery: (query: string) => void;
-  fetchUsers: (query?: string) => Promise<void>;
+  setFilters: (filters: Partial<UserFilters>) => void;
+  page: number;
+  limit: number;
+  totalUsers: number;
+  setPage: (page: number) => void;
+  fetchUsers: (query?: string, pageOverride?: number) => Promise<void>;
+  
+  // Filter options
+  departments: string[];
+  organizations: string[];
+  jobTitles: string[];
+  fetchFilterOptions: () => Promise<void>;
   getUserById: (id: string) => User | undefined;
   globalPresence: Record<string, 'online' | 'away' | 'offline'>;
   setPresence: (id: string, presence: 'online' | 'away' | 'offline') => void;
@@ -103,17 +115,54 @@ export const useAppStore = create<AppState>()(
       users: [],
       searchQuery: '',
       isSearching: false,
+      filters: {},
+      page: 1,
+      limit: 18,
+      totalUsers: 0,
+      departments: [],
+      organizations: [],
+      jobTitles: [],
 
       setSearchQuery: (query: string) => {
-        set({ searchQuery: query });
-        get().fetchUsers(query);
+        set({ searchQuery: query, page: 1 });
+        get().fetchUsers(query, 1);
       },
 
-      fetchUsers: async (query?: string) => {
+      setFilters: (newFilters: Partial<UserFilters>) => {
+        set((state) => ({ filters: { ...state.filters, ...newFilters }, page: 1 }));
+        get().fetchUsers(undefined, 1);
+      },
+      
+      setPage: (page: number) => {
+        set({ page });
+        get().fetchUsers();
+      },
+
+      fetchFilterOptions: async () => {
+        try {
+          const [deps, orgs, jobs] = await Promise.all([
+            usersApi.getDepartments(),
+            usersApi.getOrganizations(),
+            usersApi.getJobTitles(),
+          ]);
+          set({ departments: deps, organizations: orgs, jobTitles: jobs });
+        } catch (error) {
+          console.error('Failed to fetch filter options', error);
+        }
+      },
+
+      fetchUsers: async (query?: string, pageOverride?: number) => {
         set({ isSearching: true });
         try {
-          // Add debouncing at component level, but here we just fetch
-          const response = await usersApi.getUsers(query || get().searchQuery);
+          const currentPage = pageOverride ?? get().page;
+          const currentLimit = get().limit;
+          
+          const response = await usersApi.getUsers(
+            query ?? get().searchQuery, 
+            get().filters, 
+            currentPage, 
+            currentLimit
+          );
           
           // Merge global presence
           const presences = get().globalPresence;
@@ -122,7 +171,11 @@ export const useAppStore = create<AppState>()(
             presence: presences[u.id] || u.presence
           }));
           
-          set({ users: updatedUsers, isSearching: false });
+          set({ 
+            users: updatedUsers, 
+            isSearching: false,
+            totalUsers: response.total 
+          });
         } catch (error) {
           console.error('Failed to fetch users', error);
           set({ isSearching: false });

@@ -419,28 +419,15 @@ export function AdminPage() {
                         key={request.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="rounded-xl border border-white/60 bg-white/60 p-5"
+                        className="group flex flex-col gap-4 rounded-xl border border-black/5 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:border-black/10 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">{request.user_name || 'Неизвестный'}</p>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              Запрос на изменение поля{' '}
-                              <span className="font-medium text-foreground">
-                                {getAttributeLabel(request.attribute_name)}
-                              </span>
-                            </p>
-                            <div className="mt-3 space-y-1 text-sm">
-                              <p className="text-primary">
-                                <span className="font-medium">Новое:</span>{' '}
-                                {(!request.new_value || request.new_value === '[]') ? (
-                                  <span className="text-muted-foreground/70 italic">Не указано</span>
-                                ) : (
-                                  request.new_value
-                                )}
-                              </p>
-                            </div>
-                            <p className="mt-2 text-xs text-muted-foreground">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-foreground">
+                              {request.user_name || 'Неизвестный'}
+                            </h4>
+                            <span className="text-xs text-muted-foreground">
+                              •{' '}
                               {new Date(request.created_at).toLocaleDateString('ru-RU', {
                                 month: 'long',
                                 day: 'numeric',
@@ -448,30 +435,47 @@ export function AdminPage() {
                                 hour: '2-digit',
                                 minute: '2-digit',
                               })}
-                            </p>
+                            </span>
                           </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              onClick={async () => {
-                                await approveChangeRequest(request.id);
-                              }}
-                              className="flex items-center gap-2 rounded-lg bg-[#34C759] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2FB350]"
-                            >
-                              <Check className="h-4 w-4" strokeWidth={2} />
-                              Одобрить
-                            </button>
-
-                            <button
-                              onClick={async () => {
-                                await rejectChangeRequest(request.id);
-                              }}
-                              className="flex items-center gap-2 rounded-lg bg-[#FF3B30] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E6342A]"
-                            >
-                              <X className="h-4 w-4" strokeWidth={2} />
-                              Отклонить
-                            </button>
+                          <p className="text-sm text-muted-foreground">
+                            Запрос на изменение поля{' '}
+                            <span className="font-medium text-foreground">
+                              {getAttributeLabel(request.attribute_name)}
+                            </span>
+                          </p>
+                          
+                          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-1.5 text-sm dark:bg-white/10">
+                            <span className="text-muted-foreground">Новое:</span>
+                            <span className="font-medium text-foreground">
+                              {(!request.new_value || request.new_value === '[]') ? (
+                                <span className="italic font-normal opacity-70">Не указано</span>
+                              ) : (
+                                request.new_value
+                              )}
+                            </span>
                           </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2 sm:shrink-0 sm:pt-0">
+                          <button
+                            onClick={async () => {
+                              await rejectChangeRequest(request.id);
+                            }}
+                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-50 px-4 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 sm:flex-none"
+                          >
+                            <X className="h-4 w-4" strokeWidth={2} />
+                            Отклонить
+                          </button>
+                          
+                          <button
+                            onClick={async () => {
+                              await approveChangeRequest(request.id);
+                            }}
+                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 sm:flex-none"
+                          >
+                            <Check className="h-4 w-4" strokeWidth={2} />
+                            Одобрить
+                          </button>
                         </div>
                       </motion.div>
                     ))}

@@ -1,16 +1,28 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sidebar } from '../components/Sidebar';
 import { SpotlightSearch } from '../components/SpotlightSearch';
 import { EmployeeCard } from '../components/EmployeeCard';
 import { ProfileModal } from '../components/ProfileModal';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../components/ui/pagination';
 import { useAppStore } from '../../store/useAppStore';
 import type { User } from '../../types';
 import { getEmployeeWord } from '../../lib/localization';
 
 export function DirectoryPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const { users, fetchUsers, isSearching } = useAppStore();
+  const { users, fetchUsers, isSearching, page, limit, totalUsers, setPage } = useAppStore();
+  
+  const totalPages = Math.ceil(totalUsers / limit);
+  const topRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -26,6 +38,7 @@ export function DirectoryPage() {
         <div className="mx-auto max-w-7xl px-8 pt-12 pb-12">
           {/* Hero Section */}
           <motion.div
+            ref={topRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="mb-12 text-center"
@@ -39,8 +52,68 @@ export function DirectoryPage() {
           </motion.div>
 
           {/* Spotlight Search */}
-          <div className="mb-12">
+          <div className="mb-6">
             <SpotlightSearch />
+          </div>
+
+          <div className="mb-6 flex flex-col items-center justify-between gap-4 md:flex-row">
+            <div className="text-sm text-muted-foreground">
+              Найдено: {totalUsers} {getEmployeeWord(totalUsers)} (показано {users.length})
+            </div>
+
+            {totalPages > 1 && (
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        if (page > 1) {
+                          setPage(page - 1);
+                        }
+                      }} 
+                      className={page <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                    .map((p, i, arr) => (
+                      <React.Fragment key={p}>
+                        {i > 0 && arr[i - 1] !== p - 1 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        <PaginationItem>
+                          <PaginationLink 
+                            isActive={page === p}
+                            onClick={(e) => { 
+                              e.preventDefault(); 
+                              setPage(p);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      </React.Fragment>
+                    ))}
+
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        if (page < totalPages) {
+                          setPage(page + 1);
+                        }
+                      }}
+                      className={page >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </div>
 
           {/* Employee Grid */}
@@ -75,15 +148,7 @@ export function DirectoryPage() {
             )}
           </motion.div>
 
-          {/* Results Count */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mt-8 text-center text-sm text-muted-foreground"
-          >
-            Показано: {filteredUsers.length} {getEmployeeWord(filteredUsers.length)}
-          </motion.div>
+
         </div>
       </main>
 

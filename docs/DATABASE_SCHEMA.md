@@ -24,6 +24,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- нечёткий поиск (fuz
 | `office_location` | VARCHAR(256) | NULLABLE | Кабинет/офис (`physicalDeliveryOfficeName` из AD) |
 | `organization` | VARCHAR(256) | NULLABLE | Организация (вычисляется из `memberOf` по списку в `docs/CN.md`) |
 | `job_title` | VARCHAR(256) | NULLABLE | Должность (`title` из AD) |
+| `email` | VARCHAR(256) | NULLABLE | Электронная почта (`mail` из AD) |
 | `role` | VARCHAR(32) | NOT NULL, DEFAULT 'employee' | Роль в системе: `employee`, `it_operator` |
 | `is_verified` | BOOLEAN | NOT NULL, DEFAULT FALSE | Пройдена ли проверка Gatekeeper |
 | `is_protected` | BOOLEAN | NOT NULL, DEFAULT FALSE | VIP-защита профиля |

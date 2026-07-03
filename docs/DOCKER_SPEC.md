@@ -11,6 +11,12 @@
 - `ad_sync_worker`: Фоновый воркер для синхронизации с Active Directory.
 - `web_frontend`: SPA-приложение на React.
 
+### 1.1 Локальная разработка (Dev-окружение)
+Для локальной разработки используется дополнительный конфигурационный файл `docker-compose.dev.yml`, который накладывается поверх основного для реализации механизма Hot Module Replacement (HMR) фронтенда:
+- Исходный код монтируется напрямую в контейнер (`volumes`).
+- Для изоляции `node_modules` внутри контейнера используется анонимный том `/app/node_modules`.
+- Включается Vite dev-сервер с проксированием `/api` на бэкенд `http://api_gateway:8000` с помощью переменной `VITE_PROXY_TARGET`.
+
 ## 2. Спецификации сервисов
 
 ### 2.1 База данных (`db`)
@@ -57,7 +63,7 @@
 
 ### 2.5 Web Frontend (`web_frontend`)
 - **Стратегия сборки (Multi-stage build):**
-  1. **Stage 1 (Compilation):** Использование образа `node:18`. Выполнение `npm install` и `npm run build`.
+  1. **Stage 1 (Compilation):** Использование образа `node:20-alpine`. Выполнение `npm install` и `npm run build`.
   2. **Stage 2 (Production):** Использование образа `nginx:alpine`. Копирование статических файлов из Stage 1 в `/usr/share/nginx/html`.
 - **Конфигурация:** Кастомный `nginx.conf` для корректной работы React Router (fallback на `index.html`).
 

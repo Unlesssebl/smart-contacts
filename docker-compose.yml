@@ -93,20 +93,15 @@ services:
       - smart_net
 
   web_frontend:
-    image: node:20-alpine
+    build:
+      context: ./services/web_frontend
+      dockerfile: Dockerfile
     container_name: smart_contacts_web
     restart: always
-    working_dir: /app
-    volumes:
-      - ./services/web_frontend:/app
-    # Запуск npm install для установки зависимостей перед запуском Vite
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 80"
     ports:
-      - "127.0.0.1:80:80"
+      - "10.245.19.85:80:80"
     depends_on:
       - api_gateway
-    environment:
-      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://127.0.0.1:8001/api/v1}
     networks:
       - smart_net
 
