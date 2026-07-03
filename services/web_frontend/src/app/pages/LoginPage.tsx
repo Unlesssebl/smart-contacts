@@ -44,12 +44,12 @@ export function LoginPage() {
     setError('');
     setIsSubmitting(true);
 
-    const success = await login(samAccount, password);
-    if (success) {
+    const result = await login(samAccount, password);
+    if (result.success) {
       setIsSuccess(true);
       setTimeout(() => navigate('/'), 800);
     } else {
-      setError('Неверный логин или пароль. Используйте данные вашей учётной записи Windows.');
+      setError(result.error || 'Ошибка авторизации');
       setIsSubmitting(false);
     }
   };

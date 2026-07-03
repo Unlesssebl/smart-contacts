@@ -12,7 +12,7 @@ interface AppState {
   // Auth
   currentUser: UserProfile | null;
   isAuthenticated: boolean;
-  login: (samAccount: string, password: string) => Promise<boolean>;
+  login: (samAccount: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   fetchMe: () => Promise<void>;
 
@@ -80,15 +80,17 @@ export const useAppStore = create<AppState>()(
           await login(samAccount, password);
           set({ isAuthenticated: true });
           await get().fetchMe();
-          return true;
+          return { success: true };
         } catch (error: any) {
           console.error('Login failed:', error);
+          let errorMessage = 'Ошибка авторизации. Сервер недоступен.';
           if (error.response?.status === 401) {
-            toast.error('Неверный логин или пароль');
-          } else {
-            toast.error('Ошибка авторизации. Сервер недоступен.');
+            errorMessage = 'Неверный логин или пароль. Используйте данные вашей учётной записи Windows.';
+          } else if (error.response?.status === 429) {
+            errorMessage = 'Вход временно ограничен. Превышено количество попыток.';
           }
-          return false;
+          toast.error(errorMessage);
+          return { success: false, error: errorMessage };
         }
       },
 

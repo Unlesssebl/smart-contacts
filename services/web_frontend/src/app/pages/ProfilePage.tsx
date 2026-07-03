@@ -116,15 +116,7 @@ export function ProfilePage() {
                       .map((n) => n[0])
                       .join('')}
                   </div>
-                  <motion.div
-                    className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 ${
-                      user.presence === 'online' ? 'border-white bg-emerald-500' :
-                      user.presence === 'away' ? 'border-white bg-amber-400' :
-                      'border-slate-300 bg-white'
-                    }`}
-                    animate={user.presence === 'online' ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-                    transition={user.presence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
-                  />
+
                 </div>
 
                 <div className="flex-1">

@@ -37,7 +37,8 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest._skipAuthRedirect) {
+    const url = originalRequest.url || '';
+    if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login')) {
       originalRequest._retry = true;
       useAppStore.getState().logout();
       window.location.href = '/login';
