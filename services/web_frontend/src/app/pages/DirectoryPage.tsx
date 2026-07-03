@@ -35,7 +35,7 @@ export function DirectoryPage() {
       <Sidebar />
 
       <main className="ml-72 flex-1 relative">
-        <div className="mx-auto max-w-7xl px-8 pt-12 pb-12">
+        <div className="mx-auto max-w-[1600px] px-8 lg:px-12 pt-12 pb-12">
           {/* Hero Section */}
           <motion.div
             ref={topRef}
@@ -134,7 +134,7 @@ export function DirectoryPage() {
                 </p>
               </motion.div>
             ) : (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
                 <AnimatePresence mode="popLayout">
                   {filteredUsers.map((user) => (
                     <EmployeeCard

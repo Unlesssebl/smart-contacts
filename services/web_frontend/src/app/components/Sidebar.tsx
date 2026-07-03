@@ -30,7 +30,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen w-72 bg-white border-r border-border z-20 flex flex-col"
+      className="fixed left-0 top-0 h-screen w-72 bg-white border-r border-slate-200 z-20 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
     >
       <div className="flex h-full flex-col px-6 py-6">
         {/* Logo */}
@@ -52,17 +52,17 @@ export function Sidebar() {
               <Link
                 key={item.path}
                 to={item.path}
-                className="relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
-                style={{
-                  color: active ? 'var(--foreground)' : 'var(--muted-foreground)',
-                }}
+                className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors group ${active ? 'text-primary' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 {active && (
                   <motion.div
                     layoutId="activeNav"
-                    className="absolute inset-0 rounded-lg bg-black/5"
+                    className="absolute inset-0 rounded-lg bg-primary/10"
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                   />
+                )}
+                {!active && (
+                  <div className="absolute inset-0 rounded-lg bg-slate-50 opacity-0 transition-opacity group-hover:opacity-100" />
                 )}
                 <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
                 <span className="relative z-10 text-sm font-medium">{item.label}</span>
@@ -72,9 +72,9 @@ export function Sidebar() {
         </nav>
 
         {/* Help / Support Card */}
-        <div className="mt-auto mb-6 rounded-xl bg-black/5 p-4 border border-black/5">
-          <h4 className="text-sm font-medium text-foreground">Нужна помощь?</h4>
-          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+        <div className="mt-auto mb-6 rounded-xl bg-slate-50 p-4 border border-slate-100">
+          <h4 className="text-sm font-medium text-slate-900">Нужна помощь?</h4>
+          <p className="mt-1 text-xs text-slate-500 leading-relaxed">
             Если у вас возникли проблемы с доступом или поиском сотрудников, обратитесь в поддержку.
           </p>
           <a
@@ -87,27 +87,27 @@ export function Sidebar() {
 
         {/* User Profile */}
         {currentUser && (
-          <div className="border-t border-black/5 pt-6 mt-4">
+          <div className="border-t border-slate-100 pt-6 mt-4">
             <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
               <div className="relative">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-medium text-white shadow-md">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-gradient-to-br from-blue-500/40 to-blue-500/15 backdrop-blur-sm border-blue-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(59,130,246,0.25)] text-blue-800 text-sm font-medium">
                   {getInitials(currentUser.full_name)}
                 </div>
                 <motion.div
-                  className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border ${
-                    currentUser.presence === 'online' ? 'border-white bg-emerald-500' :
-                    currentUser.presence === 'away' ? 'border-white bg-amber-400' :
-                    'border-slate-300 bg-white'
+                  className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white ${
+                    currentUser.presence === 'online' ? 'bg-emerald-500' :
+                    currentUser.presence === 'away' ? 'bg-amber-400' :
+                    'bg-slate-300'
                   }`}
                   animate={currentUser.presence === 'online' ? { scale: [1, 1.2, 1] } : { scale: 1 }}
                   transition={currentUser.presence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
                 />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-medium text-foreground">
+                <p className="truncate text-sm font-medium text-slate-900">
                   {currentUser.full_name}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-slate-500">
                   {(!currentUser.job_title || currentUser.job_title === '[]') ? 'Не указано' : currentUser.job_title}
                 </p>
               </div>

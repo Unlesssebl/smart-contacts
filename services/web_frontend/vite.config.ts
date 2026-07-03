@@ -35,9 +35,12 @@ export default defineConfig({
     host: '10.245.19.85', // Listen on specific network interface
     proxy: {
       '/api': {
-        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080', // Support Docker and local dev
-        changeOrigin: true,
+        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080',
+        changeOrigin: false,
       }
+    },
+    watch: {
+      usePolling: true,
     }
   },
 
