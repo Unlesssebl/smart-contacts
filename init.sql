@@ -11,12 +11,13 @@ CREATE TABLE users (
     status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
     tg_id BIGINT UNIQUE,
     full_name VARCHAR(256) NOT NULL,
-    internal_phone VARCHAR(20),
-    mobile_phone VARCHAR(20),
+    internal_phone VARCHAR(100),
+    mobile_phone VARCHAR(100),
     department VARCHAR(256),
     office_location VARCHAR(256),
     organization VARCHAR(256),
     job_title VARCHAR(256),
+    email VARCHAR(256),
     role VARCHAR(32) NOT NULL DEFAULT 'employee',
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     is_protected BOOLEAN NOT NULL DEFAULT FALSE,
@@ -81,6 +82,8 @@ CREATE TABLE refresh_tokens (
 CREATE INDEX idx_users_fullname_trgm    ON users USING GIN (full_name gin_trgm_ops);
 CREATE INDEX idx_users_department_trgm  ON users USING GIN (department gin_trgm_ops);
 CREATE INDEX idx_users_office_trgm      ON users USING GIN (office_location gin_trgm_ops);
+CREATE INDEX idx_users_internal_phone_trgm ON users USING GIN (regexp_replace(internal_phone, '[^0-9]', '', 'g') gin_trgm_ops);
+CREATE INDEX idx_users_mobile_phone_trgm   ON users USING GIN (regexp_replace(mobile_phone, '[^0-9]', '', 'g') gin_trgm_ops);
 
 -- Поиск по Telegram ID
 CREATE INDEX idx_users_tg_id ON users (tg_id) WHERE tg_id IS NOT NULL;
@@ -103,3 +106,10 @@ CREATE UNIQUE INDEX idx_reports_unique_new
 
 CREATE INDEX idx_reports_target   ON reports (target_user_guid);
 CREATE INDEX idx_reports_status   ON reports (status);
+
+-- 7. Таблица system_settings (Системные настройки)
+CREATE TABLE system_settings (
+    key VARCHAR(64) PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

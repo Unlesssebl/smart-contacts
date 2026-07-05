@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/.venv/
+**/venv/
+**/env/
+
+# Frontend
+**/node_modules/
+**/dist/
+**/.svelte-kit/
+**/.next/
+**/.nuxt/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+docker-compose*.yml
+Dockerfile*

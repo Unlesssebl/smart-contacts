@@ -1,6 +1,11 @@
 from typing import List, Dict, Any, Optional, Generator
-from ldap3 import Server, Connection, ALL, SUBTREE
+from ldap3 import Server, Connection, ALL, SUBTREE, Tls
+import ssl
 import logging
+import base64
+import hashlib
+from cryptography.fernet import Fernet
+from app.db import SessionLocal, SystemSetting
 
 from .config import settings
 
@@ -9,11 +14,52 @@ logger = logging.getLogger(__name__)
 
 class LDAPClient:
     def __init__(self):
-        self.server = Server(settings.AD_SERVER, get_info=ALL)
+        # Fetch credentials from DB
+        db = SessionLocal()
+        try:
+            ad_user_setting = db.query(SystemSetting).filter(SystemSetting.key == "AD_USER").first()
+            ad_password_setting = db.query(SystemSetting).filter(SystemSetting.key == "AD_PASSWORD").first()
+            
+            ad_user = ad_user_setting.value if ad_user_setting else None
+            ad_password_encrypted = ad_password_setting.value if ad_password_setting else None
+        finally:
+            db.close()
+            
+        if not ad_user or not ad_password_encrypted:
+            raise ValueError("AD_USER or AD_PASSWORD is not set in DB")
+            
+        # Decrypt password
+        digest = hashlib.sha256(settings.SECRET_KEY.encode("utf-8")).digest()
+        fernet_key = base64.urlsafe_b64encode(digest)
+        cipher_suite = Fernet(fernet_key)
+        
+        try:
+            ad_password = cipher_suite.decrypt(ad_password_encrypted.encode("utf-8")).decode("utf-8")
+        except Exception as e:
+            raise ValueError(f"Failed to decrypt AD_PASSWORD: {e}")
+
+        tls_config = None
+        if settings.AD_SERVER.startswith("ldaps://"):
+            if settings.AD_INSECURE_SKIP_VERIFY:
+                logger.warning("LDAP TLS certificate verification is DISABLED (AD_INSECURE_SKIP_VERIFY=True).")
+                tls_config = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLSv1_2)
+            else:
+                tls_config = Tls(
+                    validate=ssl.CERT_REQUIRED,
+                    version=ssl.PROTOCOL_TLSv1_2,
+                    ca_certs_file=settings.AD_CA_CERT_PATH
+                )
+
+        self.server = Server(
+            settings.AD_SERVER, 
+            get_info=ALL,
+            use_ssl=settings.AD_SERVER.startswith("ldaps://"),
+            tls=tls_config
+        )
         self.conn = Connection(
             self.server,
-            user=settings.AD_USER,
-            password=settings.AD_PASSWORD,
+            user=ad_user,
+            password=ad_password,
             authentication="SIMPLE",
             auto_bind=True
         )
@@ -64,10 +110,16 @@ class LDAPClient:
         guid_bytes = uuid.UUID(guid_str).bytes_le
         guid_filter = "".join(f"\\{b:02x}" for b in guid_bytes)
         
+        # Search from the domain root to find users outside of the standard AD_BASE_DN
+        root_dn = ",".join(part for part in settings.AD_BASE_DN.split(",") if part.upper().startswith("DC="))
+        if not root_dn:
+            root_dn = settings.AD_BASE_DN
+            
         self.conn.search(
-            search_base=settings.AD_BASE_DN,
+            search_base=root_dn,
             search_filter=f"(objectGUID={guid_filter})",
-            attributes=["distinguishedName"]
+            attributes=["distinguishedName"],
+            search_scope=SUBTREE
         )
         
         if self.conn.entries:

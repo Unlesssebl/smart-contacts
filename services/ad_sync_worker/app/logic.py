@@ -1,6 +1,6 @@
 import uuid
 import re
-from typing import List, Optional, Tuple, Any, Union
+from typing import List, Optional, Tuple, Any
 import logging
 
 from .config import settings
@@ -8,33 +8,7 @@ from .config import settings
 logger = logging.getLogger(__name__)
 
 
-def ad_guid_to_uuid(binary_guid: Any) -> str:
-    """
-    Converts AD objectGUID to a UUID string.
-    Handles:
-    - Binary bytes (16 bytes, little-endian)
-    - Lists of bytes (ldap3 style)
-    - Formatted strings like '{uuid}' or 'uuid'
-    """
-    if isinstance(binary_guid, list):
-        if not binary_guid:
-            raise ValueError("GUID list is empty")
-        binary_guid = binary_guid[0]
-    
-    if isinstance(binary_guid, str):
-        # Handle string format "{89bdc9c6-7a3a-44e2-afdb-8c5d1f32ba8c}"
-        return str(uuid.UUID(binary_guid.strip("{}")))
-    
-    if isinstance(binary_guid, bytes):
-        if len(binary_guid) == 16:
-            return str(uuid.UUID(bytes_le=binary_guid))
-        # Could be a string encoded as bytes
-        try:
-            return str(uuid.UUID(binary_guid.decode().strip("{}")))
-        except Exception:
-            pass
-        
-    raise ValueError(f"Unsupported GUID format: {type(binary_guid)} (len={len(binary_guid) if hasattr(binary_guid, '__len__') else 'N/A'})")
+from shared.utils import ad_guid_to_uuid
 
 
 def determine_status(uac: int, sam_account_name: str) -> str:
@@ -57,37 +31,94 @@ def determine_status(uac: int, sam_account_name: str) -> str:
     return "ACTIVE"
 
 
-def parse_cn(dn: str) -> str:
-    """Extracts CN from a DN string."""
-    match = re.search(r"CN=([^,]+)", dn)
-    if match:
-        return match.group(1)
-    return dn
+from sqlalchemy import select
+from .db import SystemSetting
+import json
+
+_ou_mapping_cache: Optional[dict[str, str]] = None
+_ou_mapping_cache_time: float = 0
 
 
-def match_organization(member_of: List[str]) -> Tuple[Optional[str], List[str]]:
+def save_known_ous(session, paths: set):
+    """Saves the tree of known OUs to system_settings."""
+    setting = session.get(SystemSetting, "KNOWN_OUS")
+    if setting and setting.value:
+        try:
+            tree = json.loads(setting.value)
+            if not isinstance(tree, dict):
+                tree = {}
+        except json.JSONDecodeError:
+            tree = {}
+    else:
+        tree = {}
+    
+    for path in paths:
+        current = tree
+        for node in path:
+            if node not in current:
+                current[node] = {}
+            current = current[node]
+            
+    merged_json = json.dumps(tree, ensure_ascii=False)
+    
+    if setting:
+        setting.value = merged_json
+    else:
+        session.add(SystemSetting(key="KNOWN_OUS", value=merged_json))
+    session.commit()
+
+
+def get_known_ous(session) -> list[str]:
+    """Returns the list of known OU names from system_settings."""
+    setting = session.get(SystemSetting, "KNOWN_OUS")
+    if setting and setting.value:
+        try:
+            return json.loads(setting.value)
+        except json.JSONDecodeError:
+            return []
+    return []
+
+def get_ou_mapping(session) -> dict[str, str]:
+    """Returns OU mapping from DB, cached for 60 seconds."""
+    global _ou_mapping_cache, _ou_mapping_cache_time
+    import time
+    
+    current_time = time.time()
+    if _ou_mapping_cache is not None and current_time - _ou_mapping_cache_time < 60:
+        return _ou_mapping_cache
+        
+    setting = session.get(SystemSetting, "OU_MAPPING")
+    mapping = {}
+    if setting and setting.value:
+        try:
+            mapping = json.loads(setting.value)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse OU_MAPPING JSON from DB")
+            mapping = {}
+            
+    _ou_mapping_cache = mapping
+    _ou_mapping_cache_time = current_time
+    return _ou_mapping_cache
+
+def match_organization_by_ou(dn: str, session) -> Tuple[Optional[str], List[str]]:
     """
-    Matches memberOf CNs against the list in CN.md.
-    Returns (selected_org, warnings).
+    Matches the user's AD Organizational Units (OU) against the mapping in DB.
     """
-    try:
-        with open(settings.CN_LIST_PATH, "r", encoding="utf-8") as f:
-            valid_cns = [line.strip() for line in f if line.strip()]
-    except Exception as e:
-        logger.error(f"Failed to read CN list: {e}")
-        return None, [f"Error reading CN list: {e}"]
+    mapping = get_ou_mapping(session)
+    if not mapping:
+        return None, ["OU mapping is empty or could not be loaded."]
 
-    user_cns = [parse_cn(dn) for dn in member_of]
+    user_ous = re.findall(r"OU=([^,]+)", dn)
     
     # Priority 1: Exact case-sensitive match
-    exact_matches = [cn for cn in user_cns if cn in valid_cns]
+    exact_matches = [ou for ou in user_ous if ou in mapping]
     
     # Priority 2: Case-insensitive match
     case_insensitive_matches = []
-    valid_cns_lower = {cn.lower(): cn for cn in valid_cns}
-    for cn in user_cns:
-        if cn.lower() in valid_cns_lower:
-            case_insensitive_matches.append(valid_cns_lower[cn.lower()])
+    mapping_lower = {k.lower(): v for k, v in mapping.items()}
+    for ou in user_ous:
+        if ou.lower() in mapping_lower:
+            case_insensitive_matches.append(ou)
 
     matches = list(dict.fromkeys(exact_matches + case_insensitive_matches))
     
@@ -95,10 +126,14 @@ def match_organization(member_of: List[str]) -> Tuple[Optional[str], List[str]]:
         return None, []
     
     if len(matches) == 1:
-        return matches[0], []
+        # Get the actual organization name from mapping
+        key = matches[0]
+        org_name = mapping.get(key) or mapping_lower.get(key.lower())
+        return org_name, []
     
     # Multiple matches found
     # Try to pick exact case match if exists, otherwise first match
-    selected = exact_matches[0] if exact_matches else matches[0]
-    warning = f"Warning: Multiple organizations found in memberOf: {matches}. Using {selected}."
-    return selected, [warning]
+    selected_ou = exact_matches[0] if exact_matches else matches[0]
+    org_name = mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower())
+    warning = f"Warning: Multiple OUs matched in DN: {matches}. Using {selected_ou} -> {org_name}."
+    return org_name, [warning]

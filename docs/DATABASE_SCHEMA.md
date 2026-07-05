@@ -24,6 +24,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- нечёткий поиск (fuz
 | `office_location` | VARCHAR(256) | NULLABLE | Кабинет/офис (`physicalDeliveryOfficeName` из AD) |
 | `organization` | VARCHAR(256) | NULLABLE | Организация (вычисляется из `memberOf` по списку в `docs/CN.md`) |
 | `job_title` | VARCHAR(256) | NULLABLE | Должность (`title` из AD) |
+| `email` | VARCHAR(256) | NULLABLE | Электронная почта (`mail` из AD) |
 | `role` | VARCHAR(32) | NOT NULL, DEFAULT 'employee' | Роль в системе: `employee`, `it_operator` |
 | `is_verified` | BOOLEAN | NOT NULL, DEFAULT FALSE | Пройдена ли проверка Gatekeeper |
 | `is_protected` | BOOLEAN | NOT NULL, DEFAULT FALSE | VIP-защита профиля |
@@ -47,6 +48,8 @@ CONSTRAINT users_grace_check CHECK (grace_period_left >= 0 AND grace_period_left
 CREATE INDEX idx_users_fullname_trgm    ON users USING GIN (full_name gin_trgm_ops);
 CREATE INDEX idx_users_department_trgm  ON users USING GIN (department gin_trgm_ops);
 CREATE INDEX idx_users_office_trgm      ON users USING GIN (office_location gin_trgm_ops);
+CREATE INDEX idx_users_internal_phone_trgm ON users USING GIN (regexp_replace(internal_phone, '[^0-9]', '', 'g') gin_trgm_ops);
+CREATE INDEX idx_users_mobile_phone_trgm   ON users USING GIN (regexp_replace(mobile_phone, '[^0-9]', '', 'g') gin_trgm_ops);
 
 
 

@@ -1,12 +1,35 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.ldap import init_ldap_pool
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize LDAP pool
+    init_ldap_pool()
+    yield
+    # Shutdown logic (if any) could go here
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import Request
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+        return response
 
 # Set specific origins for development
 origins = [
@@ -17,8 +40,14 @@ origins = [
     "http://127.0.0.1",
     "http://127.0.0.1:80",
     "http://127.0.0.1:5173",
-    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8080",
+    "http://10.245.19.85",
+    "http://10.245.19.85:80",
+    "http://10.245.19.85:5173",
+    "http://10.245.19.85:8080",
 ]
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,3 +62,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="10.245.19.85", port=8080, reload=True)

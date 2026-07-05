@@ -10,9 +10,15 @@ class UserBase(BaseModel):
     mobile_phone: Optional[str] = None
     department: Optional[str] = None
     office_location: Optional[str] = None
+    organization: Optional[str] = None
+    job_title: Optional[str] = None
+    email: Optional[str] = None
 
 class UserRead(UserBase):
     id: UUID = Field(alias="object_guid")
+    tg_id: Optional[int] = None
+    manager_id: Optional[str] = None
+    presence: str = "offline"
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 class UserFull(UserRead):

@@ -22,9 +22,3 @@ def hash_token(token: str) -> str:
     """
     return hashlib.sha256(token.encode()).hexdigest()
 
-def verify_token(token: str) -> Optional[dict]:
-    try:
-        decoded_token = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        return decoded_token if decoded_token["exp"] >= datetime.now(timezone.utc).timestamp() else None
-    except Exception:
-        return None

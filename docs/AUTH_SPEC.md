@@ -4,8 +4,8 @@
 
 | Уровень | Технология |
 |---------|-----------|
-| Аутентификация | **LDAP BIND** через корпоративный AD (библиотека `ldap3`) |
-| Сессия | **JWT** (access token, 30 мин) + **Refresh Token** (JSON body, 7 дней, хранится в БД) |
+| Аутентификация | **LDAP BIND** через корпоративный AD (библиотека `ldap3`) / **SSO** (Kerberos) |
+| Сессия | **JWT** (access token, 30 мин) + **Refresh Token** (7 дней, хранится в БД). Передаются в **HttpOnly Cookies**. Дополнительно используется `csrf_token` в cookie. |
 | Статус сотрудника | Парсится из суффикса `sAMAccountName` в AD Sync Worker (`-uv` → `RESIGNED`, `-time` → `ON_LEAVE`) |
 
 ---
@@ -13,16 +13,20 @@
 ## Flow аутентификации
 
 ```
-[Браузер/Бот] → POST /auth/login {username, password}
-                      ↓
-              [API Gateway] → LDAP BIND к AD с переданными кредами
-                      ↓ (успех)
-              Найти/создать запись в таблице users по sam_account_name
-                      ↓
-              Создать JWT (payload: object_guid, role, sam_account_name)
-              Создать Refresh Token (UUID v4, сохранить SHA-256 хэш в таблице refresh_tokens)
-                      ↓
-              Вернуть { access_token, refresh_token } в теле JSON
+[Браузер/Бот] → GET /auth/sso (Kerberos-билет в заголовке Authorization)
+                       ↓
+               [API Gateway] → Если билета нет, вернуть 401 (БЕЗ WWW-Authenticate, чтобы избежать нативного окна браузера)
+                       ↓
+[Браузер/Бот] → POST /auth/login {username, password} (если SSO недоступен)
+                       ↓
+               [API Gateway] → LDAP BIND к AD с переданными кредами
+                       ↓ (успех)
+               Найти/создать запись в таблице users по sam_account_name
+                       ↓
+               Создать JWT (payload: object_guid, role, sam_account_name)
+               Создать Refresh Token (UUID v4, сохранить SHA-256 хэш в таблице refresh_tokens)
+                       ↓
+               Вернуть { user: {...} } в теле JSON и установить Cookies: access_token, refresh_token, csrf_token
 ```
 
 **Важно**: API Gateway **не хранит** пароль пользователя. LDAP BIND — единственная точка проверки. Пароли пользователей никогда не логируются и не сохраняются даже во временных переменных воркера.
@@ -98,6 +102,16 @@ async def require_it_operator(token_data: TokenPayload = Depends(get_current_use
 |-----------|-----------|
 | `SECRET_KEY` | Ключ подписи JWT (min 32 символа, random) |
 | `ALGORITHM` | Алгоритм JWT (`HS256`) |
+101: 
+102: ---
+103: 
+104: ## Аутентификация WebSockets
+105: 
+106: Поскольку браузерные WebSocket-соединения не поддерживают кастомные заголовки (например, `Authorization: Bearer <token>`) в стандартном JS API, а куки с `HttpOnly` могут блокироваться из-за CORS при локальной разработке, используется следующий паттерн:
+107: 1. Клиент перед подключением к WebSocket отправляет GET-запрос на `/api/v1/auth/ws-token` (с передачей стандартного Access JWT).
+108: 2. Сервер возвращает короткоживущий одноразовый токен: `{ "ws_token": "<short_lived_token>" }` со сроком жизни 5 минут.
+109: 3. Клиент передает этот токен в параметре запроса URL при подключении к WebSocket: `ws://localhost:8000/api/v1/ws/presence?token=<ws_token>`.
+110: 4. Сервер декодирует токен из параметров запроса, извлекает `sub` (GUID пользователя) и разрешает соединение. Если токен невалидный, соединение закрывается с кодом `1008` (Policy Violation).
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Время жизни access token (default: 30) |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | Время жизни refresh token (default: 7) |
 | `AD_SERVER` | LDAP-сервер для BIND (`ldap://ad.example.local`) |

@@ -1,17 +1,25 @@
 import axios from 'axios';
-import { useAuthStore } from '../stores/authStore';
-import { message, notification } from 'antd';
+import { useAppStore } from '../store/useAppStore';
+import { toast } from 'sonner';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: 10000,
+  withCredentials: true,
 });
 
-// Request interceptor: add Bearer token
+// Helper to read cookie by name
+function getCookie(name: string) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+}
+
+// Request interceptor: add CSRF token
 apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const csrfToken = getCookie('csrf_token');
+  if (csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken;
   }
   return config;
 });
@@ -20,8 +28,8 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => {
     // If we get a successful response, ensure adSyncUnavailable is false
-    if (useAuthStore.getState().adSyncUnavailable) {
-      useAuthStore.getState().setAdSyncStatus(false);
+    if (useAppStore.getState().adSyncUnavailable) {
+      useAppStore.getState().setAdSyncStatus(false);
     }
     return response;
   },
@@ -29,29 +37,26 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const url = originalRequest.url || '';
+    if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login')) {
       originalRequest._retry = true;
-      // In a real app, you might try to refresh the token here.
-      // For now, we'll just logout if we get a 401 on a non-retry request.
-      useAuthStore.getState().logout();
+      useAppStore.getState().logout();
       window.location.href = '/login';
       return Promise.reject(error);
     }
 
     // Handle 503 Service Unavailable (AD Sync issues)
     if (error.response?.status === 503) {
-      useAuthStore.getState().setAdSyncStatus(true);
-      notification.warning({
-        message: 'Синхронизация недоступна',
+      useAppStore.getState().setAdSyncStatus(true);
+      toast.warning('Синхронизация недоступна', {
         description: 'Синхронизация с Active Directory временно недоступна. Изменения будут сохранены позже.',
-        duration: 0, // Keep it visible
-        key: 'ad-sync-503',
+        duration: 5000,
       });
     }
 
     // Handle other errors
     if (error.response?.status === 500) {
-      message.error('Ошибка сервера. Попробуйте позже.');
+      toast.error('Ошибка сервера. Попробуйте позже.');
     }
 
     return Promise.reject(error);

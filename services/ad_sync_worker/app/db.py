@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import uuid
 
@@ -34,11 +34,12 @@ class User(Base):
     status: Mapped[str] = mapped_column(String(16), default="ACTIVE")
     tg_id: Mapped[Optional[int]] = mapped_column(BigInteger, unique=True)
     full_name: Mapped[str] = mapped_column(String(256), nullable=False)
-    internal_phone: Mapped[Optional[str]] = mapped_column(String(20))
-    mobile_phone: Mapped[Optional[str]] = mapped_column(String(20))
+    internal_phone: Mapped[Optional[str]] = mapped_column(String(100))
+    mobile_phone: Mapped[Optional[str]] = mapped_column(String(100))
     department: Mapped[Optional[str]] = mapped_column(String(256))
     office_location: Mapped[Optional[str]] = mapped_column(String(256))
     organization: Mapped[Optional[str]] = mapped_column(String(256))
+    ad_dn: Mapped[Optional[str]] = mapped_column(String(512))
     job_title: Mapped[Optional[str]] = mapped_column(String(256))
     role: Mapped[str] = mapped_column(String(32), default="employee")
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -46,9 +47,9 @@ class User(Base):
     grace_period_left: Mapped[int] = mapped_column(Integer, default=3)
     last_sync_timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     sync_error_log: Mapped[Optional[str]] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now, onupdate=datetime.now
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
 
 
@@ -69,5 +70,12 @@ class ChangeRequest(Base):
     resolved_by: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.object_guid", ondelete="SET NULL")
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

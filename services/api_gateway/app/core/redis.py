@@ -1,4 +1,5 @@
 import redis
+import redis.asyncio as aioredis
 from app.core.config import settings
 
 redis_client = redis.Redis(
@@ -8,30 +9,38 @@ redis_client = redis.Redis(
     decode_responses=True
 )
 
-def check_brute_force(ip: str) -> bool:
+async_redis_client = aioredis.Redis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=0,
+    decode_responses=True
+)
+
+def is_brute_force_blocked(ip: str) -> bool:
     """
-    Returns True if IP is blocked.
+    2.3. Атомарная проверка и инкремент счетчика попыток.
+    Возвращает True, если IP заблокирован.
+    Выполняется атомарно через Lua скрипт.
     """
     key = f"brute_force:{ip}"
-    attempts = redis_client.get(key)
-    if attempts and int(attempts) >= 5:
+    
+    # Атомарно инкрементируем и получаем текущее значение
+    attempts = redis_client.eval(LUA_RECORD_ATTEMPT, 1, key)
+    if attempts and int(attempts) > 5:
         return True
     return False
 
-def increment_brute_force(ip: str):
-    """
-    Increments fail counter and sets 15 min block if reached.
-    """
-    key = f"brute_force:{ip}"
-    attempts = redis_client.incr(key)
-    if attempts == 1:
-        redis_client.expire(key, 900) # 15 minutes
-    elif attempts >= 5:
-        redis_client.expire(key, 900) # Reset expiry to 15 mins on block
+LUA_RECORD_ATTEMPT = """
+local attempts = redis.call('INCR', KEYS[1])
+if attempts == 1 then
+    redis.call('EXPIRE', KEYS[1], 900)
+end
+return attempts
+"""
 
 def reset_brute_force(ip: str):
     """
-    Resets counter on successful login.
+    Сброс счетчика при успешном входе.
     """
     key = f"brute_force:{ip}"
     redis_client.delete(key)

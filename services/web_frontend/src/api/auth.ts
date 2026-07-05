@@ -10,3 +10,13 @@ export const getMe = async () => {
   const response = await apiClient.get('/auth/me');
   return response.data;
 };
+
+export const checkSso = async () => {
+  const response = await apiClient.get('/auth/sso');
+  return response.data;
+};
+
+export const getWsToken = async () => {
+  const response = await apiClient.get('/auth/ws-token');
+  return response.data.ws_token;
+};

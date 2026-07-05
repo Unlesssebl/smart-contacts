@@ -4,11 +4,18 @@ import sys
 from app.config import settings
 from app.sync import SyncWorker
 
+# Configure file handler for WARNING and above
+file_handler = logging.FileHandler("worker_errors.log", encoding="utf-8")
+file_handler.setLevel(logging.WARNING)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        file_handler
+    ]
 )
 
 logger = logging.getLogger("ad_sync_worker")
