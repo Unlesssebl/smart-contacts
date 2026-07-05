@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.db.repository.user import get_user_by_guid
 from app.models.user import User
 
-async def get_current_user_guid(request: Request) -> str:
+def get_current_user_guid(request: Request) -> str:
     # 1. Get token from cookies or Authorization header (fallback for Swagger)
     token = request.cookies.get("access_token")
     if not token:
@@ -39,7 +39,7 @@ async def get_current_user_guid(request: Request) -> str:
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
-async def get_current_user(
+def get_current_user(
     db: Session = Depends(get_db), 
     user_guid: str = Depends(get_current_user_guid)
 ) -> User:

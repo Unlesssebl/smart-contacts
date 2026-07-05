@@ -5,9 +5,12 @@ from app.core.security import create_access_token
 from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_by_guid, update_user_guid
 from app.db.repository.token import create_refresh_token, verify_refresh_token, revoke_refresh_token
 from app.core.config import settings
-from app.core.redis import is_brute_force_blocked, reset_brute_force
+from app.core.redis import is_brute_force_blocked, reset_brute_force, decrement_brute_force
 from app.schemas.auth import LoginResponse, Token, UserAuthResponse, AuthResult
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AuthService:
     @staticmethod
@@ -22,16 +25,26 @@ class AuthService:
         # 2. Development Account Bypass
         ldap_user = None
         if settings.DEV_USER and username == settings.DEV_USER and password == settings.DEV_PASSWORD:
-            ldap_user = {
-                "object_guid": "00000000-0000-0000-0000-000000000001",
-                "full_name": "Development Admin",
-                "department": "IT",
-                "job_title": "Developer"
-            }
+            from app.core.ldap.schemas import LdapUser
+            ldap_user = LdapUser(
+                object_guid="00000000-0000-0000-0000-000000000001",
+                full_name="Development Admin",
+                department="IT",
+                job_title="Developer"
+            )
         
         # 3. LDAP BIND (if not dev user)
         if not ldap_user:
-            ldap_user = authenticate_via_ldap(username, password)
+            try:
+                ldap_user = authenticate_via_ldap(username, password)
+            except ConnectionError as e:
+                # Откатываем попытку входа, так как это проблема сервиса, а не пароля
+                decrement_brute_force(client_ip)
+                logger.error(f"LDAP is unavailable: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Auth service is temporarily unavailable"
+                )
             
         if ldap_user is None:
             # Счетчик уже атомарно увеличен в is_brute_force_blocked
@@ -136,12 +149,12 @@ class AuthService:
         )
 
     @staticmethod
-    def _ensure_user_from_ldap(db: Session, username: str, ldap_user: dict):
+    def _ensure_user_from_ldap(db: Session, username: str, ldap_user):
         """
         Ensures a user exists in the local database based on LDAP info.
         Handles stub creation and GUID migration.
         """
-        ldap_guid = ldap_user.get("object_guid")
+        ldap_guid = getattr(ldap_user, "object_guid", None)
         
         user = None
         if ldap_guid:
@@ -155,7 +168,7 @@ class AuthService:
                 db, 
                 username, 
                 guid=ldap_guid,
-                full_name=ldap_user.get("full_name")
+                full_name=getattr(ldap_user, "full_name", None)
             )
         
         # If user exists but GUID is different (e.g. random UUID stub), update it
@@ -179,14 +192,15 @@ class AuthService:
         }
         
         for ldap_key, db_key in fields_to_sync.items():
-            ldap_val = ldap_user.get(ldap_key)
+            ldap_val = getattr(ldap_user, ldap_key, None)
             if ldap_val and not getattr(user, db_key):
                 setattr(user, db_key, ldap_val)
                 user_updated = True
                 
         # Always sync ad_dn if it changed
-        if ldap_user.get("ad_dn") and user.ad_dn != ldap_user.get("ad_dn"):
-            user.ad_dn = ldap_user.get("ad_dn")
+        ldap_ad_dn = getattr(ldap_user, "ad_dn", None)
+        if ldap_ad_dn and user.ad_dn != ldap_ad_dn:
+            user.ad_dn = ldap_ad_dn
             user_updated = True
                 
         if user_updated:

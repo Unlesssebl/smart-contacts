@@ -8,8 +8,9 @@
 | Язык | **TypeScript** |
 | Маршрутизация | **React Router v6** |
 | UI-библиотека | **Ant Design 5** |
+| Анимации | **motion/react** (Framer Motion) |
 | HTTP-клиент | **Axios** (с interceptor для JWT и обработки 503) |
-| Управление состоянием | **Zustand** (auth store, user store) + **persist** |
+| Управление состоянием | **Zustand** (useAppStore) + **persist** |
 | Сборка | Vite (`npm run dev` → порт 5173) |
 
 ---
@@ -47,19 +48,18 @@ services/web_frontend/
 │   │   ├── changeRequests.ts
 │   │   └── reports.ts
 │   ├── stores/
-│   │   ├── authStore.ts        # accessToken, role, gatekeeper_status
-│   │   └── userStore.ts        # Профиль текущего пользователя
+│   │   └── useAppStore.ts      # Единый стор: auth, user, ui_states
 │   ├── pages/
-│   │   ├── LoginPage/
-│   │   ├── ProfilePage/
-│   │   ├── DirectoryPage/
-│   │   ├── AdminPage/
+│   │   ├── LoginPage.tsx
+│   │   ├── ProfilePage.tsx
+│   │   ├── DirectoryPage.tsx
+│   │   └── AdminPage.tsx
 │   ├── components/
-│   │   ├── GatekeeperModal/
-│   │   ├── UserCard/
-│   │   ├── ChangeRequestTable/
-│   │   ├── ReportsTable/
-│   │   └── ProtectedRoute/
+│   │   ├── GatekeeperModal.tsx
+│   │   ├── UserCard.tsx
+│   │   ├── ChangeRequestTable.tsx
+│   │   ├── ReportsTable.tsx
+│   │   └── ProtectedRoute.tsx
 │   ├── router.tsx
 │   └── main.tsx
 ├── Dockerfile
@@ -72,9 +72,13 @@ services/web_frontend/
 ## Страницы и роуты
 
 ### `/login` — Вход
-- Форма: `username` (AD-логин) и `password`
-- Успех → токен в `authStore` → редирект на `/profile`
-- 401 → сообщение «Неверный логин или пароль»
+- **SSO Проверка**: При монтировании страницы выполняется `GET /auth/sso`.
+  - Если успех → токен в стор → редирект на `/profile`.
+  - Если 401 → отображение формы входа.
+- **Форма**: `username` (AD-логин) и `password`.
+- Успех → токен в `authStore` → редирект на `/profile`.
+- 401 → сообщение «Неверный логин или пароль».
+- **Анимация**: Плавное появление формы через `motion.div` при неудачном SSO.
 
 ---
 
@@ -179,28 +183,17 @@ apiClient.interceptors.response.use(
 
 ## Компонент `<GatekeeperModal>`
 
-```
-Props:
-  hardBlock: boolean  — если true: кнопка «Пропустить» скрыта, модалку нельзя закрыть
-  userData: UserProfile — текущие данные пользователя для отображения
+**Поведение:**
+- **hardBlock**: если `true`, кнопка «Пропустить» скрыта, модалку нельзя закрыть (Esc/клик по фону заблокированы).
+- **Счётчик пропусков**:
+  - `grace_period_left == 2` → Жёлтый (Warning).
+  - `grace_period_left == 1` → Красный (Error), текст «Последний пропуск».
+  - `grace_period_left == 0` → Жёсткая блокировка.
 
-Содержимое модалки:
-  1. Заголовок: «Проверьте актуальность ваших данных»
-  2. Подзаголовок (если !hardBlock): «Осталось пропусков: {grace_period_left} из 3»
-  3. Read-only карточка с текущими данными пользователя:
-     - ФИО, должность, отдел (из AD — не редактируются)
-     - Корпоративный номер (XX-XX), мобильный телефон (E.164), кабинет
-  4. Кнопки действий:
-     «Всё верно»    → POST /profile/me/acknowledge { action: "confirm" } → is_verified = true в store
-     «Изменить данные» → закрыть модалку → открыть форму редактирования на /profile
-     «Пропустить»   → POST /profile/me/acknowledge { action: "skip" }   → grace_period_left -= 1 в store
-                       (скрыта если hardBlock=true)
-
-Правила отображения счётчика:
-  grace_period_left == 2 → colorWarning (жёлтый)
-  grace_period_left == 1 → colorError (красный), текст «Последний пропуск». Кнопка «Пропустить» окрашивается в `colorError` и имеет всплывающую подсказку: «Это ваша последняя возможность пропустить подтверждение данных».
-  grace_period_left == 0 → hardBlock=true, счётчик скрыт
-```
+**Действия:**
+- «Всё верно» → `POST /profile/me/acknowledge { action: "confirm" }`.
+- «Изменить данные» → закрыть модалку, скролл к форме редактирования на `/profile`.
+- «Пропустить» → `POST /profile/me/acknowledge { action: "skip" }`.
 
 ---
 

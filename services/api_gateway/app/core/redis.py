@@ -44,3 +44,10 @@ def reset_brute_force(ip: str):
     """
     key = f"brute_force:{ip}"
     redis_client.delete(key)
+
+def decrement_brute_force(ip: str):
+    """
+    Уменьшает счетчик попыток (используется при недоступности AD).
+    """
+    key = f"brute_force:{ip}"
+    redis_client.decr(key)

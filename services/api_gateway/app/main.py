@@ -20,6 +20,9 @@ app = FastAPI(
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
