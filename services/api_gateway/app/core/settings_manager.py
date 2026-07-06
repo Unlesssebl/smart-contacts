@@ -1,9 +1,9 @@
-import base64
+﻿import base64
 import hashlib
 from typing import Optional
 from cryptography.fernet import Fernet
 from sqlalchemy.orm import Session
-from app.models.system_setting import SystemSetting
+from shared.models.system_setting import SystemSetting
 from app.core.config import settings
 from app.core.redis import redis_client
 

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+﻿from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from typing import Optional, List
 from app.db.session import get_db
 from app.api import deps
-from app.models.user import User
-from app.models.enums import UserStatus, UserRole
+from shared.models.user import User
+from shared.models.enums import UserStatus, UserRole
 from app.schemas.user import PaginatedUsers, UserFull
 from uuid import UUID
 

@@ -1,9 +1,9 @@
-from sqlalchemy import Column, String, Boolean, SmallInteger, DateTime, BigInteger, Text
+﻿from sqlalchemy import Column, String, Boolean, SmallInteger, DateTime, BigInteger, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from app.db.session import Base
+from shared.database import Base
 import uuid
-from app.models.enums import UserStatus, UserRole
+from shared.models.enums import UserStatus, UserRole
 
 class User(Base):
     __tablename__ = "users"

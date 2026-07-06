@@ -3,7 +3,9 @@ import os
 from datetime import datetime, timezone
 from sqlalchemy import select, update
 from .config import settings
-from .db import SessionLocal, User, ChangeRequest
+from .db import SessionLocal
+from shared.models.user import User
+from shared.models.change_request import ChangeRequest
 from .ldap import LDAPClient
 from .logic import determine_status, match_organization_by_ou, save_known_ous
 from shared.utils import ad_guid_to_uuid

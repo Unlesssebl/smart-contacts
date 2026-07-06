@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
-from app.models.user import User
-from app.models.change_request import ChangeRequest
-from app.models.enums import ChangeRequestStatus
+from shared.models.user import User
+from shared.models.change_request import ChangeRequest
+from shared.models.enums import ChangeRequestStatus
 from app.schemas.user import ProfileAcknowledge
 from app.schemas.change_request import ChangeRequestCreate, ChangeRequestRead
 from typing import List

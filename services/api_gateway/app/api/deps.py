@@ -1,11 +1,11 @@
-from fastapi import Depends, HTTPException, status, Request
+﻿from fastapi import Depends, HTTPException, status, Request
 from jose import jwt
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 from app.db.repository.user import get_user_by_guid
-from app.models.user import User
-from app.models.enums import UserStatus
+from shared.models.user import User
+from shared.models.enums import UserStatus
 from jose.exceptions import JWTError
 
 def get_current_user_guid(request: Request) -> str:

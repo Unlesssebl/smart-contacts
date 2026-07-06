@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+﻿from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.core.ldap import authenticate_via_ldap
 from app.core.security import create_access_token
@@ -7,7 +7,7 @@ from app.db.repository.token import create_refresh_token, verify_refresh_token, 
 from app.core.config import settings
 from app.core.redis import is_brute_force_blocked, reset_brute_force, decrement_brute_force
 from app.schemas.auth import Token, UserAuthResponse, AuthResult
-from app.models.enums import UserRole
+from shared.models.enums import UserRole
 import logging
 
 logger = logging.getLogger(__name__)

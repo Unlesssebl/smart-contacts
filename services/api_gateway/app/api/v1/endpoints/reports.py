@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
-from app.models.user import User
+from shared.models.user import User
 from app.db.repository import report as report_repo
 from app.db.repository import user as user_repo
 from app.schemas.report import ReportCreate

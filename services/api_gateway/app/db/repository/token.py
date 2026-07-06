@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from app.models.token import RefreshToken
+﻿from sqlalchemy.orm import Session
+from shared.models.token import RefreshToken
 from app.core.security import hash_token
 from datetime import datetime, timedelta, timezone
 from app.core.config import settings

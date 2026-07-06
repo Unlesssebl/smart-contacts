@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import re
 from app.db.session import SessionLocal
 
@@ -8,7 +8,7 @@ def apply_ou_mapping_to_users_bg(mapping: dict):
     db = SessionLocal()
     try:
         mapping_lower = {k.lower(): v for k, v in mapping.items()}
-        from app.models.user import User
+        from shared.models.user import User
         
         users = db.query(User).filter(User.ad_dn.isnot(None)).all()
         for user in users:

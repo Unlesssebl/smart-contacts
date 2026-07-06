@@ -1,6 +1,6 @@
-from sqlalchemy import Column, String, Text, DateTime
+﻿from sqlalchemy import Column, String, Text, DateTime
 from sqlalchemy.sql import func
-from app.db.session import Base
+from shared.database import Base
 
 class SystemSetting(Base):
     __tablename__ = "system_settings"

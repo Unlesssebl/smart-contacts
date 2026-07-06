@@ -32,7 +32,7 @@ def determine_status(uac: int, sam_account_name: str) -> str:
 
 
 from sqlalchemy import select
-from .db import SystemSetting
+from shared.models.system_setting import SystemSetting
 import json
 
 _ou_mapping_cache: Optional[dict[str, str]] = None

@@ -1,7 +1,7 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
+﻿from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from app.db.session import Base
+from shared.database import Base
 import uuid
 
 class RefreshToken(Base):

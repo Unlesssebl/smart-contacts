@@ -5,7 +5,8 @@ import logging
 import base64
 import hashlib
 from cryptography.fernet import Fernet
-from app.db import SessionLocal, SystemSetting
+from app.db import SessionLocal
+from shared.models.system_setting import SystemSetting
 
 from .config import settings
 

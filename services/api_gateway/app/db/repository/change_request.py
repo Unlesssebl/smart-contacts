@@ -1,10 +1,10 @@
-from sqlalchemy.orm import Session
-from app.models.change_request import ChangeRequest
-from app.models.user import User
+﻿from sqlalchemy.orm import Session
+from shared.models.change_request import ChangeRequest
+from shared.models.user import User
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
-from app.models.enums import ChangeRequestStatus
+from shared.models.enums import ChangeRequestStatus
 
 from sqlalchemy.orm import joinedload
 

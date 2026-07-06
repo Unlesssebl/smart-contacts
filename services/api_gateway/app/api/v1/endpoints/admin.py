@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+﻿from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
-from app.models.user import User
-from app.models.enums import UserRole
+from shared.models.user import User
+from shared.models.enums import UserRole
 from app.db.repository import change_request as cr_repo
 from app.db.repository import report as report_repo
 from app.schemas.change_request import ChangeRequestRead
@@ -143,7 +143,7 @@ def list_ad_ous(
     admin: User = Depends(check_admin_auth)
 ):
     """Returns list of known OUs collected by the sync worker during the last sync cycle."""
-    from app.models.system_setting import SystemSetting
+    from shared.models.system_setting import SystemSetting
     setting = db.get(SystemSetting, "KNOWN_OUS")
     if setting and setting.value:
         try:

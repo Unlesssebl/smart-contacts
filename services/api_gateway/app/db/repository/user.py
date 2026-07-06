@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from app.models.user import User
+﻿from sqlalchemy.orm import Session
+from shared.models.user import User
 from typing import Optional
 import uuid
 from sqlalchemy import update
