@@ -97,6 +97,8 @@ depends_on:
 | `EXCHANGE_SERVER` | URL Exchange EWS | `ad_sync_worker` |
 | `SECRET_KEY` | Ключ для подписи JWT | `api_gateway` |
 | `ALGORITHM` | Алгоритм шифрования | `api_gateway` |
+| `DEV_USER` | Логин обхода AD-аутентификации для разработки | `api_gateway` |
+| `DEV_PASSWORD` | Пароль обхода AD-аутентификации для разработки | `api_gateway` |
 | `VITE_API_BASE_URL` | URL API для фронтенда | `web_frontend` |
 
 ## 5. Сетевое взаимодействие

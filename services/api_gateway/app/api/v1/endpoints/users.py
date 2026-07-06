@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from typing import Optional, List
@@ -13,7 +13,7 @@ import re
 
 router = APIRouter()
 
-@router.get("/", response_model=PaginatedUsers)
+@router.get("", response_model=PaginatedUsers)
 async def list_users(
     q: Optional[str] = Query(None, description="Fuzzy search by name, department, office"),
     department: Optional[str] = Query(None, description="Filter by exact department name"),
