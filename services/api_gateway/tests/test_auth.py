@@ -49,6 +49,7 @@ def test_get_me_authorized(client: TestClient, mock_kerberos, test_admin_user):
     # 1. Login to get token
     login_resp = client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock"})
     access_token = login_resp.cookies.get("access_token")
+    assert access_token is not None
     
     # 2. Use token to get profile
     # TestClient automatically handles cookies, but we can also set headers explicitly if needed.

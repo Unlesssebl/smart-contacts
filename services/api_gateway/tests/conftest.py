@@ -43,7 +43,7 @@ def db_engine():
     if os.path.exists("./test.db"):
         try:
             os.remove("./test.db")
-        except:
+        except OSError:
             pass
 
 @pytest.fixture(scope="function")

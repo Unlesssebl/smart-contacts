@@ -1,4 +1,3 @@
-import pytest
 from fastapi.testclient import TestClient
 
 def test_list_users(client: TestClient, mock_kerberos, test_admin_user, test_normal_user):

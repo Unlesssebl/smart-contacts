@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from app.db.session import get_db, SessionLocal
+from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
 from app.models.enums import UserRole
@@ -13,7 +13,6 @@ from app.core import settings_manager
 from typing import List, Dict, Any
 from uuid import UUID
 import json
-import re
 from app.services.ou_service import apply_ou_mapping_to_users_bg
 
 router = APIRouter()

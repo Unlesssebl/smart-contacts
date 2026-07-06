@@ -1,6 +1,4 @@
-import pytest
-from app.core.ldap.pool import get_search_pool, init_ldap_pool
-from ldap3 import Connection
+from app.core.ldap.pool import init_ldap_pool
 
 def test_get_search_pool_with_mock(mock_ldap_pool):
     """
