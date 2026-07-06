@@ -51,7 +51,7 @@ services:
     volumes:
       - ./services/api_gateway:/app
       - ./services/shared:/app/shared
-    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "127.0.0.1:8001:8000"
     dns:

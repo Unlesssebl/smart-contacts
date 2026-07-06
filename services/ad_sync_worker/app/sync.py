@@ -1,5 +1,5 @@
 import logging
-import os
+
 from datetime import datetime, timezone
 from sqlalchemy import select, update
 from .config import settings
@@ -13,25 +13,36 @@ from .utils import with_retry
 
 logger = logging.getLogger(__name__)
 
-USN_FILE = "last_usn.txt"
+
 
 class SyncWorker:
     def __init__(self):
         self.last_usn = self._load_last_usn()
 
     def _load_last_usn(self) -> int:
-        if os.path.exists(USN_FILE):
-            try:
-                with open(USN_FILE, "r") as f:
-                    return int(f.read().strip())
-            except Exception:
-                return 0
+        try:
+            from shared.models.system_setting import SystemSetting
+            with SessionLocal() as session:
+                setting = session.get(SystemSetting, "LAST_AD_USN")
+                if setting and setting.value:
+                    return int(setting.value)
+        except Exception as e:
+            logger.error(f"Error loading last USN from DB: {e}")
         return 0
 
     def _save_last_usn(self, usn: int):
         self.last_usn = usn
-        with open(USN_FILE, "w") as f:
-            f.write(str(usn))
+        try:
+            from shared.models.system_setting import SystemSetting
+            with SessionLocal() as session:
+                setting = session.get(SystemSetting, "LAST_AD_USN")
+                if setting:
+                    setting.value = str(usn)
+                else:
+                    session.add(SystemSetting(key="LAST_AD_USN", value=str(usn)))
+                session.commit()
+        except Exception as e:
+            logger.error(f"Error saving last USN to DB: {e}")
 
     def pull(self):
         """
