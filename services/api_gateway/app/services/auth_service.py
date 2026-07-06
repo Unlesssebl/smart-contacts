@@ -6,8 +6,8 @@ from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_b
 from app.db.repository.token import create_refresh_token, verify_refresh_token, revoke_refresh_token
 from app.core.config import settings
 from app.core.redis import is_brute_force_blocked, reset_brute_force, decrement_brute_force
-from app.schemas.auth import LoginResponse, Token, UserAuthResponse, AuthResult
-import uuid
+from app.schemas.auth import Token, UserAuthResponse, AuthResult
+from app.models.enums import UserRole
 import logging
 
 logger = logging.getLogger(__name__)
@@ -61,36 +61,13 @@ class AuthService:
 
         # 5. Check for initial admin role
         init_admins = [a.strip().lower() for a in settings.INIT_ADMINS.split(",") if a.strip()]
-        if username.lower() in init_admins and user.role != "it_operator":
-            user.role = "it_operator"
+        if username.lower() in init_admins and user.role != UserRole.IT_OPERATOR.value:
+            user.role = UserRole.IT_OPERATOR.value
             db.commit()
             db.refresh(user)
 
-        # 6. Generate tokens
-        access_token = create_access_token(
-            subject=user.object_guid,
-            role=user.role,
-            sam=user.sam_account_name,
-            dept=user.department
-        )
-        refresh_token = create_refresh_token(db, user.object_guid)
-
-        return AuthResult(
-            tokens=Token(
-                access_token=access_token,
-                token_type="bearer",
-                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-                refresh_token=refresh_token
-            ),
-            user=UserAuthResponse(
-                id=user.object_guid,
-                sam_account_name=user.sam_account_name,
-                full_name=user.full_name,
-                role=user.role,
-                is_verified=user.is_verified,
-                grace_period_left=user.grace_period_left
-            )
-        )
+        # 6. Generate tokens and return result
+        return AuthService._build_auth_result(user, db)
 
     @staticmethod
     def login_sso(db: Session, full_username: str) -> AuthResult:
@@ -122,7 +99,11 @@ class AuthService:
                         detail=f"SSO authentication failed: {str(e)}"
                     )
 
-        # 3. Generate tokens
+        # 3. Generate tokens and return result
+        return AuthService._build_auth_result(user, db)
+
+    @staticmethod
+    def _build_auth_result(user, db: Session) -> AuthResult:
         access_token = create_access_token(
             subject=user.object_guid,
             role=user.role,

@@ -1,5 +1,6 @@
 import logging
 import queue
+import threading
 from typing import Optional
 from ldap3 import Connection, REUSABLE
 from app.core.redis import redis_client
@@ -8,9 +9,6 @@ from app.core.settings_manager import get_setting
 from .connection import server_pool
 
 logger = logging.getLogger(__name__)
-
-import threading
-
 # Глобальный пул соединений для сервисного аккаунта (поиск пользователей)
 _search_pool_conn = None
 _current_pool_version = None

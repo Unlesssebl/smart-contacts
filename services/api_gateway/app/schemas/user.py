@@ -2,7 +2,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
-import re
 
 class UserBase(BaseModel):
     full_name: str
@@ -30,9 +29,7 @@ class UserFull(UserRead):
     grace_period_left: int
     last_sync_timestamp: Optional[datetime] = None
 
-class UserInDB(UserFull):
-    created_at: datetime
-    updated_at: datetime
+
 
 class PaginatedUsers(BaseModel):
     total: int

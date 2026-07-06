@@ -1,7 +1,7 @@
 import json
 import asyncio
 import logging
-from typing import Dict, Any
+from typing import Dict
 from fastapi import WebSocket
 from app.core.redis import async_redis_client
 

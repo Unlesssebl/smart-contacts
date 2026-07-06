@@ -1,13 +1,15 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
 from typing import Optional
-
+import uuid
 from sqlalchemy import update
 
 def get_user_by_sam(db: Session, sam: str) -> Optional[User]:
     return db.query(User).filter(User.sam_account_name == sam).first()
 
 def get_user_by_guid(db: Session, guid: str) -> Optional[User]:
+    if isinstance(guid, str):
+        guid = uuid.UUID(guid)
     return db.query(User).filter(User.object_guid == guid).first()
 
 def update_user_guid(db: Session, sam: str, new_guid: str) -> None:

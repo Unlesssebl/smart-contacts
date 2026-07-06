@@ -61,3 +61,4 @@ redisdata/
 *.log
 .cgr-hash-cache.json
 .qdrant_code_embeddings/
+*.db

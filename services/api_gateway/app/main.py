@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.ldap import init_ldap_pool
@@ -18,10 +20,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi import Request
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
-
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -34,21 +32,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         return response
 
-# Set specific origins for development
-origins = [
-    "http://localhost",
-    "http://localhost:80",
-    "http://localhost:5173",  # Vite default
-    "http://localhost:8000",
-    "http://127.0.0.1",
-    "http://127.0.0.1:80",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:8080",
-    "http://10.245.19.85",
-    "http://10.245.19.85:80",
-    "http://10.245.19.85:5173",
-    "http://10.245.19.85:8080",
-]
+# Parse allowed origins from settings
+origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()]
 
 app.add_middleware(SecurityHeadersMiddleware)
 

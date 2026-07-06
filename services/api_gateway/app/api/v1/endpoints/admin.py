@@ -1,20 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from app.db.session import get_db
+from app.db.session import get_db, SessionLocal
 from app.api import deps
 from app.models.user import User
+from app.models.enums import UserRole
 from app.db.repository import change_request as cr_repo
 from app.db.repository import report as report_repo
 from app.schemas.change_request import ChangeRequestRead
 from app.schemas.report import ReportRead
+from app.schemas.setting import LDAPSettingsRead, LDAPSettingsUpdate, OuMappingUpdate
+from app.core import settings_manager
 from typing import List, Dict, Any
 from uuid import UUID
 import json
+import re
+from app.services.ou_service import apply_ou_mapping_to_users_bg
 
 router = APIRouter()
 
 def check_admin_auth(current_user: User = Depends(deps.get_current_user)):
-    if current_user.role != "it_operator":
+    if current_user.role != UserRole.IT_OPERATOR.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="The user does not have enough privileges"
@@ -75,9 +80,6 @@ def process_report(
         raise HTTPException(status_code=404, detail="Report not found")
     return report
 
-from app.schemas.setting import LDAPSettingsRead, LDAPSettingsUpdate
-from app.core import settings_manager
-
 @router.get("/settings/ldap", response_model=LDAPSettingsRead)
 def get_ldap_settings(
     db: Session = Depends(get_db),
@@ -106,9 +108,6 @@ def update_ldap_settings(
     
     return get_ldap_settings(db, admin)
 
-import json
-from app.schemas.setting import OuMappingUpdate
-
 @router.get("/settings/ou-mapping", response_model=OuMappingUpdate)
 def get_ou_mapping(
     db: Session = Depends(get_db),
@@ -123,43 +122,7 @@ def get_ou_mapping(
             mapping = {}
     return OuMappingUpdate(mapping=mapping)
 
-import re
-from fastapi import BackgroundTasks
-from app.db.session import SessionLocal
 
-def apply_ou_mapping_to_users_bg(mapping: dict):
-    db = SessionLocal()
-    try:
-        mapping_lower = {k.lower(): v for k, v in mapping.items()}
-        from app.models.user import User
-        
-        users = db.query(User).filter(User.ad_dn.isnot(None)).all()
-        for user in users:
-            user_ous = re.findall(r"OU=([^,]+)", user.ad_dn)
-            
-            exact_matches = [ou for ou in user_ous if ou in mapping]
-            case_insensitive_matches = [ou for ou in user_ous if ou.lower() in mapping_lower]
-            
-            matches = list(dict.fromkeys(exact_matches + case_insensitive_matches))
-            
-            if not matches:
-                org_name = None
-            elif len(matches) == 1:
-                key = matches[0]
-                org_name = mapping.get(key) or mapping_lower.get(key.lower())
-            else:
-                selected_ou = exact_matches[0] if exact_matches else matches[0]
-                org_name = mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower())
-                
-            if user.organization != org_name:
-                user.organization = org_name
-                
-        db.commit()
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Error in apply_ou_mapping_to_users_bg: {e}")
-    finally:
-        db.close()
 
 @router.post("/settings/ou-mapping", response_model=OuMappingUpdate)
 def update_ou_mapping(

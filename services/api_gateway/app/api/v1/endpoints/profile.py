@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
 from app.models.change_request import ChangeRequest
-from app.schemas.user import UserFull, ProfileAcknowledge
+from app.models.enums import ChangeRequestStatus
+from app.schemas.user import ProfileAcknowledge
 from app.schemas.change_request import ChangeRequestCreate, ChangeRequestRead
-from typing import List, Dict, Any
+from typing import List
 
 router = APIRouter()
 
@@ -17,7 +18,7 @@ def get_my_profile(
 ):
     pending_changes = db.query(ChangeRequest).filter(
         ChangeRequest.user_guid == current_user.object_guid,
-        ChangeRequest.status.in_(["pending", "conflict"])
+        ChangeRequest.status.in_([ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value])
     ).all()
     
     return {
@@ -73,7 +74,7 @@ def create_change_request(
     existing = db.query(ChangeRequest).filter(
         ChangeRequest.user_guid == current_user.object_guid,
         ChangeRequest.attribute_name == data.attribute_name,
-        ChangeRequest.status.in_(["pending", "conflict"])
+        ChangeRequest.status.in_([ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value])
     ).first()
     
     if existing:
@@ -88,7 +89,7 @@ def create_change_request(
         attribute_name=data.attribute_name,
         new_value=data.new_value,
         source="web",
-        status="pending"
+        status=ChangeRequestStatus.PENDING.value
     )
     
     db.add(new_request)

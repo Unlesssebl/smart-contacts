@@ -4,8 +4,9 @@ from app.models.user import User
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
+from app.models.enums import ChangeRequestStatus
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import joinedload
 
 def get_change_requests(db: Session) -> List[ChangeRequest]:
     return db.query(ChangeRequest).options(joinedload(ChangeRequest.user)).order_by(ChangeRequest.created_at.desc()).all()
@@ -18,7 +19,7 @@ def approve_request(db: Session, request_id: UUID, admin_guid: UUID) -> Optional
     if not req:
         return None
     
-    if req.status not in ["pending", "conflict"]:
+    if req.status not in [ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value]:
         return None
 
     # Apply changes to user
@@ -27,7 +28,7 @@ def approve_request(db: Session, request_id: UUID, admin_guid: UUID) -> Optional
         setattr(user, req.attribute_name, req.new_value)
         user.updated_at = datetime.utcnow()
     
-    req.status = "approved"
+    req.status = ChangeRequestStatus.APPROVED.value
     req.resolved_at = datetime.utcnow()
     req.resolved_by = admin_guid
     
@@ -40,10 +41,10 @@ def reject_request(db: Session, request_id: UUID, admin_guid: UUID) -> Optional[
     if not req:
         return None
     
-    if req.status not in ["pending", "conflict"]:
+    if req.status not in [ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value]:
         return None
     
-    req.status = "rejected"
+    req.status = ChangeRequestStatus.REJECTED.value
     req.resolved_at = datetime.utcnow()
     req.resolved_by = admin_guid
     

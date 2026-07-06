@@ -3,13 +3,14 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.db.session import Base
 import uuid
+from app.models.enums import UserStatus, UserRole
 
 class User(Base):
     __tablename__ = "users"
 
     object_guid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sam_account_name = Column(String(64), unique=True, nullable=False)
-    status = Column(String(16), nullable=False, default="ACTIVE")
+    status = Column(String(16), nullable=False, default=UserStatus.ACTIVE.value)
     tg_id = Column(BigInteger, unique=True)
     full_name = Column(String(256), nullable=False)
     internal_phone = Column(String(100))
@@ -20,7 +21,7 @@ class User(Base):
     ad_dn = Column(String(512))
     job_title = Column(String(256))
     email = Column(String(256))
-    role = Column(String(32), nullable=False, default="employee")
+    role = Column(String(32), nullable=False, default=UserRole.EMPLOYEE.value)
     is_verified = Column(Boolean, nullable=False, default=False)
     is_protected = Column(Boolean, nullable=False, default=False)
     grace_period_left = Column(SmallInteger, nullable=False, default=3)

@@ -32,7 +32,7 @@ def verify_refresh_token(db: Session, token: str) -> Optional[RefreshToken]:
     token_hash = hash_token(token)
     db_token = db.query(RefreshToken).filter(
         RefreshToken.token_hash == token_hash,
-        RefreshToken.revoked == False,
+        RefreshToken.revoked.is_(False),
         RefreshToken.expires_at > datetime.now(timezone.utc)
     ).first()
     return db_token

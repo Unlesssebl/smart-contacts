@@ -5,8 +5,9 @@ from app.models.change_request import ChangeRequest
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
+from app.models.enums import ChangeRequestStatus, ReportStatus
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import joinedload
 
 def get_reports(db: Session) -> List[Report]:
     return db.query(Report).options(joinedload(Report.target_user), joinedload(Report.reporter)).order_by(Report.created_at.desc()).all()
@@ -19,7 +20,7 @@ def create_report(db: Session, reporter_guid: UUID, target_guid: UUID, reason: s
         target_user_guid=target_guid,
         reporter_user_guid=reporter_guid,
         reason=reason,
-        status="pending"
+        status=ReportStatus.PENDING.value
     )
     db.add(new_report)
     
@@ -29,11 +30,11 @@ def create_report(db: Session, reporter_guid: UUID, target_guid: UUID, reason: s
         # Escalate pending change requests to 'conflict'
         active_requests = db.query(ChangeRequest).filter(
             ChangeRequest.user_guid == target_guid,
-            ChangeRequest.status == "pending"
+            ChangeRequest.status == ChangeRequestStatus.PENDING.value
         ).all()
         
         for req in active_requests:
-            req.status = "conflict"
+            req.status = ChangeRequestStatus.CONFLICT.value
             
     db.commit()
     db.refresh(new_report)
@@ -43,7 +44,7 @@ def find_duplicate_report(db: Session, reporter_guid: UUID, target_guid: UUID) -
     return db.query(Report).filter(
         Report.target_user_guid == target_guid,
         Report.reporter_user_guid == reporter_guid,
-        Report.status == "pending"
+        Report.status == ReportStatus.PENDING.value
     ).first()
 
 def process_report(db: Session, report_id: UUID, admin_guid: UUID) -> Optional[Report]:
@@ -51,7 +52,7 @@ def process_report(db: Session, report_id: UUID, admin_guid: UUID) -> Optional[R
     if not report:
         return None
     
-    report.status = "processed"
+    report.status = ReportStatus.PROCESSED.value
     report.processed_at = datetime.utcnow()
     report.processed_by = admin_guid
     

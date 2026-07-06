@@ -1,7 +1,6 @@
 import logging
 from typing import Optional
 from app.core.config import settings
-from shared.utils import ad_guid_to_uuid
 from .pool import get_search_pool
 from .schemas import LdapUser
 from ldap3.utils.conv import escape_filter_chars

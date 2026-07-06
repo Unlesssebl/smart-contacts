@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Cookie, Header
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Optional
 from jose import jwt, JWTError
 from app.core.config import settings

@@ -5,6 +5,8 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.db.repository.user import get_user_by_guid
 from app.models.user import User
+from app.models.enums import UserStatus
+from jose.exceptions import JWTError
 
 def get_current_user_guid(request: Request) -> str:
     # 1. Get token from cookies or Authorization header (fallback for Swagger)
@@ -36,7 +38,7 @@ def get_current_user_guid(request: Request) -> str:
         if user_guid is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
         return user_guid
-    except Exception:
+    except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
 def get_current_user(
@@ -48,7 +50,7 @@ def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     
     # 4. Enforce user status (immediate revocation)
-    if user.status != "ACTIVE":
+    if user.status != UserStatus.ACTIVE.value:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
         
     return user

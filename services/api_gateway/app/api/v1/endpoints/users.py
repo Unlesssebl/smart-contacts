@@ -5,6 +5,7 @@ from typing import Optional, List
 from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
+from app.models.enums import UserStatus, UserRole
 from app.schemas.user import PaginatedUsers, UserFull
 from uuid import UUID
 
@@ -25,7 +26,7 @@ async def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    query = db.query(User).filter(User.status != "RESIGNED")
+    query = db.query(User).filter(User.status != UserStatus.RESIGNED.value)
     
     if department:
         query = query.filter(User.department == department)
@@ -131,7 +132,7 @@ async def get_user(
         raise HTTPException(status_code=404, detail="User not found")
     
     # Скрытие internal_phone для защищенных профилей
-    if user.is_protected and current_user.role != "it_operator":
+    if user.is_protected and current_user.role != UserRole.IT_OPERATOR.value:
         user.internal_phone = None
         
     return user
