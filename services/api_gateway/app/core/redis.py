@@ -16,6 +16,14 @@ async_redis_client = aioredis.Redis(
     decode_responses=True
 )
 
+LUA_RECORD_ATTEMPT = """
+local attempts = redis.call('INCR', KEYS[1])
+if attempts == 1 then
+    redis.call('EXPIRE', KEYS[1], 900)
+end
+return attempts
+"""
+
 def is_brute_force_blocked(ip: str) -> bool:
     """
     2.3. Атомарная проверка и инкремент счетчика попыток.
@@ -30,14 +38,6 @@ def is_brute_force_blocked(ip: str) -> bool:
         return True
     return False
 
-LUA_RECORD_ATTEMPT = """
-local attempts = redis.call('INCR', KEYS[1])
-if attempts == 1 then
-    redis.call('EXPIRE', KEYS[1], 900)
-end
-return attempts
-"""
-
 def reset_brute_force(ip: str):
     """
     Сброс счетчика при успешном входе.
@@ -50,4 +50,5 @@ def decrement_brute_force(ip: str):
     Уменьшает счетчик попыток (используется при недоступности AD).
     """
     key = f"brute_force:{ip}"
-    redis_client.decr(key)
+    if redis_client.exists(key):
+        redis_client.decr(key)

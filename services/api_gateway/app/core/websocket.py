@@ -52,19 +52,25 @@ class ConnectionManager:
 
     async def _listen_to_redis(self):
         """Background task that listens to Redis and broadcasts to local connections."""
-        try:
-            async for message in self.pubsub.listen():
-                if message["type"] == "message":
-                    data = json.loads(message["data"])
-                    # Send to all local connections
-                    for ws in self.active_connections.values():
-                        try:
-                            await ws.send_json(data)
-                        except Exception as e:
-                            logger.error(f"Error sending WS message: {e}")
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error(f"Redis PubSub listener error: {e}")
+        while True:
+            try:
+                async for message in self.pubsub.listen():
+                    if message["type"] == "message":
+                        data = json.loads(message["data"])
+                        # Send to all local connections
+                        for ws in self.active_connections.values():
+                            try:
+                                await ws.send_json(data)
+                            except Exception as e:
+                                logger.error(f"Error sending WS message: {e}")
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Redis PubSub listener error: {e}. Reconnecting in 5 seconds...")
+                await asyncio.sleep(5)
+                try:
+                    await self.pubsub.subscribe(self.redis_channel)
+                except Exception as sub_e:
+                    logger.error(f"Failed to resubscribe: {sub_e}")
 
 manager = ConnectionManager()

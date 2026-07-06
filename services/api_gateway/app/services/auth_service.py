@@ -1,4 +1,4 @@
-﻿from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.core.ldap import authenticate_via_ldap
 from app.core.security import create_access_token
@@ -56,17 +56,17 @@ class AuthService:
         # 4. Success - reset counter
         reset_brute_force(client_ip)
 
-        # 4. User lookup/creation (Extracted)
+        # 5. User lookup/creation (Extracted)
         user = AuthService._ensure_user_from_ldap(db, username, ldap_user)
 
-        # 5. Check for initial admin role
+        # 6. Check for initial admin role
         init_admins = [a.strip().lower() for a in settings.INIT_ADMINS.split(",") if a.strip()]
         if username.lower() in init_admins and user.role != UserRole.IT_OPERATOR.value:
             user.role = UserRole.IT_OPERATOR.value
             db.commit()
             db.refresh(user)
 
-        # 6. Generate tokens and return result
+        # 7. Generate tokens and return result
         return AuthService._build_auth_result(user, db)
 
     @staticmethod

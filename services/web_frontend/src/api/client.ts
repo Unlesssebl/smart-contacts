@@ -38,10 +38,9 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized
     const url = originalRequest.url || '';
-    if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login')) {
+    if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login') && !url.endsWith('/auth/ws-token')) {
       originalRequest._retry = true;
       useAppStore.getState().logout();
-      window.location.href = '/login';
       return Promise.reject(error);
     }
 

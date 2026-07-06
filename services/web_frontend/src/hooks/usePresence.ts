@@ -11,6 +11,8 @@ export const usePresence = () => {
   const statusRef = useRef<'online' | 'away' | 'offline'>('offline');
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(0);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isActiveRef = useRef<boolean>(false); // tracks whether the current effect is still alive
   
   const { setPresence, setBulkPresence, isAuthenticated } = useAppStore();
 
@@ -22,9 +24,13 @@ export const usePresence = () => {
       return;
     }
 
+    isActiveRef.current = true;
+
     const connect = async () => {
+      if (!isActiveRef.current) return;
       try {
         const token = await getWsToken();
+        if (!isActiveRef.current) return; // logged out while waiting for token
         const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
         let wsUrl = '';
         
@@ -60,20 +66,29 @@ export const usePresence = () => {
 
       ws.onclose = () => {
         statusRef.current = 'offline';
-        // Try to reconnect in 5 seconds
-        setTimeout(connect, 5000);
+        if (isActiveRef.current) {
+          reconnectTimerRef.current = setTimeout(connect, 5000);
+        }
       };
       } catch (err) {
         console.error('Failed to setup presence WS', err);
-        setTimeout(connect, 5000);
+        if (isActiveRef.current) {
+          reconnectTimerRef.current = setTimeout(connect, 5000);
+        }
       }
     };
 
     connect();
 
     return () => {
+      isActiveRef.current = false; // stop any pending reconnects
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [isAuthenticated, setPresence, setBulkPresence]);
