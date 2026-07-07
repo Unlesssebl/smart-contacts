@@ -23,6 +23,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- нечёткий поиск (fuz
 | `department` | VARCHAR(256) | NULLABLE | Отдел (`department` из AD) |
 | `office_location` | VARCHAR(256) | NULLABLE | Кабинет/офис (`physicalDeliveryOfficeName` из AD) |
 | `organization` | VARCHAR(256) | NULLABLE | Организация (вычисляется из `memberOf` по списку в `docs/CN.md`) |
+| `ad_dn` | VARCHAR(512) | NULLABLE | Distinguished Name пользователя в AD (`distinguishedName`) |
 | `job_title` | VARCHAR(256) | NULLABLE | Должность (`title` из AD) |
 | `email` | VARCHAR(256) | NULLABLE | Электронная почта (`mail` из AD) |
 | `role` | VARCHAR(32) | NOT NULL, DEFAULT 'employee' | Роль в системе: `employee`, `it_operator` |
@@ -139,6 +140,18 @@ CREATE INDEX idx_reports_status   ON reports (status);
 | `expires_at` | TIMESTAMPTZ | NOT NULL | |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | `revoked` | BOOLEAN | NOT NULL, DEFAULT FALSE | |
+
+---
+
+---
+
+## Таблица `system_settings` (Системные настройки)
+
+| Поле | Тип | Ограничения | Описание |
+|------|-----|-------------|----------|
+| `key` | VARCHAR(64) | PK | Ключ настройки (например, `AD_USER`, `OU_MAPPING`, `FORCE_SYNC`) |
+| `value` | TEXT | NOT NULL | Значение настройки |
+| `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Время последнего обновления |
 
 ---
 

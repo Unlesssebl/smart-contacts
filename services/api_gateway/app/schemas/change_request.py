@@ -28,8 +28,16 @@ class ChangeRequestBase(BaseModel):
             if not re.match(INTERNAL_PHONE_PATTERN, v):
                 raise ValueError(r"Internal phone must match pattern \d{2}-\d{2} or \d{4}")
         elif attr == "mobile_phone":
+            if not v:
+                return v
             # Нормализация: убираем пробелы, скобки и тире
             v_clean = re.sub(r"[\s\(\)\-]", "", v)
+            # Автоматически заменяем 8 на +7
+            if len(v_clean) == 11 and v_clean.startswith("8"):
+                v_clean = "+7" + v_clean[1:]
+            elif len(v_clean) == 11 and v_clean.startswith("7"):
+                v_clean = "+" + v_clean
+            
             if not re.match(MOBILE_PHONE_PATTERN, v_clean):
                 raise ValueError(r"Mobile phone must match pattern +7 (999) 999-99-99")
             return v_clean

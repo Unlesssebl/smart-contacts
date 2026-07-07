@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Phone, MapPin, Building2, User as UserIcon, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { getChangeWord } from '../../lib/localization';
 
 interface ProfileModalProps {
   user: User;
@@ -26,32 +25,67 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
   };
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [mobilePhone, setMobilePhone] = useState(cleanValue(user.mobile_phone));
   const [officeLocation, setOfficeLocation] = useState(cleanValue(user.office_location));
-  const { addChangeRequest, currentUser, getUserById } = useAppStore();
+  const [pendingFields, setPendingFields] = useState<Set<string>>(new Set());
+  const { addChangeRequest, currentUser, getUserById, globalPresence } = useAppStore();
 
   const manager = user.manager_id ? getUserById(user.manager_id) : null;
+  const currentPresence = globalPresence[user.id] || user.presence;
+
+  // Загружаем активные заявки при открытии формы редактирования
+  useEffect(() => {
+    if (isEditing && currentUser?.id === user.id) {
+      import('../../api/changeRequests').then(({ changeRequestsApi }) => {
+        changeRequestsApi.getMyChangeRequests().then(requests => {
+          const activePending = new Set(
+            requests
+              .filter(r => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved')
+              .map(r => r.field_name)
+          );
+          setPendingFields(activePending);
+        }).catch(() => {});
+      });
+    } else if (!isEditing) {
+      setPendingFields(new Set());
+    }
+  }, [isEditing, currentUser, user]);
 
   const handleSubmitChange = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     let changeCount = 0;
+    let hasError = false;
 
-    if (mobilePhone !== cleanValue(user.mobile_phone)) {
-      await addChangeRequest({
-        attribute_name: 'mobile_phone',
-        new_value: mobilePhone || '',
-      });
-      changeCount++;
+    if (mobilePhone !== cleanValue(user.mobile_phone) && !pendingFields.has('mobile_phone')) {
+      try {
+        await addChangeRequest({
+          attribute_name: 'mobile_phone',
+          new_value: mobilePhone || '',
+        });
+        changeCount++;
+      } catch (e) {
+        hasError = true;
+      }
     }
 
-    if (officeLocation !== cleanValue(user.office_location)) {
-      await addChangeRequest({
-        attribute_name: 'office_location',
-        new_value: officeLocation,
-      });
-      changeCount++;
+    if (officeLocation !== cleanValue(user.office_location) && !pendingFields.has('office_location')) {
+      try {
+        await addChangeRequest({
+          attribute_name: 'office_location',
+          new_value: officeLocation,
+        });
+        changeCount++;
+      } catch (e) {
+        hasError = true;
+      }
     }
 
-    setIsEditing(false);
+    setIsSubmitting(false);
+    if (!hasError) {
+      setIsEditing(false);
+    }
   };
 
   return (
@@ -94,12 +128,12 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                     </div>
                     <motion.div
                       className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 ${
-                        user.presence === 'online' ? 'border-white bg-emerald-500' :
-                        user.presence === 'away' ? 'border-white bg-amber-400' :
+                        currentPresence === 'online' ? 'border-white bg-emerald-500' :
+                        currentPresence === 'away' ? 'border-white bg-amber-400' :
                         'border-slate-300 bg-white'
                       }`}
-                      animate={user.presence === 'online' ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-                      transition={user.presence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
+                      animate={currentPresence === 'online' ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                      transition={currentPresence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
                     />
                   </div>
 
@@ -145,13 +179,22 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                           <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div className="flex-1">
                             <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
-                            <input
-                              type="text"
-                              value={mobilePhone}
-                              onChange={(e) => setMobilePhone(e.target.value)}
-                              placeholder="Не указано"
-                              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
-                            />
+                            {pendingFields.has('mobile_phone') ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-foreground">{displayValue(user.mobile_phone)}</span>
+                                <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-600">
+                                  Заявка на рассмотрении
+                                </span>
+                              </div>
+                            ) : (
+                              <input
+                                type="text"
+                                value={mobilePhone}
+                                onChange={(e) => setMobilePhone(e.target.value)}
+                                placeholder="Не указано"
+                                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
+                              />
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -169,13 +212,22 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                           <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div className="flex-1">
                             <p className="mb-1 text-xs text-muted-foreground">Офис / Расположение</p>
-                            <input
-                              type="text"
-                              value={officeLocation}
-                              onChange={(e) => setOfficeLocation(e.target.value)}
-                              placeholder="Не указано"
-                              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
-                            />
+                            {pendingFields.has('office_location') ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-foreground">{displayValue(user.office_location)}</span>
+                                <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-600">
+                                  Заявка на рассмотрении
+                                </span>
+                              </div>
+                            ) : (
+                              <input
+                                type="text"
+                                value={officeLocation}
+                                onChange={(e) => setOfficeLocation(e.target.value)}
+                                placeholder="Не указано"
+                                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
+                              />
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -213,17 +265,20 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                       <>
                         <button
                           onClick={handleSubmitChange}
-                          className="flex-1 btn-primary py-3"
+                          disabled={isSubmitting}
+                          className={`flex-1 btn-primary py-3 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          Отправить запрос на изменение
+                          {isSubmitting ? 'Отправка...' : 'Отправить запрос на изменение'}
                         </button>
                         <button
                           onClick={() => {
+                            if (isSubmitting) return;
                             setIsEditing(false);
                             setMobilePhone(cleanValue(user.mobile_phone));
                             setOfficeLocation(cleanValue(user.office_location));
                           }}
-                          className="btn-secondary px-6 py-3"
+                          disabled={isSubmitting}
+                          className={`btn-secondary px-6 py-3 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           Отмена
                         </button>

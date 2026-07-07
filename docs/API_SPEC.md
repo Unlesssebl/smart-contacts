@@ -422,8 +422,7 @@
 ### `POST /admin/sync/force`
 Принудительный запуск синхронизации AD. **Доступ**: IT-Operator.
 
-**Ответ 202:** `{ "message": "Force sync initiated" }`
-**Ответ 503:** `{ "detail": "AD Sync Worker is unavailable" }`
+**Ответ 200:** `{ "status": "ok", "message": "Sync requested" }`
 
 ---
 

@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
@@ -70,6 +70,8 @@ def create_change_request(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
+    if current_user.is_protected:
+        raise HTTPException(status_code=403, detail="Profile is protected from changes")
     # Проверка на наличие активной заявки на это же поле
     existing = db.query(ChangeRequest).filter(
         ChangeRequest.user_guid == current_user.object_guid,
@@ -94,6 +96,6 @@ def create_change_request(
     
     db.add(new_request)
     db.commit()
-    db.refresh(new_request)
+    db.refresh(new_request, ['user'])
     
     return new_request

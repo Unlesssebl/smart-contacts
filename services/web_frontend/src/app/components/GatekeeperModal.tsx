@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 export const GatekeeperModal: React.FC = () => {
   const { currentUser, logout } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (currentUser && !currentUser.is_verified) {
@@ -46,9 +48,7 @@ export const GatekeeperModal: React.FC = () => {
             <button
               onClick={() => {
                 setIsOpen(false);
-                // The actual confirmation logic would go to Profile -> Verify, 
-                // but this button can just take them to Profile.
-                window.location.hash = '#profile'; // Adjust based on routing
+                navigate(`/profile/${currentUser.id}`);
               }}
               className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
             >

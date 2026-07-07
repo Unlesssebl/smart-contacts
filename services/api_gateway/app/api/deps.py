@@ -1,4 +1,4 @@
-﻿from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status, Request
 from jose import jwt
 from sqlalchemy.orm import Session
 from app.core.config import settings
@@ -47,7 +47,7 @@ def get_current_user(
 ) -> User:
     user = get_user_by_guid(db, user_guid)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or deleted")
     
     # 4. Enforce user status (immediate revocation)
     if user.status != UserStatus.ACTIVE.value:

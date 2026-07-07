@@ -25,4 +25,4 @@ class ChangeRequest(Base):
 
     @property
     def user_name(self) -> str | None:
-        return self.user.display_name if self.user else None
+        return self.user.full_name if self.user else None

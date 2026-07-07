@@ -26,6 +26,7 @@ export function DirectoryPage() {
 
   useEffect(() => {
     fetchUsers();
+    useAppStore.getState().fetchFilterOptions();
   }, [fetchUsers]);
 
   const filteredUsers = users; // Since filtering is done server-side

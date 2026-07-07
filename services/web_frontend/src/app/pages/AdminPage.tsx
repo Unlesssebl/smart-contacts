@@ -285,15 +285,22 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>('requests');
-  const { changeRequests, reports, fetchAdminData, approveChangeRequest, rejectChangeRequest, ldapSettings, fetchLDAPSettings, updateLDAPSettings, ouMapping, fetchOUMapping, updateOUMapping } = useAppStore();
+  const { changeRequests, reports, fetchAdminData, approveChangeRequest, rejectChangeRequest, ldapSettings, fetchLDAPSettings, updateLDAPSettings, ouMapping, fetchOUMapping, updateOUMapping, forceSync } = useAppStore();
 
   useEffect(() => {
     fetchAdminData();
     fetchLDAPSettings();
     fetchOUMapping();
+    
+    // Poll for updates to see transition from approved -> applied/conflict
+    const interval = setInterval(() => {
+      fetchAdminData();
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, [fetchAdminData, fetchLDAPSettings, fetchOUMapping]);
 
-  const pendingRequests = changeRequests.filter((r) => r.status === 'pending');
+  const activeRequests = changeRequests.filter((r) => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved');
 
   return (
     <div className="flex min-h-screen bg-transparent">
@@ -344,7 +351,7 @@ export function AdminPage() {
                 />
               )}
               <span className="relative z-10">
-                Запросы на изменения {pendingRequests.length > 0 && `(${pendingRequests.length})`}
+                Запросы на изменения {activeRequests.length > 0 && `(${activeRequests.length})`}
               </span>
             </button>
 
@@ -408,13 +415,13 @@ export function AdminPage() {
           >
             {activeTab === 'requests' ? (
               <div className="p-6">
-                {pendingRequests.length === 0 ? (
+                {activeRequests.length === 0 ? (
                   <div className="py-12 text-center">
-                    <p className="text-lg text-muted-foreground">Нет ожидающих запросов на изменение</p>
+                    <p className="text-lg text-muted-foreground">Нет активных запросов на изменение</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {pendingRequests.map((request) => (
+                    {activeRequests.map((request) => (
                       <motion.div
                         key={request.id}
                         initial={{ opacity: 0, x: -20 }}
@@ -440,9 +447,16 @@ export function AdminPage() {
                           <p className="text-sm text-muted-foreground">
                             Запрос на изменение поля{' '}
                             <span className="font-medium text-foreground">
-                              {getAttributeLabel(request.attribute_name)}
+                              {getAttributeLabel(request.field_name || request.attribute_name)}
                             </span>
                           </p>
+                          
+                          {request.status === 'conflict' && (
+                            <div className="mt-2 text-sm text-destructive font-medium flex items-center gap-1.5">
+                              <Shield className="w-4 h-4" />
+                              Ошибка применения в AD (Требуется ручная обработка или повторная попытка)
+                            </div>
+                          )}
                           
                           <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-1.5 text-sm dark:bg-white/10">
                             <span className="text-muted-foreground">Новое:</span>
@@ -457,25 +471,33 @@ export function AdminPage() {
                         </div>
 
                         <div className="flex items-center gap-2 pt-2 sm:shrink-0 sm:pt-0">
-                          <button
-                            onClick={async () => {
-                              await rejectChangeRequest(request.id);
-                            }}
-                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-50 px-4 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 sm:flex-none"
-                          >
-                            <X className="h-4 w-4" strokeWidth={2} />
-                            Отклонить
-                          </button>
-                          
-                          <button
-                            onClick={async () => {
-                              await approveChangeRequest(request.id);
-                            }}
-                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 sm:flex-none"
-                          >
-                            <Check className="h-4 w-4" strokeWidth={2} />
-                            Одобрить
-                          </button>
+                          {request.status === 'approved' ? (
+                            <div className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 sm:flex-none">
+                              В процессе применения...
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  await rejectChangeRequest(request.id);
+                                }}
+                                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-50 px-4 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 sm:flex-none"
+                              >
+                                <X className="h-4 w-4" strokeWidth={2} />
+                                Отклонить
+                              </button>
+                              
+                              <button
+                                onClick={async () => {
+                                  await approveChangeRequest(request.id);
+                                }}
+                                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 sm:flex-none"
+                              >
+                                <Check className="h-4 w-4" strokeWidth={2} />
+                                {request.status === 'conflict' ? 'Повторить' : 'Одобрить'}
+                              </button>
+                            </>
+                          )}
                         </div>
                       </motion.div>
                     ))}
@@ -543,6 +565,19 @@ export function AdminPage() {
               </div>
             ) : activeTab === 'settings' ? (
               <div className="p-6">
+                <div className="flex items-center justify-between mb-8 pb-6 border-b max-w-xl">
+                  <div>
+                    <h3 className="text-lg font-medium">Ручная синхронизация</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Принудительно запустить цикл синхронизации с Active Directory прямо сейчас.</p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => forceSync()} 
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2 whitespace-nowrap shrink-0"
+                  >
+                    Запустить синхронизацию
+                  </button>
+                </div>
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();

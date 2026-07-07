@@ -16,6 +16,7 @@ CREATE TABLE users (
     department VARCHAR(256),
     office_location VARCHAR(256),
     organization VARCHAR(256),
+    ad_dn VARCHAR(512),
     job_title VARCHAR(256),
     email VARCHAR(256),
     role VARCHAR(32) NOT NULL DEFAULT 'employee',

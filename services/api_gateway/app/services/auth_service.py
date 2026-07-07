@@ -172,7 +172,19 @@ class AuthService:
             "office_location": "office_location"
         }
         
+        # Load pending CRs to protect fields (EC-6)
+        from shared.models.change_request import ChangeRequest
+        from shared.models.enums import ChangeRequestStatus
+        
+        pending_crs = db.query(ChangeRequest).filter(
+            ChangeRequest.user_guid == user.object_guid,
+            ChangeRequest.status.in_([ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value, ChangeRequestStatus.APPROVED.value])
+        ).all()
+        pending_fields = {cr.attribute_name for cr in pending_crs}
+
         for ldap_key, db_key in fields_to_sync.items():
+            if db_key in pending_fields:
+                continue
             ldap_val = getattr(ldap_user, ldap_key, None)
             if ldap_val and not getattr(user, db_key):
                 setattr(user, db_key, ldap_val)

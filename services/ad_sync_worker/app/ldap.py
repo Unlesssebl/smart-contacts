@@ -16,15 +16,12 @@ logger = logging.getLogger(__name__)
 class LDAPClient:
     def __init__(self):
         # Fetch credentials from DB
-        db = SessionLocal()
-        try:
+        with SessionLocal() as db:
             ad_user_setting = db.query(SystemSetting).filter(SystemSetting.key == "AD_USER").first()
             ad_password_setting = db.query(SystemSetting).filter(SystemSetting.key == "AD_PASSWORD").first()
             
             ad_user = ad_user_setting.value if ad_user_setting else None
             ad_password_encrypted = ad_password_setting.value if ad_password_setting else None
-        finally:
-            db.close()
             
         if not ad_user or not ad_password_encrypted:
             raise ValueError("AD_USER or AD_PASSWORD is not set in DB")

@@ -25,5 +25,10 @@ export const adminApi = {
   processReport: async (id: string): Promise<Report> => {
     const response = await apiClient.patch(`/admin/reports/${id}/process`);
     return response.data;
+  },
+
+  forceSync: async (): Promise<{status: string; message: string}> => {
+    const response = await apiClient.post('/admin/sync/force');
+    return response.data;
   }
 };

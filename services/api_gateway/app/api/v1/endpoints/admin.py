@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
@@ -18,7 +18,7 @@ from app.services.ou_service import apply_ou_mapping_to_users_bg
 router = APIRouter()
 
 def check_admin_auth(current_user: User = Depends(deps.get_current_user)):
-    if current_user.role != UserRole.IT_OPERATOR.value:
+    if current_user.role not in [UserRole.IT_OPERATOR.value, UserRole.ADMIN.value]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="The user does not have enough privileges"
@@ -152,3 +152,11 @@ def list_ad_ous(
             return {}
     return {}
 
+@router.post("/sync/force")
+def force_sync(
+    db: Session = Depends(get_db),
+    admin: User = Depends(check_admin_auth)
+):
+    """Signals the AD sync worker to perform an immediate sync cycle."""
+    settings_manager.set_setting(db, "FORCE_SYNC", "1")
+    return {"status": "ok", "message": "Sync requested"}

@@ -1,4 +1,4 @@
-﻿from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
 from shared.models.report import Report
 from shared.models.user import User
 from shared.models.change_request import ChangeRequest
@@ -13,7 +13,7 @@ def get_reports(db: Session) -> List[Report]:
     return db.query(Report).options(joinedload(Report.target_user), joinedload(Report.reporter)).order_by(Report.created_at.desc()).all()
 
 def get_report(db: Session, report_id: UUID) -> Optional[Report]:
-    return db.query(Report).filter(Report.id == report_id).first()
+    return db.query(Report).options(joinedload(Report.target_user), joinedload(Report.reporter)).filter(Report.id == report_id).first()
 
 def create_report(db: Session, reporter_guid: UUID, target_guid: UUID, reason: str) -> Report:
     new_report = Report(
@@ -57,5 +57,5 @@ def process_report(db: Session, report_id: UUID, admin_guid: UUID) -> Optional[R
     report.processed_by = admin_guid
     
     db.commit()
-    db.refresh(report)
-    return report
+    # Возвращаем заново запрошенный объект, чтобы подтянуть связи
+    return get_report(db, report_id)

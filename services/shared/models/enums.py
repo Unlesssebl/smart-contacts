@@ -1,4 +1,4 @@
-﻿from enum import Enum
+from enum import Enum
 
 class UserStatus(str, Enum):
     ACTIVE = "ACTIVE"
@@ -8,6 +8,7 @@ class UserStatus(str, Enum):
 class UserRole(str, Enum):
     EMPLOYEE = "employee"
     IT_OPERATOR = "it_operator"
+    ADMIN = "admin"
 
 class ChangeRequestStatus(str, Enum):
     PENDING = "pending"

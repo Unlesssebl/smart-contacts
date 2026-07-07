@@ -64,6 +64,8 @@ interface AppState {
   ouMapping: Record<string, string>;
   fetchOUMapping: () => Promise<void>;
   updateOUMapping: (mapping: Record<string, string>) => Promise<void>;
+
+  forceSync: () => Promise<void>;
 }
 
 let searchAbortController: AbortController | null = null;
@@ -229,9 +231,16 @@ export const useAppStore = create<AppState>()(
             changeRequests: [newRequest, ...state.changeRequests]
           }));
           toast.success('Заявка на изменение контактов успешно создана');
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to create change request', error);
-          toast.error('Ошибка при создании заявки');
+          if (error.response?.status === 422) {
+             toast.error('Неверный формат введенных данных');
+          } else if (error.response?.status === 409) {
+             toast.error('Заявка на изменение этого поля уже существует');
+          } else {
+             toast.error('Ошибка при создании заявки');
+          }
+          throw error;
         }
       },
 
@@ -243,7 +252,7 @@ export const useAppStore = create<AppState>()(
               r.id === id ? updatedRequest : r
             )
           }));
-          toast.success('Заявка одобрена');
+          toast.success('Заявка одобрена и будет применена в AD');
         } catch (error) {
           console.error('Failed to approve request', error);
           toast.error('Не удалось одобрить заявку');
@@ -292,6 +301,16 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           console.error('Failed to fetch admin data', error);
           toast.error('Не удалось загрузить данные панели администратора');
+        }
+      },
+
+      forceSync: async () => {
+        try {
+          const res = await adminApi.forceSync();
+          toast.success('Синхронизация с AD запущена');
+        } catch (error) {
+          console.error('Failed to force sync', error);
+          toast.error('Ошибка при запуске синхронизации');
         }
       },
 

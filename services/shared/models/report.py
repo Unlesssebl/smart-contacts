@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, String, DateTime, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -23,8 +23,8 @@ class Report(Base):
 
     @property
     def target_user_name(self) -> str | None:
-        return self.target_user.display_name if self.target_user else None
+        return self.target_user.full_name if self.target_user else None
 
     @property
     def reporter_user_name(self) -> str | None:
-        return self.reporter.display_name if self.reporter else None
+        return self.reporter.full_name if self.reporter else None

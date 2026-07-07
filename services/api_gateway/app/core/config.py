@@ -5,7 +5,7 @@ from typing import Optional
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Smart Contacts API Gateway"
     API_V1_STR: str = "/api/v1"
-    ALLOWED_ORIGINS: str = "http://localhost,http://localhost:5173,http://127.0.0.1:5173,http://10.245.19.85:8080"
+    ALLOWED_ORIGINS: str = "http://localhost,http://localhost:5173,http://127.0.0.1:5173"
 
     # PostgreSQL (Required)
     POSTGRES_USER: str

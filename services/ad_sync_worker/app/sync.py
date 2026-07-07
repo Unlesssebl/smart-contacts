@@ -206,18 +206,19 @@ class SyncWorker:
 
     def push(self):
         """
-        Push approved change requests to AD.
+        Push pending/approved changes to AD.
         """
-        logger.info("Starting Push cycle.")
-        
         with SessionLocal() as session:
             approved_requests = session.execute(
                 select(ChangeRequest).where(ChangeRequest.status == "approved")
             ).scalars().all()
 
             if not approved_requests:
-                logger.info("No approved requests to push.")
                 return
+                
+            logger.info("Starting Push cycle.")
+
+            processed_conflicts = set()
 
             with LDAPClient() as ldap:
                 for cr in approved_requests:
@@ -251,11 +252,47 @@ class SyncWorker:
                     if success:
                         cr.status = "applied"
                         cr.resolved_at = datetime.now(timezone.utc)
+                        # Apply changes to local DB user upon success (Plan Option A)
+                        setattr(user, cr.attribute_name, cr.new_value)
                         user.last_sync_timestamp = datetime.now(timezone.utc)
                         logger.info(f"Applied {cr.attribute_name} for {user.sam_account_name}")
                     else:
-                        user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {cr.id}"
+                        # Check if another pending or conflict request already exists in DB
+                        # or if we already set one to conflict in this cycle.
+                        conflict_key = (str(user.object_guid), cr.attribute_name)
+                        
+                        existing = session.execute(
+                            select(ChangeRequest).where(
+                                ChangeRequest.user_guid == user.object_guid,
+                                ChangeRequest.attribute_name == cr.attribute_name,
+                                ChangeRequest.id != cr.id,
+                                ChangeRequest.status.in_(["pending", "conflict"])
+                            )
+                        ).scalars().first()
+                        
+                        if existing or conflict_key in processed_conflicts:
+                            cr.status = "rejected"
+                            user.sync_error_log = (user.sync_error_log or "") + f"\nMarked {cr.id} as rejected to avoid duplicate pending/conflict."
+                            logger.warning(f"Duplicate active request found. Marking {cr.id} as rejected.")
+                        else:
+                            cr.status = "conflict"
+                            processed_conflicts.add(conflict_key)
+
+                        error_msg = ldap.conn.result.get("description", "Unknown LDAP Error")
+                        user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {cr.id}: {error_msg}"
+                        logger.error(f"AD Push failed for {cr.id}: {error_msg}")
             
+            # Clean up expired refresh tokens (EC-7)
+            try:
+                from shared.models.token import RefreshToken
+                expired_tokens = session.execute(
+                    select(RefreshToken).where(RefreshToken.expires_at < datetime.now(timezone.utc))
+                ).scalars().all()
+                for t in expired_tokens:
+                    session.delete(t)
+            except Exception as e:
+                logger.error(f"Failed to clean up expired tokens: {e}")
+
             session.commit()
         
         logger.info("Push cycle completed.")

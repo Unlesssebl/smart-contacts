@@ -1,13 +1,71 @@
 import { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit, Clock, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '../components/Sidebar';
 import { useAppStore } from '../../store/useAppStore';
-import { getChangeWord } from '../../lib/localization';
 
-import type { User } from '../../types';
+import type { User, UserProfile } from '../../types';
+
+function EditableField({
+  icon: Icon,
+  label,
+  value,
+  pendingValue,
+  isEditing,
+  onChange,
+  placeholder = "Не указано",
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  pendingValue?: string;
+  isEditing?: boolean;
+  onChange?: (val: string) => void;
+  placeholder?: string;
+}) {
+  const displayValue = (val: string) => {
+    if (!val.trim()) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-black/5 px-2.5 py-0.5 text-xs font-medium text-muted-foreground/70">
+          Не указано
+        </span>
+      );
+    }
+    return val;
+  };
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+      <Icon className="h-5 w-5 text-primary shrink-0" strokeWidth={1.5} />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+        
+        {pendingValue !== undefined ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-foreground line-through opacity-50 truncate">{displayValue(value)}</span>
+            <span className="text-sm text-foreground font-medium truncate">{displayValue(pendingValue)}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-600 shrink-0">
+              <Clock className="w-3 h-3" />
+              На рассмотрении
+            </span>
+          </div>
+        ) : isEditing && onChange ? (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
+          />
+        ) : (
+          <p className="text-sm text-foreground truncate">{displayValue(value)}</p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -34,8 +92,10 @@ export function ProfilePage() {
   const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [mobilePhone, setMobilePhone] = useState(cleanValue(user?.mobile_phone));
   const [officeLocation, setOfficeLocation] = useState(cleanValue(user?.office_location));
+  const [pendingFields, setPendingFields] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (user) {
@@ -43,6 +103,26 @@ export function ProfilePage() {
       setOfficeLocation(cleanValue(user.office_location));
     }
   }, [user]);
+
+  const fetchPendingFields = () => {
+    if (currentUser?.id === user?.id) {
+      import('../../api/changeRequests').then(({ changeRequestsApi }) => {
+        changeRequestsApi.getMyChangeRequests().then(requests => {
+          const activePending: Record<string, string> = {};
+          requests.forEach(r => {
+            if (r.status === 'pending' || r.status === 'conflict' || r.status === 'approved') {
+              activePending[r.field_name] = r.new_value;
+            }
+          });
+          setPendingFields(activePending);
+        }).catch(() => {});
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingFields();
+  }, [currentUser, user]);
 
   const displayValue = (val: string | null | undefined) => {
     const cleaned = cleanValue(val);
@@ -72,27 +152,46 @@ export function ProfilePage() {
   }
 
   const manager = user.manager_id ? getUserById(user.manager_id) : null;
+  const isCurrentUser = currentUser?.id === user.id;
+  const hasChanges = mobilePhone !== cleanValue(user.mobile_phone) || officeLocation !== cleanValue(user.office_location);
 
   const handleSubmitChange = async () => {
-    let changeCount = 0;
+    if (isSubmitting || !hasChanges) return;
+    setIsSubmitting(true);
+    let hasError = false;
+    const newPending = { ...pendingFields };
 
-    if (mobilePhone !== (user.mobile_phone || '')) {
-      await addChangeRequest({
-        attribute_name: 'mobile_phone',
-        new_value: mobilePhone || '',
-      });
-      changeCount++;
+    if (mobilePhone !== cleanValue(user.mobile_phone) && !('mobile_phone' in pendingFields)) {
+      try {
+        await addChangeRequest({
+          attribute_name: 'mobile_phone',
+          new_value: mobilePhone || '',
+        });
+        newPending['mobile_phone'] = mobilePhone || '';
+      } catch (e) {
+        hasError = true;
+      }
     }
 
-    if (officeLocation !== (user.office_location || '')) {
-      await addChangeRequest({
-        attribute_name: 'office_location',
-        new_value: officeLocation,
-      });
-      changeCount++;
+    if (officeLocation !== cleanValue(user.office_location) && !('office_location' in pendingFields)) {
+      try {
+        await addChangeRequest({
+          attribute_name: 'office_location',
+          new_value: officeLocation,
+        });
+        newPending['office_location'] = officeLocation;
+      } catch (e) {
+        hasError = true;
+      }
     }
 
-    setIsEditing(false);
+    setIsSubmitting(false);
+    setPendingFields(newPending);
+    if (!hasError) {
+      setIsEditing(false);
+      setMobilePhone(cleanValue(user.mobile_phone));
+      setOfficeLocation(cleanValue(user.office_location));
+    }
   };
 
   return (
@@ -116,11 +215,17 @@ export function ProfilePage() {
                       .map((n) => n[0])
                       .join('')}
                   </div>
-
                 </div>
 
                 <div className="flex-1">
-                  <h1 className="text-3xl font-semibold text-foreground">{user.full_name}</h1>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-semibold text-foreground">{user.full_name}</h1>
+                    {isCurrentUser && (currentUser as UserProfile)?.sam_account_name && (
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                        {(currentUser as UserProfile).sam_account_name}
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-1 text-lg text-muted-foreground">{displayValue(user.job_title)}</p>
                   <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                     <Building2 className="h-4 w-4" strokeWidth={1.5} />
@@ -138,69 +243,35 @@ export function ProfilePage() {
                     Контактная информация
                   </h3>
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                      <Mail className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Email</p>
-                        <p className="text-sm text-foreground">{displayValue(user.email)}</p>
-                      </div>
-                    </div>
+                    <EditableField 
+                      icon={Mail} 
+                      label="Email" 
+                      value={cleanValue(user.email)} 
+                    />
+                    
+                    <EditableField 
+                      icon={Phone} 
+                      label="Внутренний телефон" 
+                      value={cleanValue(user.internal_phone)} 
+                    />
 
-                    <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                      <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Внутренний телефон</p>
-                        <p className="text-sm text-foreground">{displayValue(user.internal_phone)}</p>
-                      </div>
-                    </div>
+                    <EditableField 
+                      icon={Phone} 
+                      label="Мобильный телефон" 
+                      value={isEditing ? mobilePhone : cleanValue(user.mobile_phone)} 
+                      pendingValue={pendingFields['mobile_phone']}
+                      isEditing={isEditing}
+                      onChange={setMobilePhone}
+                    />
 
-                    {isEditing ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                        <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                          <div className="flex-1">
-                            <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
-                            <input
-                              type="text"
-                              value={mobilePhone}
-                              onChange={(e) => setMobilePhone(e.target.value)}
-                              placeholder="Не указано"
-                              className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
-                            />
-                          </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                        <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Мобильный телефон</p>
-                          <p className="text-sm text-foreground">{displayValue(user.mobile_phone)}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {isEditing ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                        <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                        <div className="flex-1">
-                          <p className="mb-1 text-xs text-muted-foreground">Офис / Расположение</p>
-                          <input
-                            type="text"
-                            value={officeLocation}
-                            onChange={(e) => setOfficeLocation(e.target.value)}
-                            placeholder="Не указано"
-                            className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                        <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Офис / Расположение</p>
-                          <p className="text-sm text-foreground">{displayValue(user.office_location)}</p>
-                        </div>
-                      </div>
-                    )}
+                    <EditableField 
+                      icon={MapPin} 
+                      label="Офис / Расположение" 
+                      value={isEditing ? officeLocation : cleanValue(user.office_location)} 
+                      pendingValue={pendingFields['office_location']}
+                      isEditing={isEditing}
+                      onChange={setOfficeLocation}
+                    />
                   </div>
                 </div>
 
@@ -219,23 +290,26 @@ export function ProfilePage() {
                 )}
               </div>
 
-              {currentUser?.id === user.id && (
-                <div className="mt-6 flex gap-3">
+              {isCurrentUser && (
+                <div className="mt-8 flex gap-3 pt-6 border-t border-black/5">
                   {isEditing ? (
                     <>
                       <button
                         onClick={handleSubmitChange}
-                        className="flex-1 btn-primary py-3"
+                        disabled={isSubmitting || !hasChanges}
+                        className={`flex-1 btn-primary py-3 ${isSubmitting || !hasChanges ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        Отправить запрос на изменение
+                        {isSubmitting ? 'Отправка...' : 'Отправить запрос на изменение'}
                       </button>
                       <button
                         onClick={() => {
+                          if (isSubmitting) return;
                           setIsEditing(false);
                           setMobilePhone(cleanValue(user.mobile_phone));
                           setOfficeLocation(cleanValue(user.office_location));
                         }}
-                        className="btn-secondary px-6 py-3"
+                        disabled={isSubmitting}
+                        className={`btn-secondary px-6 py-3 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         Отмена
                       </button>

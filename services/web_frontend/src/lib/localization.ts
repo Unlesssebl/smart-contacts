@@ -34,6 +34,10 @@ export const getStatusLabel = (status: string) => {
     in_progress: 'В работе',
     pending: 'Ожидает',
     open: 'Открыто',
+    approved: 'Одобрено',
+    rejected: 'Отклонено',
+    applied: 'Применено в AD',
+    conflict: 'Ошибка применения',
   };
   return statuses[status] || status.replace('_', ' ');
 };
