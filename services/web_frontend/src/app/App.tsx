@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
 import { useEffect } from 'react';
+import { OverlayScrollbars } from 'overlayscrollbars';
+import 'overlayscrollbars/overlayscrollbars.css';
 import { LoginPage } from './pages/LoginPage';
 import { DirectoryPage } from './pages/DirectoryPage';
 import { AdminPage } from './pages/AdminPage';
@@ -55,7 +57,28 @@ function AnimatedRoutes() {
 
 import { GatekeeperModal } from './components/GatekeeperModal';
 
+
 export default function App() {
+  const isAuthenticated = useAppStore(state => state.isAuthenticated);
+  const fetchMyPendingFields = useAppStore(state => state.fetchMyPendingFields);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMyPendingFields();
+    }
+  }, [isAuthenticated, fetchMyPendingFields]);
+
+  useEffect(() => {
+    const instance = OverlayScrollbars(document.body, {
+      scrollbars: {
+        theme: 'os-theme-dark',
+        autoHide: 'scroll',
+        autoHideDelay: 800,
+      },
+    });
+    return () => instance.destroy();
+  }, []);
+
   return (
     <BrowserRouter>
       <AnimatedRoutes />

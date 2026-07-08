@@ -279,6 +279,7 @@ class SyncWorker:
                             processed_conflicts.add(conflict_key)
 
                         error_msg = ldap.conn.result.get("description", "Unknown LDAP Error")
+                        cr.rejection_reason = error_msg
                         user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {cr.id}: {error_msg}"
                         logger.error(f"AD Push failed for {cr.id}: {error_msg}")
             

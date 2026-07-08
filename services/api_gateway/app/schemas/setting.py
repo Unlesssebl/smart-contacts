@@ -8,6 +8,8 @@ class LDAPSettingsUpdate(BaseModel):
 class LDAPSettingsRead(BaseModel):
     ad_user: Optional[str] = None
     is_password_set: bool
+    status: Optional[str] = None
+    last_error: Optional[str] = None
 
 class OuMappingUpdate(BaseModel):
     mapping: dict[str, str]

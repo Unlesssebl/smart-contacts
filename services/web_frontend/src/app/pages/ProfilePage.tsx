@@ -69,7 +69,7 @@ function EditableField({
 
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
-  const { getUserById, currentUser, addChangeRequest } = useAppStore();
+  const { getUserById, currentUser, addChangeRequest, pendingFields: globalPendingFields } = useAppStore();
   
   const storeUser = id ? getUserById(id) : null;
   const [user, setUser] = useState<User | null>(storeUser || null);
@@ -95,7 +95,7 @@ export function ProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mobilePhone, setMobilePhone] = useState(cleanValue(user?.mobile_phone));
   const [officeLocation, setOfficeLocation] = useState(cleanValue(user?.office_location));
-  const [pendingFields, setPendingFields] = useState<Record<string, string>>({});
+  const pendingFields = currentUser?.id === user?.id ? (globalPendingFields || null) : {};
 
   useEffect(() => {
     if (user) {
@@ -104,25 +104,6 @@ export function ProfilePage() {
     }
   }, [user]);
 
-  const fetchPendingFields = () => {
-    if (currentUser?.id === user?.id) {
-      import('../../api/changeRequests').then(({ changeRequestsApi }) => {
-        changeRequestsApi.getMyChangeRequests().then(requests => {
-          const activePending: Record<string, string> = {};
-          requests.forEach(r => {
-            if (r.status === 'pending' || r.status === 'conflict' || r.status === 'approved') {
-              activePending[r.field_name] = r.new_value;
-            }
-          });
-          setPendingFields(activePending);
-        }).catch(() => {});
-      });
-    }
-  };
-
-  useEffect(() => {
-    fetchPendingFields();
-  }, [currentUser, user]);
 
   const displayValue = (val: string | null | undefined) => {
     const cleaned = cleanValue(val);
@@ -156,10 +137,9 @@ export function ProfilePage() {
   const hasChanges = mobilePhone !== cleanValue(user.mobile_phone) || officeLocation !== cleanValue(user.office_location);
 
   const handleSubmitChange = async () => {
-    if (isSubmitting || !hasChanges) return;
+    if (isSubmitting || !hasChanges || pendingFields === null) return;
     setIsSubmitting(true);
     let hasError = false;
-    const newPending = { ...pendingFields };
 
     if (mobilePhone !== cleanValue(user.mobile_phone) && !('mobile_phone' in pendingFields)) {
       try {
@@ -167,7 +147,6 @@ export function ProfilePage() {
           attribute_name: 'mobile_phone',
           new_value: mobilePhone || '',
         });
-        newPending['mobile_phone'] = mobilePhone || '';
       } catch (e) {
         hasError = true;
       }
@@ -179,14 +158,12 @@ export function ProfilePage() {
           attribute_name: 'office_location',
           new_value: officeLocation,
         });
-        newPending['office_location'] = officeLocation;
       } catch (e) {
         hasError = true;
       }
     }
 
     setIsSubmitting(false);
-    setPendingFields(newPending);
     if (!hasError) {
       setIsEditing(false);
       setMobilePhone(cleanValue(user.mobile_phone));
@@ -259,7 +236,7 @@ export function ProfilePage() {
                       icon={Phone} 
                       label="Мобильный телефон" 
                       value={isEditing ? mobilePhone : cleanValue(user.mobile_phone)} 
-                      pendingValue={pendingFields['mobile_phone']}
+                      pendingValue={pendingFields?.['mobile_phone']}
                       isEditing={isEditing}
                       onChange={setMobilePhone}
                     />
@@ -268,7 +245,7 @@ export function ProfilePage() {
                       icon={MapPin} 
                       label="Офис / Расположение" 
                       value={isEditing ? officeLocation : cleanValue(user.office_location)} 
-                      pendingValue={pendingFields['office_location']}
+                      pendingValue={pendingFields?.['office_location']}
                       isEditing={isEditing}
                       onChange={setOfficeLocation}
                     />
@@ -317,10 +294,11 @@ export function ProfilePage() {
                   ) : (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="btn-secondary px-6 py-3 gap-2"
+                      disabled={pendingFields === null}
+                      className={`btn-secondary px-6 py-3 gap-2 ${pendingFields === null ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <Edit className="h-4 w-4" strokeWidth={1.5} />
-                      Редактировать профиль
+                      {pendingFields === null ? 'Загрузка...' : 'Редактировать профиль'}
                     </button>
                   )}
                 </div>

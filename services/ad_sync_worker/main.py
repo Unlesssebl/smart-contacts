@@ -3,6 +3,7 @@ import logging
 import sys
 from app.config import settings
 from app.sync import SyncWorker
+from app.ldap import InvalidLDAPCredentialsError
 
 # Configure file handler for WARNING and above
 file_handler = logging.FileHandler("worker_errors.log", encoding="utf-8")
@@ -20,6 +21,31 @@ logging.basicConfig(
 
 logger = logging.getLogger("ad_sync_worker")
 
+def set_ldap_status(status: str, last_error: str = ""):
+    from app.db import SessionLocal
+    from shared.models.system_setting import SystemSetting
+    try:
+        with SessionLocal() as session:
+            for k, v in [("LDAP_STATUS", status), ("LDAP_LAST_ERROR", last_error)]:
+                setting = session.get(SystemSetting, k)
+                if setting:
+                    setting.value = v
+                else:
+                    session.add(SystemSetting(key=k, value=v))
+            session.commit()
+    except Exception as e:
+        logger.error(f"Failed to save LDAP status: {e}")
+
+def get_credentials_version() -> str:
+    from app.db import SessionLocal
+    from shared.models.system_setting import SystemSetting
+    try:
+        with SessionLocal() as session:
+            setting = session.get(SystemSetting, "LDAP_CREDENTIALS_VERSION")
+            return setting.value if setting else ""
+    except Exception:
+        return ""
+
 def main():
     logger.info("Starting AD Sync Worker...")
     worker = SyncWorker()
@@ -28,10 +54,22 @@ def main():
     pull_interval = settings.AD_PULL_INTERVAL_SECONDS
     push_interval = 5  # Push every 5 seconds
     
+    known_cred_version = get_credentials_version()
+    credentials_invalid = False
+    
     while True:
         current_time = time.time()
         
-        # Check if manual sync was requested
+        if credentials_invalid:
+            current_version = get_credentials_version()
+            if current_version != known_cred_version:
+                logger.info("Credentials version changed, resetting circuit breaker.")
+                known_cred_version = current_version
+                credentials_invalid = False
+            else:
+                time.sleep(push_interval)
+                continue
+        
         force_sync_requested = False
         try:
             from app.db import SessionLocal
@@ -45,19 +83,19 @@ def main():
         except Exception as e:
             logger.error(f"Error checking FORCE_SYNC flag: {e}")
         
-        # Pull if interval has elapsed or forced
-        if force_sync_requested or (current_time - last_pull_time >= pull_interval):
-            try:
+        try:
+            if force_sync_requested or (current_time - last_pull_time >= pull_interval):
                 worker.pull()
                 last_pull_time = current_time
-            except Exception as e:
-                logger.error(f"Unexpected error in pull loop: {e}")
-        
-        # Always push frequently
-        try:
+                
             worker.push()
+            set_ldap_status("ok")
+        except InvalidLDAPCredentialsError as e:
+            logger.error(f"Circuit Breaker OPEN due to auth error: {e}")
+            credentials_invalid = True
+            set_ldap_status("error", str(e))
         except Exception as e:
-            logger.error(f"Unexpected error in push loop: {e}")
+            logger.error(f"Unexpected error in sync loop: {e}")
             
         time.sleep(push_interval)
 

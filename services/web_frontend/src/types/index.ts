@@ -41,6 +41,7 @@ export interface ChangeRequest {
   field_name: string; // from attribute_name
   new_value: string;
   status: ChangeRequestStatus;
+  rejection_reason?: string | null;
   created_at: string;
 }
 

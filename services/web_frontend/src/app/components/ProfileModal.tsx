@@ -28,55 +28,41 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mobilePhone, setMobilePhone] = useState(cleanValue(user.mobile_phone));
   const [officeLocation, setOfficeLocation] = useState(cleanValue(user.office_location));
-  const [pendingFields, setPendingFields] = useState<Set<string>>(new Set());
-  const { addChangeRequest, currentUser, getUserById, globalPresence } = useAppStore();
+
+  // Глобальный стейт — загружается при логине (fetchMe) и поддерживается в актуальном состоянии
+  const { addChangeRequest, currentUser, getUserById, globalPresence, pendingFields } = useAppStore();
 
   const manager = user.manager_id ? getUserById(user.manager_id) : null;
   const currentPresence = globalPresence[user.id] || user.presence;
+  const isOwnProfile = currentUser?.id === user.id;
 
-  // Загружаем активные заявки при открытии формы редактирования
+  // Блокировка скролла при открытой модалке (с компенсацией ширины скроллбара)
   useEffect(() => {
-    if (isEditing && currentUser?.id === user.id) {
-      import('../../api/changeRequests').then(({ changeRequestsApi }) => {
-        changeRequestsApi.getMyChangeRequests().then(requests => {
-          const activePending = new Set(
-            requests
-              .filter(r => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved')
-              .map(r => r.field_name)
-          );
-          setPendingFields(activePending);
-        }).catch(() => {});
-      });
-    } else if (!isEditing) {
-      setPendingFields(new Set());
-    }
-  }, [isEditing, currentUser, user]);
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = 'hidden';
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, []);
 
   const handleSubmitChange = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || !pendingFields) return;
     setIsSubmitting(true);
-    let changeCount = 0;
     let hasError = false;
 
-    if (mobilePhone !== cleanValue(user.mobile_phone) && !pendingFields.has('mobile_phone')) {
+    if (mobilePhone !== cleanValue(user.mobile_phone) && !('mobile_phone' in pendingFields)) {
       try {
-        await addChangeRequest({
-          attribute_name: 'mobile_phone',
-          new_value: mobilePhone || '',
-        });
-        changeCount++;
+        await addChangeRequest({ attribute_name: 'mobile_phone', new_value: mobilePhone || '' });
       } catch (e) {
         hasError = true;
       }
     }
 
-    if (officeLocation !== cleanValue(user.office_location) && !pendingFields.has('office_location')) {
+    if (officeLocation !== cleanValue(user.office_location) && !('office_location' in pendingFields)) {
       try {
-        await addChangeRequest({
-          attribute_name: 'office_location',
-          new_value: officeLocation,
-        });
-        changeCount++;
+        await addChangeRequest({ attribute_name: 'office_location', new_value: officeLocation });
       } catch (e) {
         hasError = true;
       }
@@ -100,12 +86,13 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onPointerDown={onClose}>
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onPointerDown={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="relative w-full max-w-2xl overflow-hidden glass-card p-0"
             >
               {/* Header */}
@@ -179,7 +166,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                           <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div className="flex-1">
                             <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
-                            {pendingFields.has('mobile_phone') ? (
+                            {pendingFields && 'mobile_phone' in pendingFields ? (
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-foreground">{displayValue(user.mobile_phone)}</span>
                                 <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-600">
@@ -212,7 +199,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                           <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
                           <div className="flex-1">
                             <p className="mb-1 text-xs text-muted-foreground">Офис / Расположение</p>
-                            {pendingFields.has('office_location') ? (
+                            {pendingFields && 'office_location' in pendingFields ? (
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-foreground">{displayValue(user.office_location)}</span>
                                 <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-600">
@@ -286,10 +273,11 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                     ) : (
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="btn-secondary px-6 py-3 gap-2"
+                        disabled={pendingFields === null}
+                        className={`btn-secondary px-6 py-3 gap-2 ${pendingFields === null ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <Edit className="h-4 w-4" strokeWidth={1.5} />
-                        Редактировать профиль
+                        {pendingFields === null ? 'Загрузка...' : 'Редактировать профиль'}
                       </button>
                     )}
                   </div>

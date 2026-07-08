@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, Generator
 from ldap3 import Server, Connection, ALL, SUBTREE, Tls
+from ldap3.core.exceptions import LDAPBindError
 import ssl
 import logging
 import base64
@@ -12,6 +13,8 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
+class InvalidLDAPCredentialsError(Exception):
+    pass
 
 class LDAPClient:
     def __init__(self):
@@ -24,7 +27,7 @@ class LDAPClient:
             ad_password_encrypted = ad_password_setting.value if ad_password_setting else None
             
         if not ad_user or not ad_password_encrypted:
-            raise ValueError("AD_USER or AD_PASSWORD is not set in DB")
+            raise InvalidLDAPCredentialsError("AD_USER or AD_PASSWORD is not set in DB")
             
         # Decrypt password
         digest = hashlib.sha256(settings.SECRET_KEY.encode("utf-8")).digest()
@@ -34,7 +37,7 @@ class LDAPClient:
         try:
             ad_password = cipher_suite.decrypt(ad_password_encrypted.encode("utf-8")).decode("utf-8")
         except Exception as e:
-            raise ValueError(f"Failed to decrypt AD_PASSWORD: {e}")
+            raise InvalidLDAPCredentialsError(f"Failed to decrypt AD_PASSWORD: {e}")
 
         tls_config = None
         if settings.AD_SERVER.startswith("ldaps://"):
@@ -54,13 +57,16 @@ class LDAPClient:
             use_ssl=settings.AD_SERVER.startswith("ldaps://"),
             tls=tls_config
         )
-        self.conn = Connection(
-            self.server,
-            user=ad_user,
-            password=ad_password,
-            authentication="SIMPLE",
-            auto_bind=True
-        )
+        try:
+            self.conn = Connection(
+                self.server,
+                user=ad_user,
+                password=ad_password,
+                authentication="SIMPLE",
+                auto_bind=True
+            )
+        except LDAPBindError as e:
+            raise InvalidLDAPCredentialsError(f"LDAP Authentication Failed: {e}")
 
     def search_paged(
         self, 

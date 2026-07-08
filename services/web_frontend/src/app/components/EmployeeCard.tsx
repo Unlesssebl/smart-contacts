@@ -1,8 +1,9 @@
 import React from 'react';
 import type { User } from '../../types';
-import { motion } from 'motion/react';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+
+const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
 
 const getAvatarColorForName = (name: string) => {
   const colors = [
@@ -69,7 +70,6 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
   ({ user, onClick }, ref) => {
     const searchQuery = useAppStore(state => state.searchQuery);
     
-    const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
     const displayValue = (val: string | null | undefined) => {
       const cleaned = cleanValue(val);
       if (!cleaned.trim()) {
@@ -83,15 +83,8 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
     };
 
     return (
-      <motion.div
+      <div
         ref={ref}
-        layoutId={user.id}
-        layout
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        whileHover={{ y: -4, scale: 1.01 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
         onClick={onClick}
         className="group cursor-pointer p-6 bg-white border border-slate-200/50 rounded-3xl hover:border-slate-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 flex flex-col h-full"
       >
@@ -107,20 +100,18 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
                 .substring(0, 2)
                 .toUpperCase()}
             </div>
-            <motion.div
+            <div
               className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] ${
                 user.presence === 'online' ? 'border-white bg-emerald-500' :
                 user.presence === 'away' ? 'border-white bg-amber-400' :
                 'border-white bg-slate-200'
               }`}
-              animate={user.presence === 'online' ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-              transition={user.presence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
             />
           </div>
 
           {/* Info */}
           <div className="flex-1 min-w-0 pt-1">
-            <h3 className="truncate font-semibold text-slate-900 group-hover:text-blue-600 transition-colors text-[17px] tracking-tight leading-tight">
+            <h3 className="truncate font-semibold text-slate-900 text-[17px] tracking-tight leading-tight">
               <HighlightedText text={user.full_name} highlight={searchQuery} />
             </h3>
             {user.job_title && user.job_title !== '[]' && (
@@ -153,26 +144,26 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
         <div className="mt-auto pt-8">
           <div className="flex flex-col gap-3.5">
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400">
                 <Mail className="h-4 w-4" strokeWidth={2} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.email)}</div>
             </div>
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400">
                 <Phone className="h-4 w-4" strokeWidth={2} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.internal_phone)}</div>
             </div>
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400">
                 <MapPin className="h-4 w-4" strokeWidth={2} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.office_location)}</div>
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   }
 );

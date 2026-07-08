@@ -1,4 +1,4 @@
-﻿import base64
+import base64
 import hashlib
 from typing import Optional
 from cryptography.fernet import Fernet
@@ -46,6 +46,9 @@ def set_setting(db: Session, key: str, value: str, encrypt: bool = False):
         db.add(setting)
     db.commit()
 
-def bump_ldap_credentials_version():
+def bump_ldap_credentials_version(db: Session = None):
     """Инвалидация кэша конфигурации LDAP."""
     redis_client.incr("ldap_credentials_version")
+    if db:
+        import time
+        set_setting(db, "LDAP_CREDENTIALS_VERSION", str(time.time()))

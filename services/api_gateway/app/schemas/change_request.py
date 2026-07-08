@@ -52,5 +52,6 @@ class ChangeRequestRead(ChangeRequestBase):
     user_name: Optional[str] = None
     field_name: str = Field(alias="attribute_name")
     status: str
+    rejection_reason: Optional[str] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

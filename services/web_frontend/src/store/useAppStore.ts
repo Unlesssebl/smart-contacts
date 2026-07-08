@@ -41,6 +41,8 @@ interface AppState {
 
   // Change Requests
   changeRequests: ChangeRequest[];
+  pendingFields: Record<string, string> | null;
+  fetchMyPendingFields: () => Promise<void>;
   addChangeRequest: (request: { attribute_name: string; new_value: string }) => Promise<void>;
   approveChangeRequest: (id: string) => Promise<void>;
   rejectChangeRequest: (id: string) => Promise<void>;
@@ -58,7 +60,7 @@ interface AppState {
 
   // Settings
   ldapSettings: import('../api/settings').LDAPSettings | null;
-  fetchLDAPSettings: () => Promise<void>;
+  fetchLDAPSettings: (silent?: boolean) => Promise<void>;
   updateLDAPSettings: (settings: import('../api/settings').LDAPSettings) => Promise<void>;
 
   ouMapping: Record<string, string>;
@@ -109,6 +111,7 @@ export const useAppStore = create<AppState>()(
         try {
           const profile = await getMe();
           set({ currentUser: profile });
+          await get().fetchMyPendingFields();
         } catch (error) {
           console.error('Failed to fetch profile', error);
           if (!get().adSyncUnavailable) {
@@ -223,22 +226,49 @@ export const useAppStore = create<AppState>()(
 
       // Change Requests
       changeRequests: [],
+      pendingFields: null,
+
+      fetchMyPendingFields: async () => {
+        if (!get().currentUser) return;
+        try {
+          const requests = await changeRequestsApi.getMyChangeRequests();
+          const activePending: Record<string, string> = {};
+          requests.forEach(r => {
+            if (r.status === 'pending' || r.status === 'conflict' || r.status === 'approved') {
+              const fieldKey = r.field_name || (r as any).attribute_name;
+              if (fieldKey) activePending[fieldKey] = r.new_value;
+            }
+          });
+          set({ pendingFields: activePending });
+        } catch (error) {
+          console.error('Failed to fetch pending fields', error);
+          set({ pendingFields: {} });
+        }
+      },
 
       addChangeRequest: async (request) => {
         try {
           const newRequest = await changeRequestsApi.createChangeRequest(request);
           set(state => ({
-            changeRequests: [newRequest, ...state.changeRequests]
+            changeRequests: [newRequest, ...state.changeRequests],
+            pendingFields: state.pendingFields 
+              ? { ...state.pendingFields, [request.attribute_name]: request.new_value }
+              : { [request.attribute_name]: request.new_value }
           }));
           toast.success('Заявка на изменение контактов успешно создана');
         } catch (error: any) {
           console.error('Failed to create change request', error);
           if (error.response?.status === 422) {
-             toast.error('Неверный формат введенных данных');
+            toast.error('Неверный формат введённых данных');
           } else if (error.response?.status === 409) {
-             toast.error('Заявка на изменение этого поля уже существует');
+            set(state => ({
+              pendingFields: state.pendingFields 
+                ? { ...state.pendingFields, [request.attribute_name]: request.new_value }
+                : { [request.attribute_name]: request.new_value }
+            }));
+            toast.error('Для этого поля уже есть заявка на рассмотрении');
           } else {
-             toast.error('Ошибка при создании заявки');
+            toast.error('Ошибка при создании заявки');
           }
           throw error;
         }
@@ -320,14 +350,14 @@ export const useAppStore = create<AppState>()(
 
       // Settings
       ldapSettings: null,
-      fetchLDAPSettings: async () => {
+      fetchLDAPSettings: async (silent = false) => {
         try {
           const { settingsApi } = await import('../api/settings');
           const settings = await settingsApi.getLDAPSettings();
           set({ ldapSettings: settings });
         } catch (error) {
           console.error('Failed to fetch LDAP settings', error);
-          toast.error('Не удалось загрузить настройки LDAP');
+          if (!silent) toast.error('Не удалось загрузить настройки LDAP');
         }
       },
       updateLDAPSettings: async (newSettings) => {

@@ -4,6 +4,8 @@ export interface LDAPSettings {
   ad_user?: string;
   is_password_set?: boolean;
   ad_password?: string;
+  status?: string | null;
+  last_error?: string | null;
 }
 
 export const settingsApi = {

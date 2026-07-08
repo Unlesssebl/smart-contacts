@@ -86,9 +86,13 @@ def get_ldap_settings(
 ):
     ad_user = settings_manager.get_setting(db, "AD_USER")
     ad_password = settings_manager.get_setting(db, "AD_PASSWORD")
+    ldap_status = settings_manager.get_setting(db, "LDAP_STATUS")
+    ldap_last_error = settings_manager.get_setting(db, "LDAP_LAST_ERROR")
     return LDAPSettingsRead(
         ad_user=ad_user,
-        is_password_set=bool(ad_password)
+        is_password_set=bool(ad_password),
+        status=ldap_status,
+        last_error=ldap_last_error
     )
 
 @router.post("/settings/ldap", response_model=LDAPSettingsRead)
@@ -103,7 +107,7 @@ def update_ldap_settings(
     if settings_data.ad_password is not None:
         settings_manager.set_setting(db, "AD_PASSWORD", settings_data.ad_password, encrypt=True)
         
-    settings_manager.bump_ldap_credentials_version()
+    settings_manager.bump_ldap_credentials_version(db)
     
     return get_ldap_settings(db, admin)
 

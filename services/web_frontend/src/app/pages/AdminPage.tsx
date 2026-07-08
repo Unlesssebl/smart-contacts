@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Check, X, Shield, Plus, Trash2, ChevronDown, ChevronRight, ChevronsUpDown } from 'lucide-react';
+import { Check, X, Shield, Plus, Trash2, ChevronDown, ChevronRight, ChevronsUpDown, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '../components/Sidebar';
 import { useAppStore } from '../../store/useAppStore';
-import { getAttributeLabel, getStatusLabel } from '../../lib/localization';
+import { getAttributeLabel, getStatusLabel, getLdapErrorTranslation } from '../../lib/localization';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/tooltip';
@@ -113,6 +113,20 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
   useEffect(() => {
     setLocalMapping(Object.entries(ouMapping || {}).map(([ou, org]) => ({ou, org})));
   }, [ouMapping]);
+
+  const fetchLDAPSettings = useAppStore(state => state.fetchLDAPSettings);
+  
+  // Poll LDAP settings when on settings tab
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (activeTab === 'settings') {
+      fetchLDAPSettings(true); // silent fetch
+      interval = setInterval(() => {
+        fetchLDAPSettings(true);
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTab, fetchLDAPSettings]);
 
   const handleAdd = () => {
     const shortName = newOu.split('/').pop()?.trim() || '';
@@ -453,8 +467,16 @@ export function AdminPage() {
                           
                           {request.status === 'conflict' && (
                             <div className="mt-2 text-sm text-destructive font-medium flex items-center gap-1.5">
-                              <Shield className="w-4 h-4" />
-                              Ошибка применения в AD (Требуется ручная обработка или повторная попытка)
+                              <Shield className="w-4 h-4 shrink-0" />
+                              <div className="flex-1">
+                                <div>Ошибка применения в AD (Требуется ручная обработка или повторная попытка)</div>
+                                {request.rejection_reason && (
+                                  <div className="mt-1 text-xs opacity-90 font-normal">
+                                    {getLdapErrorTranslation(request.rejection_reason)}
+                                    <div className="mt-0.5 opacity-60 text-[10px] uppercase tracking-wider">{request.rejection_reason}</div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                           
@@ -601,6 +623,28 @@ export function AdminPage() {
                       </p>
                     </div>
                     
+                    {ldapSettings?.status === 'ok' && (
+                      <div className="flex items-center gap-2 p-3 rounded-md bg-green-500/15 text-green-600 border border-green-500/30 text-sm">
+                        <CheckCircle2 className="w-5 h-5 shrink-0" />
+                        <div>Подключение установлено успешно. Воркер готов к синхронизации.</div>
+                      </div>
+                    )}
+                    
+                    {ldapSettings?.status === 'error' && (
+                      <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/15 text-destructive border border-destructive/30 text-sm">
+                        <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="font-medium">Ошибка подключения:</div>
+                          <div className="mt-1 text-xs opacity-90 break-all">
+                            {getLdapErrorTranslation(ldapSettings.last_error)}
+                            {ldapSettings.last_error && (
+                              <div className="mt-1 opacity-60 text-[10px] uppercase tracking-wider">{ldapSettings.last_error}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <label htmlFor="ad_user" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                         Имя пользователя (UPN или DN)
