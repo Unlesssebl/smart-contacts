@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { motion, AnimatePresence } from 'motion/react';
 import { FilterCombobox } from './ui/FilterCombobox';
 import { Switch } from './ui/switch';
@@ -11,15 +12,26 @@ export function SpotlightSearch() {
     searchQuery, setSearchQuery, isSearching, 
     filters, setFilters,
     departments, organizations, jobTitles, fetchFilterOptions 
-  } = useAppStore();
+  } = useAppStore(useShallow((state) => ({
+    searchQuery: state.searchQuery,
+    setSearchQuery: state.setSearchQuery,
+    isSearching: state.isSearching,
+    filters: state.filters,
+    setFilters: state.setFilters,
+    departments: state.departments,
+    organizations: state.organizations,
+    jobTitles: state.jobTitles,
+    fetchFilterOptions: state.fetchFilterOptions,
+  })));
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [localQuery, setLocalQuery] = useState(searchQuery);
 
   // Show filters if any filter is active, or if user explicitly toggles it
-  const hasActiveFilters = Boolean(
+  const hasActiveFilters = useMemo(() => Boolean(
     filters.department || filters.organization || filters.job_title || 
     filters.has_phone || filters.has_email
-  );
+  ), [filters]);
   
   const [showFilters, setShowFilters] = useState(hasActiveFilters);
 

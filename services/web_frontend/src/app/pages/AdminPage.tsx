@@ -114,20 +114,6 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
     setLocalMapping(Object.entries(ouMapping || {}).map(([ou, org]) => ({ou, org})));
   }, [ouMapping]);
 
-  const fetchLDAPSettings = useAppStore(state => state.fetchLDAPSettings);
-  
-  // Poll LDAP settings when on settings tab
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (activeTab === 'settings') {
-      fetchLDAPSettings(true); // silent fetch
-      interval = setInterval(() => {
-        fetchLDAPSettings(true);
-      }, 5000);
-    }
-    return () => clearInterval(interval);
-  }, [activeTab, fetchLDAPSettings]);
-
   const handleAdd = () => {
     const shortName = newOu.split('/').pop()?.trim() || '';
     if (!shortName || !newOrg.trim()) {
@@ -313,6 +299,18 @@ export function AdminPage() {
     
     return () => clearInterval(interval);
   }, [fetchAdminData, fetchLDAPSettings, fetchOUMapping]);
+
+  // Poll LDAP settings when on settings tab
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (activeTab === 'settings') {
+      fetchLDAPSettings(true); // silent fetch
+      interval = setInterval(() => {
+        fetchLDAPSettings(true);
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTab, fetchLDAPSettings]);
 
   const activeRequests = changeRequests.filter((r) => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved');
 
