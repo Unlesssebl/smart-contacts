@@ -136,13 +136,22 @@ export function DirectoryPage() {
               </motion.div>
             ) : (
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence>
                   {filteredUsers.map((user) => (
-                    <EmployeeCard
+                    <motion.div
                       key={user.id}
-                      user={user}
-                      onClick={() => setSelectedUser(user)}
-                    />
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="h-full"
+                    >
+                      <EmployeeCard
+                        user={user}
+                        onClick={() => setSelectedUser(user)}
+                      />
+                    </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
