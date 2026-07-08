@@ -42,6 +42,7 @@ export function DirectoryPage() {
             ref={topRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
             className="mb-12 text-center"
           >
             <h1 className="mb-3 text-4xl font-semibold tracking-tight text-foreground">
@@ -118,47 +119,41 @@ export function DirectoryPage() {
           </div>
 
           {/* Employee Grid */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 min-h-[300px]">
-              <AnimatePresence mode="wait">
-                {filteredUsers.length === 0 ? (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 min-h-[300px]">
+            <AnimatePresence mode="wait">
+              {filteredUsers.length === 0 ? (
+                <motion.div
+                  key="empty-state"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.2 }}
+                  className="col-span-1 lg:col-span-2 xl:col-span-3 rounded-2xl border p-12 text-center glass-card flex flex-col items-center justify-center"
+                >
+                  <p className="text-lg text-muted-foreground">Сотрудники не найдены</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Попробуйте изменить поисковый запрос
+                  </p>
+                </motion.div>
+              ) : (
+                filteredUsers.map((user) => (
                   <motion.div
-                    key="empty-state"
+                    key={user.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, x: -50 }}
                     transition={{ duration: 0.2 }}
-                    className="col-span-1 lg:col-span-2 xl:col-span-3 rounded-2xl border p-12 text-center glass-card flex flex-col items-center justify-center"
+                    className="h-full"
                   >
-                    <p className="text-lg text-muted-foreground">Сотрудники не найдены</p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Попробуйте изменить поисковый запрос
-                    </p>
+                    <EmployeeCard
+                      user={user}
+                      onClick={() => setSelectedUser(user)}
+                    />
                   </motion.div>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <motion.div
-                      key={user.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, x: -50 }}
-                      transition={{ duration: 0.2 }}
-                      className="h-full"
-                    >
-                      <EmployeeCard
-                        user={user}
-                        onClick={() => setSelectedUser(user)}
-                      />
-                    </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
 
 
         </div>

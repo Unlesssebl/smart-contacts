@@ -50,6 +50,17 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
     };
   }, []);
 
+  // Закрытие модального окна по клавише ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleSubmitChange = async () => {
     if (isSubmitting || !pendingFields) return;
     setIsSubmitting(true);

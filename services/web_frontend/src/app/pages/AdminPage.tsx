@@ -322,8 +322,9 @@ export function AdminPage() {
         <div className="mx-auto max-w-7xl px-8 pt-12 pb-12">
           {/* Header */}
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
             className="mb-8"
           >
             <div className="flex items-center gap-3">
@@ -345,7 +346,7 @@ export function AdminPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
+            transition={{ duration: 0.2 }}
             className="mb-8 inline-flex rounded-xl p-1 glass-card"
           >
             <button
@@ -422,7 +423,7 @@ export function AdminPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={{ duration: 0.2 }}
             className="overflow-hidden glass-card p-0"
           >
             {activeTab === 'requests' ? (
