@@ -36,14 +36,17 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
   const currentPresence = globalPresence[user.id] || user.presence;
   const isOwnProfile = currentUser?.id === user.id;
 
-  // Блокировка скролла при открытой модалке (с компенсацией ширины скроллбара)
+  // Блокировка скролла специально для OverlayScrollbars
+  // Модификация body ломала OverlayScrollbars и вызывала ремаунт всего приложения
   useEffect(() => {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.overflow = 'hidden';
-    document.body.style.paddingRight = `${scrollbarWidth}px`;
+    const viewport = document.querySelector('[data-overlayscrollbars-viewport]') as HTMLElement;
+    if (viewport) {
+      viewport.style.overflow = 'hidden';
+    }
     return () => {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
+      if (viewport) {
+        viewport.style.overflow = '';
+      }
     };
   }, []);
 
