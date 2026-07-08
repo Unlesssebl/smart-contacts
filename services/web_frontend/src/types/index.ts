@@ -15,6 +15,7 @@ export interface User {
   email?: string | null;
   manager_id?: string | null;
   presence?: 'online' | 'away' | 'offline';
+  ad_dn?: string | null;
 }
 
 export interface UserProfile extends User {

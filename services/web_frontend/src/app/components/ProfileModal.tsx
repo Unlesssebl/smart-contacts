@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Mail, Phone, MapPin, Building2, User as UserIcon, Edit } from 'lucide-react';
+import { X, Mail, Phone, MapPin, Building2, User as UserIcon, Edit, Shield, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
@@ -9,6 +9,65 @@ interface ProfileModalProps {
   user: User;
   onClose: () => void;
 }
+
+const formatAdPath = (dn: string | null | undefined) => {
+  if (!dn) return { raw: '', domain: '', path: '', hierarchy: [] };
+  const parts = dn.split(',').map(part => part.trim());
+  const ous: string[] = [];
+  let cn = '';
+  const dcs: string[] = [];
+  
+  parts.forEach(part => {
+    const [key, val] = part.split('=');
+    if (!key || !val) return;
+    const cleanKey = key.toUpperCase();
+    if (cleanKey === 'OU') {
+      ous.unshift(val);
+    } else if (cleanKey === 'CN') {
+      cn = val;
+    } else if (cleanKey === 'DC') {
+      dcs.push(val);
+    }
+  });
+
+  return {
+    raw: dn,
+    domain: dcs.join('.'),
+    path: [...ous, cn].filter(Boolean).join(' ➔ '),
+    hierarchy: [...ous, cn].filter(Boolean)
+  };
+};
+
+const copyToClipboard = async (text: string) => {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Navigator clipboard failed, trying fallback...', err);
+  }
+
+  // Fallback for non-secure HTTP contexts
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-999999px';
+  textArea.style.top = '-999999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return successful;
+  } catch (err) {
+    console.error('Fallback copy failed', err);
+    document.body.removeChild(textArea);
+    return false;
+  }
+};
 
 export function ProfileModal({ user, onClose }: ProfileModalProps) {
   const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
@@ -35,6 +94,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
   const manager = user.manager_id ? getUserById(user.manager_id) : null;
   const currentPresence = globalPresence[user.id] || user.presence;
   const isOwnProfile = currentUser?.id === user.id;
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'it_operator';
 
   // Блокировка скролла специально для OverlayScrollbars
   // Модификация body ломала OverlayScrollbars и вызывала ремаунт всего приложения
@@ -253,6 +313,55 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                           <p className="text-xs text-muted-foreground">Руководитель</p>
                           <p className="text-sm text-foreground">{manager.full_name}</p>
                           <p className="text-xs text-muted-foreground">{displayValue(manager.job_title)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Admin-only info */}
+                  {isAdmin && user.ad_dn && (
+                    <div>
+                      <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        Администрирование
+                      </h3>
+                      <div className="rounded-xl border border-black/5 bg-white/40 p-4 shadow-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-muted-foreground mb-2">Путь в Active Directory</p>
+                            
+                            {/* Breadcrumb Path */}
+                            {(() => {
+                              const formatted = formatAdPath(user.ad_dn);
+                              return (
+                                <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground font-medium">
+                                  {formatted.hierarchy.map((item, idx) => (
+                                    <span key={idx} className="flex items-center gap-1.5">
+                                      {idx > 0 && <span className="text-muted-foreground/30">➔</span>}
+                                      <span className="rounded-lg bg-black/5 px-2.5 py-1 border border-black/5">
+                                        {item}
+                                      </span>
+                                    </span>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          
+                          {/* Copy Button */}
+                          <button
+                            onClick={async () => {
+                              const success = await copyToClipboard(user.ad_dn || '');
+                              if (success) {
+                                toast.success('Путь скопирован в буфер обмена');
+                              } else {
+                                toast.error('Не удалось скопировать путь');
+                              }
+                            }}
+                            className="rounded-lg p-2.5 text-muted-foreground hover:bg-black/5 hover:text-foreground transition-colors border border-black/5 bg-white/80 shadow-sm shrink-0 flex items-center justify-center"
+                            title="Скопировать DN в буфер обмена"
+                          >
+                            <Copy className="h-4 w-4" strokeWidth={1.5} />
+                          </button>
                         </div>
                       </div>
                     </div>

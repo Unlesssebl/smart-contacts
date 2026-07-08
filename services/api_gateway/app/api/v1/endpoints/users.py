@@ -90,6 +90,13 @@ async def list_users(
     total = query.count()
     items = query.offset((page - 1) * limit).limit(limit).all()
     
+    is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    if not is_admin:
+        for item in items:
+            if item in db:
+                db.expunge(item)
+            item.ad_dn = None
+            
     return {
         "total": total,
         "page": page,
@@ -131,8 +138,17 @@ async def get_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    
     # Скрытие internal_phone для защищенных профилей
     if user.is_protected and current_user.role != UserRole.IT_OPERATOR.value:
+        if user in db:
+            db.expunge(user)
         user.internal_phone = None
+        
+    if not is_admin:
+        if user in db:
+            db.expunge(user)
+        user.ad_dn = None
         
     return user

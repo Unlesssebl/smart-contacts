@@ -12,6 +12,7 @@ class UserBase(BaseModel):
     organization: Optional[str] = None
     job_title: Optional[str] = None
     email: Optional[str] = None
+    ad_dn: Optional[str] = None
 
 class UserRead(UserBase):
     id: UUID = Field(alias="object_guid")

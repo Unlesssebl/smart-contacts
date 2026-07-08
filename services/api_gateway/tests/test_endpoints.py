@@ -77,3 +77,54 @@ def test_admin_endpoint_allowed_for_admin(client: TestClient, mock_kerberos, tes
     # Should be OK (even if list is empty)
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+def test_user_ad_dn_access_control(client: TestClient, mocker, db_session, test_admin_user, test_normal_user):
+    """
+    Test that ad_dn is visible to admin/operator but hidden (None) for normal employees.
+    """
+    # 1. Update users in DB with ad_dn values
+    test_admin_user.ad_dn = "CN=Admin User,OU=IT,DC=test,DC=local"
+    test_normal_user.ad_dn = "CN=Normal User,OU=Users,DC=test,DC=local"
+    db_session.commit()
+
+    # 2. Login as admin (test_admin_user / it_operator)
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_admin_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_admin"})
+
+    # 2a. Admin fetches users list - should see ad_dn
+    response = client.get("/api/v1/users")
+    assert response.status_code == 200
+    items = response.json()["items"]
+    admin_dn_item = next(u for u in items if u["object_guid"] == str(test_admin_user.object_guid))
+    normal_dn_item = next(u for u in items if u["object_guid"] == str(test_normal_user.object_guid))
+    assert admin_dn_item["ad_dn"] == "CN=Admin User,OU=IT,DC=test,DC=local"
+    assert normal_dn_item["ad_dn"] == "CN=Normal User,OU=Users,DC=test,DC=local"
+
+    # 2b. Admin fetches individual user - should see ad_dn
+    response = client.get(f"/api/v1/users/{test_normal_user.object_guid}")
+    assert response.status_code == 200
+    assert response.json()["ad_dn"] == "CN=Normal User,OU=Users,DC=test,DC=local"
+
+    # 3. Login as normal employee (test_normal_user)
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_normal_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_normal"})
+
+    # 3a. Normal user fetches users list - ad_dn should be None/null
+    response = client.get("/api/v1/users")
+    assert response.status_code == 200
+    items = response.json()["items"]
+    admin_dn_item = next(u for u in items if u["object_guid"] == str(test_admin_user.object_guid))
+    normal_dn_item = next(u for u in items if u["object_guid"] == str(test_normal_user.object_guid))
+    assert admin_dn_item["ad_dn"] is None
+    assert normal_dn_item["ad_dn"] is None
+
+    # 3b. Normal user fetches individual user - ad_dn should be None/null
+    response = client.get(f"/api/v1/users/{test_normal_user.object_guid}")
+    assert response.status_code == 200
+    assert response.json()["ad_dn"] is None

@@ -17,7 +17,7 @@ from sqlalchemy.pool import StaticPool
 
 # Create our test engine
 test_engine = create_engine(
-    "sqlite:///./test.db",
+    "sqlite:////tmp/test.db",
     connect_args={"check_same_thread": False},
     poolclass=StaticPool
 )
@@ -30,19 +30,19 @@ app.db.session.SessionLocal = TestingSessionLocal
 
 from app.main import app
 from app.db.session import Base, get_db
-from app.models.user import User
+from shared.models.user import User
 import uuid
 from datetime import datetime, timezone
 
 # Use SQLite file for optimal testing speed without touching Postgres
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:////tmp/test.db"
 
 @pytest.fixture(scope="session")
 def db_engine():
     yield test_engine
-    if os.path.exists("./test.db"):
+    if os.path.exists("/tmp/test.db"):
         try:
-            os.remove("./test.db")
+            os.remove("/tmp/test.db")
         except OSError:
             pass
 
