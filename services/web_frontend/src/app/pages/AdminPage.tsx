@@ -313,7 +313,26 @@ export function AdminPage() {
   }, [activeTab, fetchLDAPSettings]);
 
   const activeRequests = changeRequests.filter((r) => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved');
+  
+  // Group ChangeRequests
+  const groupedRequests = activeRequests.reduce((acc, req) => {
+    // @ts-ignore
+    const key = req.user_id || req.user_guid;
+    if (!acc[key]) acc[key] = { user_name: req.user_name, items: [] };
+    acc[key].items.push(req);
+    return acc;
+  }, {} as Record<string, { user_name: string, items: any[] }>);
 
+  const activeReports = reports.filter((r) => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved');
+  
+  // Group Reports
+  const groupedReports = activeReports.reduce((acc, req) => {
+    // @ts-ignore
+    const key = req.user_id || req.target_user_guid;
+    if (!acc[key]) acc[key] = { user_name: req.target_user_name, reporter_name: req.reporter_user_name, items: [] };
+    acc[key].items.push(req);
+    return acc;
+  }, {} as Record<string, { user_name: string, reporter_name: string, items: any[] }>);
   return (
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
@@ -325,21 +344,14 @@ export function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
-            className="mb-8"
+            className="mb-12 text-center"
           >
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-gradient-to-br from-primary to-accent p-3 shadow-lg">
-                <Shield className="h-6 w-6 text-white" strokeWidth={1.5} />
-              </div>
-              <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                  Панель администратора
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Управление запросами на изменение и жалобами пользователей
-                </p>
-              </div>
-            </div>
+            <h1 className="mb-3 text-4xl font-semibold tracking-tight text-foreground">
+              Панель администратора
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Управление запросами на изменение и жалобами пользователей
+            </p>
           </motion.div>
 
           {/* Tabs (Apple-style Segmented Control) */}
@@ -347,8 +359,9 @@ export function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
-            className="mb-8 inline-flex rounded-xl p-1 glass-card"
+            className="mb-8 flex justify-center"
           >
+            <div className="inline-flex rounded-xl p-1 glass-card">
             <button
               onClick={() => setActiveTab('requests')}
               className="relative rounded-lg px-6 py-2 text-sm font-medium transition-colors"
@@ -415,11 +428,12 @@ export function AdminPage() {
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 />
               )}
-              <span className="relative z-10">Организации (OU)</span>
-            </button>
+                <span className="relative z-10">Организации (OU)</span>
+              </button>
+            </div>
           </motion.div>
 
-          {/* Content */}
+          {/* Content Area */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -434,91 +448,79 @@ export function AdminPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {activeRequests.map((request) => (
+                    {Object.entries(groupedRequests).map(([userId, group]) => (
                       <motion.div
-                        key={request.id}
+                        key={userId}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="group flex flex-col gap-4 rounded-xl border border-black/5 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:border-black/10 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 sm:flex-row sm:items-center sm:justify-between"
+                        className="rounded-xl border border-black/5 bg-white/60 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5"
                       >
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-foreground">
-                              {request.user_name || 'Неизвестный'}
-                            </h4>
-                            <span className="text-xs text-muted-foreground">
-                              •{' '}
-                              {new Date(request.created_at).toLocaleDateString('ru-RU', {
-                                month: 'long',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Запрос на изменение поля{' '}
-                            <span className="font-medium text-foreground">
-                              {getAttributeLabel(request.field_name || request.attribute_name)}
-                            </span>
-                          </p>
-                          
-                          {request.status === 'conflict' && (
-                            <div className="mt-2 text-sm text-destructive font-medium flex items-center gap-1.5">
-                              <Shield className="w-4 h-4 shrink-0" />
-                              <div className="flex-1">
-                                <div>Ошибка применения в AD (Требуется ручная обработка или повторная попытка)</div>
-                                {request.rejection_reason && (
-                                  <div className="mt-1 text-xs opacity-90 font-normal">
-                                    {getLdapErrorTranslation(request.rejection_reason)}
-                                    <div className="mt-0.5 opacity-60 text-[10px] uppercase tracking-wider">{request.rejection_reason}</div>
+                        <div className="mb-3 flex items-center gap-2 border-b border-black/5 pb-2 dark:border-white/10">
+                          <h4 className="font-semibold text-foreground text-base">
+                            {group.user_name || 'Неизвестный'}
+                          </h4>
+                        </div>
+                        <div className="space-y-2">
+                          {group.items.map((request) => (
+                            <div key={request.id} className="group flex flex-col gap-3 rounded-lg bg-black/5 p-3 dark:bg-white/5 sm:flex-row sm:items-center sm:justify-between transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+                              <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                <p className="text-sm text-muted-foreground w-40 shrink-0">
+                                  {getAttributeLabel(request.field_name || request.attribute_name)}
+                                </p>
+                                
+                                {request.status === 'conflict' && (
+                                  <div className="text-sm text-destructive font-medium flex items-center gap-1.5">
+                                    <div className="flex-1">
+                                      <div>Ошибка применения в AD</div>
+                                      {request.rejection_reason && (
+                                        <div className="mt-0.5 text-xs opacity-90 font-normal">
+                                          {getLdapErrorTranslation(request.rejection_reason)}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
+                                )}
+                                
+                                <div className="inline-flex items-center gap-2 rounded-md bg-white/60 px-2 py-1 text-sm dark:bg-black/20 shadow-sm">
+                                  <span className="text-muted-foreground text-xs">Новое:</span>
+                                  <span className="font-medium text-foreground text-sm">
+                                    {(!request.new_value || request.new_value === '[]') ? (
+                                      <span className="italic font-normal opacity-70 text-rose-500 line-through">Удалить</span>
+                                    ) : request.new_value === '<Удалить>' ? (
+                                      <span className="italic font-normal opacity-70 text-rose-500 line-through">Удалить</span>
+                                    ) : (
+                                      request.new_value
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 pt-2 sm:shrink-0 sm:pt-0">
+                                {request.status === 'approved' ? (
+                                  <div className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 sm:flex-none">
+                                    В процессе...
+                                  </div>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={async () => await rejectChangeRequest(request.id)}
+                                      className="flex items-center justify-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 shadow-sm sm:flex-none"
+                                    >
+                                      <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                    </button>
+                                    
+                                    <button
+                                      onClick={async () => await approveChangeRequest(request.id)}
+                                      className="flex items-center justify-center gap-1.5 rounded-md bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-100 shadow-sm sm:flex-none"
+                                    >
+                                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                      {request.status === 'conflict' ? 'Повторить' : 'Одобрить'}
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </div>
-                          )}
-                          
-                          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-1.5 text-sm dark:bg-white/10">
-                            <span className="text-muted-foreground">Новое:</span>
-                            <span className="font-medium text-foreground">
-                              {(!request.new_value || request.new_value === '[]') ? (
-                                <span className="italic font-normal opacity-70">Не указано</span>
-                              ) : (
-                                request.new_value
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-2 sm:shrink-0 sm:pt-0">
-                          {request.status === 'approved' ? (
-                            <div className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 sm:flex-none">
-                              В процессе применения...
-                            </div>
-                          ) : (
-                            <>
-                              <button
-                                onClick={async () => {
-                                  await rejectChangeRequest(request.id);
-                                }}
-                                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-50 px-4 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 sm:flex-none"
-                              >
-                                <X className="h-4 w-4" strokeWidth={2} />
-                                Отклонить
-                              </button>
-                              
-                              <button
-                                onClick={async () => {
-                                  await approveChangeRequest(request.id);
-                                }}
-                                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 sm:flex-none"
-                              >
-                                <Check className="h-4 w-4" strokeWidth={2} />
-                                {request.status === 'conflict' ? 'Повторить' : 'Одобрить'}
-                              </button>
-                            </>
-                          )}
+                          ))}
                         </div>
                       </motion.div>
                     ))}
@@ -533,51 +535,94 @@ export function AdminPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {reports.map((report) => (
+                    {Object.entries(groupedReports).map(([userId, group]) => (
                       <motion.div
-                        key={report.id}
+                        key={userId}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="rounded-xl border border-black/5 bg-black/5 backdrop-blur-sm p-5 shadow-sm"
+                        className="rounded-xl border border-black/5 bg-white/60 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5"
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3">
-                              <p className="font-medium text-foreground">{report.target_user_name || 'Неизвестный'}</p>
-                              <span
-                                className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                                style={{
-                                  background:
-                                    report.status === 'processed'
-                                      ? 'rgba(52, 199, 89, 0.15)'
-                                      : report.status === 'pending'
-                                      ? 'rgba(0, 147, 233, 0.15)'
-                                      : 'rgba(255, 77, 79, 0.15)',
-                                  color:
-                                    report.status === 'processed'
-                                      ? '#38A169'
-                                      : report.status === 'pending'
-                                      ? 'var(--primary)'
-                                      : 'var(--destructive)',
-                                }}
-                              >
-                                {getStatusLabel(report.status)}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sm font-medium text-primary">
-                              Жалоба от: {report.reporter_user_name || 'Неизвестный'}
-                            </p>
-                            <p className="mt-2 text-sm text-foreground">{report.reason}</p>
-                            <p className="mt-2 text-xs text-muted-foreground">
-                              {new Date(report.created_at).toLocaleDateString('ru-RU', {
-                                month: 'long',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                        <div className="mb-3 flex items-center justify-between border-b border-black/5 pb-2 dark:border-white/10">
+                          <div className="flex items-baseline gap-3">
+                            <h4 className="font-semibold text-foreground text-base">
+                              {group.user_name || 'Неизвестный'}
+                            </h4>
+                            <p className="text-xs font-medium text-primary/80">
+                              Жалоба от: {group.reporter_name || 'Неизвестный'}
                             </p>
                           </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {group.items.map((report) => (
+                            <div key={report.id} className="group flex flex-col gap-3 rounded-lg bg-black/5 p-3 dark:bg-white/5 sm:flex-row sm:items-center sm:justify-between transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+                              <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                <p className="text-sm text-muted-foreground w-40 shrink-0">
+                                  {getAttributeLabel(report.attribute_name)}
+                                </p>
+                                
+                                {report.status === 'conflict' && (
+                                  <div className="text-sm text-destructive font-medium flex items-center gap-1.5">
+                                    <div className="flex-1">
+                                      <div>Ошибка применения в AD</div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="inline-flex items-center gap-2 rounded-md bg-white/60 px-2 py-1 text-sm dark:bg-black/20 shadow-sm">
+                                  <span className="text-muted-foreground text-xs">Новое:</span>
+                                  <span className="font-medium text-foreground text-sm">
+                                    {(!report.new_value || report.new_value === '[]') ? (
+                                      <span className="italic font-normal opacity-70 text-rose-500 line-through">Удалить</span>
+                                    ) : report.new_value === '<Удалить>' ? (
+                                      <span className="italic font-normal opacity-70 text-rose-500 line-through">Удалить</span>
+                                    ) : (
+                                      report.new_value
+                                    )}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground/50 hidden sm:block">
+                                  {new Date(report.created_at).toLocaleDateString('ru-RU', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center gap-1.5 pt-2 sm:shrink-0 sm:pt-0">
+                                {report.status === 'approved' ? (
+                                  <div className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 sm:flex-none">
+                                    В процессе...
+                                  </div>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={async () => {
+                                        const useStore = await import('../../store/useAppStore');
+                                        await useStore.useAppStore.getState().rejectReport(report.id);
+                                      }}
+                                      className="flex items-center justify-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 shadow-sm sm:flex-none"
+                                    >
+                                      <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                    </button>
+                                    
+                                    <button
+                                      onClick={async () => {
+                                        const useStore = await import('../../store/useAppStore');
+                                        await useStore.useAppStore.getState().approveReport(report.id);
+                                      }}
+                                      className="flex items-center justify-center gap-1.5 rounded-md bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-100 shadow-sm sm:flex-none"
+                                    >
+                                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                      Одобрить
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </motion.div>
                     ))}

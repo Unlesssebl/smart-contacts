@@ -68,15 +68,26 @@ def list_reports(
 ):
     return report_repo.get_reports(db)
 
-@router.patch("/reports/{report_id}/process", response_model=ReportRead)
-def process_report(
+@router.patch("/reports/{report_id}/approve", response_model=ReportRead)
+def approve_report(
     report_id: UUID,
     db: Session = Depends(get_db),
     admin: User = Depends(check_admin_auth)
 ):
-    report = report_repo.process_report(db, report_id, admin.object_guid)
+    report = report_repo.approve_report(db, report_id, admin.object_guid)
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Report not found or cannot be approved")
+    return report
+
+@router.patch("/reports/{report_id}/reject", response_model=ReportRead)
+def reject_report(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    admin: User = Depends(check_admin_auth)
+):
+    report = report_repo.reject_report(db, report_id, admin.object_guid)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found or cannot be rejected")
     return report
 
 @router.get("/settings/ldap", response_model=LDAPSettingsRead)

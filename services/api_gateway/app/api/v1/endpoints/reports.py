@@ -1,17 +1,17 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
 from shared.models.user import User
 from app.db.repository import report as report_repo
 from app.db.repository import user as user_repo
-from app.schemas.report import ReportCreate
+from app.schemas.report import ReportCreateBulk
 
 router = APIRouter()
 
 @router.post("/", status_code=201)
-def create_report(
-    data: ReportCreate,
+def create_reports(
+    data: ReportCreateBulk,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
@@ -24,17 +24,15 @@ def create_report(
     if not target_user:
         raise HTTPException(status_code=404, detail="Target user not found")
         
-    # Проверка на дубликат репорта от того же пользователя
-    existing_report = report_repo.find_duplicate_report(db, current_user.object_guid, data.target_user_id)
-    if existing_report:
-        raise HTTPException(status_code=409, detail="You have already reported this user")
+    if not data.changes:
+        raise HTTPException(status_code=400, detail="No changes provided")
     
-    # Создание репорта (включая логику эскалации конфликтов)
-    new_report = report_repo.create_report(
+    # Создание репортов
+    new_reports = report_repo.create_reports_bulk(
         db, 
         current_user.object_guid, 
         data.target_user_id, 
-        data.reason
+        data.changes
     )
     
-    return {"id": new_report.id, "status": new_report.status}
+    return {"created_count": len(new_reports)}

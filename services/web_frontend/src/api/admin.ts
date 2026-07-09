@@ -22,8 +22,13 @@ export const adminApi = {
     return response.data;
   },
 
-  processReport: async (id: string): Promise<Report> => {
-    const response = await apiClient.patch(`/admin/reports/${id}/process`);
+  approveReport: async (id: string): Promise<Report> => {
+    const response = await apiClient.patch(`/admin/reports/${id}/approve`);
+    return response.data;
+  },
+
+  rejectReport: async (id: string): Promise<Report> => {
+    const response = await apiClient.patch(`/admin/reports/${id}/reject`);
     return response.data;
   },
 

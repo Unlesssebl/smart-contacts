@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { User } from '../../types';
-import { Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin, Edit } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { ReportModal } from './ReportModal';
 
 const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
 
@@ -69,6 +70,9 @@ interface EmployeeCardProps {
 export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
   ({ user, onClick }, ref) => {
     const searchQuery = useAppStore(state => state.searchQuery);
+    const currentUser = useAppStore(state => state.currentUser);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const isOwnProfile = currentUser?.id === user.id;
     
     const displayValue = (val: string | null | undefined) => {
       const cleaned = cleanValue(val);
@@ -86,8 +90,21 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
       <div
         ref={ref}
         onClick={onClick}
-        className={`group cursor-pointer p-6 bg-white border border-slate-200/50 rounded-3xl hover:border-slate-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 flex flex-col h-full ${user.is_hidden ? 'opacity-60 grayscale-[0.2]' : ''}`}
+        className={`relative group cursor-pointer p-6 bg-white border border-slate-200/50 rounded-3xl hover:border-slate-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 flex flex-col h-full ${user.is_hidden ? 'opacity-60 grayscale-[0.2]' : ''}`}
       >
+        {!isOwnProfile && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsReportModalOpen(true);
+            }}
+            className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors opacity-0 group-hover:opacity-100 border border-slate-200 bg-white shadow-sm"
+          >
+            <Edit className="h-[18px] w-[18px]" strokeWidth={2} />
+            <span className="text-sm font-medium">Исправить</span>
+          </button>
+        )}
+
         {/* TOP: Avatar and Primary Info */}
         <div className="flex items-start gap-4">
           {/* Avatar with online status */}
@@ -168,6 +185,13 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
             </div>
           </div>
         </div>
+
+        {isReportModalOpen && (
+          <ReportModal
+            user={user}
+            onClose={() => setIsReportModalOpen(false)}
+          />
+        )}
       </div>
     );
   }

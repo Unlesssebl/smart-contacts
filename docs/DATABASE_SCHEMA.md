@@ -109,17 +109,19 @@ CREATE INDEX idx_cr_status  ON change_requests (status);
 | `id` | UUID | PK, DEFAULT uuid_generate_v4() | |
 | `target_user_guid` | UUID | FK → users.object_guid ON DELETE CASCADE, NOT NULL | На кого жалоба |
 | `reporter_user_guid` | UUID | FK → users.object_guid ON DELETE SET NULL, NULLABLE | Кто пожаловался |
-| `reason` | TEXT | NOT NULL | Причина жалобы (свободный текст, макс. 500 символов) |
-| `status` | VARCHAR(20) | NOT NULL, DEFAULT 'new' | `new`, `processed` |
+| `attribute_name` | VARCHAR(64) | NOT NULL | Имя поля, которое предложено исправить |
+| `new_value` | TEXT | NOT NULL | Новое предложенное значение |
+| `status` | VARCHAR(20) | NOT NULL, DEFAULT 'pending' | `pending`, `conflict`, `approved`, `rejected` |
+| `rejection_reason` | TEXT | NULLABLE | Причина ошибки в AD или отклонения |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
-| `processed_at` | TIMESTAMPTZ | NULLABLE | |
-| `processed_by` | UUID | FK → users.object_guid ON DELETE SET NULL, NULLABLE | IT-Operator, закрывший репорт |
+| `resolved_at` | TIMESTAMPTZ | NULLABLE | Когда обработана |
+| `resolved_by` | UUID | FK → users.object_guid ON DELETE SET NULL, NULLABLE | IT-Operator, обработавший репорт |
 
-**Уникальный индекс**: Один пользователь — один активный репорт на один профиль:
+**Уникальный индекс**: Нельзя создать две активные жалобы на одно поле одного профиля от одного пользователя:
 ```sql
 CREATE UNIQUE INDEX idx_reports_unique_new
-  ON reports (target_user_guid, reporter_user_guid)
-  WHERE status = 'new';
+  ON reports (target_user_guid, reporter_user_guid, attribute_name)
+  WHERE status IN ('pending', 'conflict');
 ```
 
 ### Индексы `reports`
@@ -164,5 +166,5 @@ CREATE INDEX idx_reports_status   ON reports (status);
 | `change_requests.resolved_by` | → `users.object_guid` | SET NULL — история сохраняется |
 | `reports.target_user_guid` | → `users.object_guid` | CASCADE |
 | `reports.reporter_user_guid` | → `users.object_guid` | SET NULL |
-| `reports.processed_by` | → `users.object_guid` | SET NULL |
+| `reports.resolved_by` | → `users.object_guid` | SET NULL |
 | `refresh_tokens.user_guid` | → `users.object_guid` | CASCADE |

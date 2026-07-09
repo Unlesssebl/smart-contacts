@@ -59,14 +59,17 @@ CREATE TABLE reports (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     target_user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
     reporter_user_guid UUID REFERENCES users(object_guid) ON DELETE SET NULL,
-    reason TEXT NOT NULL,
+    attribute_name VARCHAR(64) NOT NULL,
+    new_value TEXT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    rejection_reason TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     processed_at TIMESTAMPTZ,
     processed_by UUID REFERENCES users(object_guid) ON DELETE SET NULL,
     
-    -- Ограничение статуса
-    CONSTRAINT reports_status_check CHECK (status IN ('pending', 'processed'))
+    -- Ограничения
+    CONSTRAINT reports_status_check CHECK (status IN ('pending', 'conflict', 'approved', 'applied', 'rejected')),
+    CONSTRAINT reports_attribute_check CHECK (attribute_name IN ('internal_phone', 'mobile_phone', 'office_location', 'department', 'full_name', 'job_title'))
 );
 
 -- 5. Таблица refresh_tokens (Сессии)
@@ -101,10 +104,10 @@ CREATE UNIQUE INDEX idx_cr_unique_pending
 CREATE INDEX idx_cr_user_guid ON change_requests (user_guid);
 CREATE INDEX idx_cr_status  ON change_requests (status);
 
--- Уникальный индекс для reports: один пользователь — одна активная жалоба на профиль
+-- Уникальный индекс для reports: один пользователь — одна активная жалоба на конкретное поле
 CREATE UNIQUE INDEX idx_reports_unique_new
-  ON reports (target_user_guid, reporter_user_guid)
-  WHERE status = 'pending';
+  ON reports (target_user_guid, reporter_user_guid, attribute_name)
+  WHERE status IN ('pending', 'conflict');
 
 CREATE INDEX idx_reports_target   ON reports (target_user_guid);
 CREATE INDEX idx_reports_status   ON reports (status);

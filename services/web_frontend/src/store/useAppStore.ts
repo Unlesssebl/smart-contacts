@@ -50,7 +50,9 @@ interface AppState {
 
   // Reports
   reports: Report[];
-  addReport: (report: { target_user_id: string; reason: string }) => Promise<void>;
+  addReport: (report: { target_user_id: string; changes: { attribute_name: string; new_value: string }[] }) => Promise<void>;
+  approveReport: (id: string) => Promise<void>;
+  rejectReport: (id: string) => Promise<void>;
 
   // Admin Data
   fetchAdminData: () => Promise<void>;
@@ -317,14 +319,48 @@ export const useAppStore = create<AppState>()(
 
       addReport: async (report) => {
         try {
-          const newReport = await reportsApi.createReport(report);
+          await reportsApi.createReport(report);
+          // We don't append to state.reports here because the API returns a {created_count} instead of a single Report.
+          // The new reports will be fetched if the user navigates to the Admin Panel.
+          toast.success('Заявка успешно отправлена');
+        } catch (error: any) {
+          if (error.response?.status === 409) {
+            toast.error('Вы уже предложили правку для этого пользователя');
+          } else {
+            console.error('Failed to create report', error);
+            toast.error('Ошибка при отправке заявки');
+          }
+          throw error;
+        }
+      },
+
+      approveReport: async (id: string) => {
+        try {
+          const updatedReport = await adminApi.approveReport(id);
           set(state => ({
-            reports: [newReport, ...state.reports]
+            reports: state.reports.map(r =>
+              r.id === id ? updatedReport : r
+            )
           }));
-          toast.success('Жалоба успешно отправлена');
+          toast.success('Жалоба одобрена');
         } catch (error) {
-          console.error('Failed to create report', error);
-          toast.error('Ошибка при отправке жалобы');
+          console.error('Failed to approve report', error);
+          toast.error('Не удалось одобрить жалобу');
+        }
+      },
+
+      rejectReport: async (id: string) => {
+        try {
+          const updatedReport = await adminApi.rejectReport(id);
+          set(state => ({
+            reports: state.reports.map(r =>
+              r.id === id ? updatedReport : r
+            )
+          }));
+          toast.success('Жалоба отклонена');
+        } catch (error) {
+          console.error('Failed to reject report', error);
+          toast.error('Не удалось отклонить жалобу');
         }
       },
 

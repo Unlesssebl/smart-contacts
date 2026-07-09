@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { User } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { adminApi } from '../../api/admin';
+import { ReportModal } from './ReportModal';
 
 interface ProfileModalProps {
   user: User;
@@ -90,6 +91,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
   const [isHidden, setIsHidden] = useState(user.is_hidden || false);
   const [mobilePhone, setMobilePhone] = useState(cleanValue(user.mobile_phone));
   const [officeLocation, setOfficeLocation] = useState(cleanValue(user.office_location));
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Глобальный стейт — загружается при логине (fetchMe) и поддерживается в актуальном состоянии
   const { addChangeRequest, currentUser, getUserById, globalPresence, pendingFields, updateUserInStore } = useAppStore();
@@ -407,10 +409,10 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                   )}
                 </div>
 
-                {/* Edit Actions */}
-                {currentUser?.id === user.id && (
-                  <div className="mt-6 flex gap-3">
-                    {isEditing ? (
+                {/* Actions Block */}
+                <div className="mt-6 flex gap-3">
+                  {currentUser?.id === user.id ? (
+                    isEditing ? (
                       <>
                         <button
                           onClick={handleSubmitChange}
@@ -441,12 +443,27 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                         <Edit className="h-4 w-4" strokeWidth={1.5} />
                         {pendingFields === null ? 'Загрузка...' : 'Редактировать профиль'}
                       </button>
-                    )}
-                  </div>
-                )}
+                    )
+                  ) : (
+                    <button
+                      onClick={() => setIsReportModalOpen(true)}
+                      className="btn-secondary px-6 py-3 gap-2"
+                    >
+                      <Edit className="h-4 w-4" strokeWidth={1.5} />
+                      Предложить исправление
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>
+
+          {isReportModalOpen && (
+            <ReportModal
+              user={user}
+              onClose={() => setIsReportModalOpen(false)}
+            />
+          )}
     </>
   );
 }
