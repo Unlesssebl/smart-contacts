@@ -30,5 +30,10 @@ export const adminApi = {
   forceSync: async (): Promise<{status: string; message: string}> => {
     const response = await apiClient.post('/admin/sync/force');
     return response.data;
+  },
+
+  updateUserVisibility: async (id: string, is_hidden: boolean): Promise<{status: string; is_hidden: boolean}> => {
+    const response = await apiClient.patch(`/admin/users/${id}/visibility`, { is_hidden });
+    return response.data;
   }
 };

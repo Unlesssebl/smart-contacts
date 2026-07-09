@@ -4,6 +4,7 @@ import { X, Mail, Phone, MapPin, Building2, User as UserIcon, Edit, Shield, Copy
 import { toast } from 'sonner';
 import type { User } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
+import { adminApi } from '../../api/admin';
 
 interface ProfileModalProps {
   user: User;
@@ -85,11 +86,13 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
+  const [isHidden, setIsHidden] = useState(user.is_hidden || false);
   const [mobilePhone, setMobilePhone] = useState(cleanValue(user.mobile_phone));
   const [officeLocation, setOfficeLocation] = useState(cleanValue(user.office_location));
 
   // Глобальный стейт — загружается при логине (fetchMe) и поддерживается в актуальном состоянии
-  const { addChangeRequest, currentUser, getUserById, globalPresence, pendingFields } = useAppStore();
+  const { addChangeRequest, currentUser, getUserById, globalPresence, pendingFields, updateUserInStore } = useAppStore();
 
   const manager = user.manager_id ? getUserById(user.manager_id) : null;
   const currentPresence = globalPresence[user.id] || user.presence;
@@ -363,6 +366,42 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                             <Copy className="h-4 w-4" strokeWidth={1.5} />
                           </button>
                         </div>
+                      </div>
+                      
+                      <div className="mt-4 rounded-xl border border-black/5 bg-white/40 p-4 shadow-sm flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Скрыть из справочника (сервисная УЗ)</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Пользователь будет виден только администраторам
+                          </p>
+                        </div>
+                        <button
+                          disabled={isUpdatingVisibility}
+                          onClick={async () => {
+                            try {
+                              setIsUpdatingVisibility(true);
+                              const newHiddenState = !isHidden;
+                              await adminApi.updateUserVisibility(user.id, newHiddenState);
+                              setIsHidden(newHiddenState);
+                              updateUserInStore(user.id, { is_hidden: newHiddenState });
+                              toast.success(newHiddenState ? 'Учетная запись скрыта' : 'Учетная запись теперь видима');
+                            } catch (e) {
+                              toast.error('Ошибка при обновлении видимости');
+                            } finally {
+                              setIsUpdatingVisibility(false);
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                            isHidden ? 'bg-primary' : 'bg-slate-200'
+                          } ${isUpdatingVisibility ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              isHidden ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
                       </div>
                     </div>
                   )}

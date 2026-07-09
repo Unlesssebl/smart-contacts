@@ -26,7 +26,11 @@ async def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
+    is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    
     query = db.query(User).filter(User.status != UserStatus.RESIGNED.value)
+    if not is_admin:
+        query = query.filter(User.is_hidden == False)
     
     if department:
         query = query.filter(User.department == department)
@@ -90,7 +94,7 @@ async def list_users(
     total = query.count()
     items = query.offset((page - 1) * limit).limit(limit).all()
     
-    is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    
     if not is_admin:
         for item in items:
             if item in db:
@@ -139,6 +143,9 @@ async def get_user(
         raise HTTPException(status_code=404, detail="User not found")
     
     is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    
+    if user.is_hidden and not is_admin:
+        raise HTTPException(status_code=404, detail="User not found")
     
     # Скрытие internal_phone для защищенных профилей
     if user.is_protected and current_user.role != UserRole.IT_OPERATOR.value:

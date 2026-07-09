@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, String, Boolean, SmallInteger, DateTime, BigInteger, Text
+from sqlalchemy import Column, String, Boolean, SmallInteger, DateTime, BigInteger, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from shared.database import Base
@@ -24,6 +24,7 @@ class User(Base):
     role = Column(String(32), nullable=False, default=UserRole.EMPLOYEE.value)
     is_verified = Column(Boolean, nullable=False, default=False)
     is_protected = Column(Boolean, nullable=False, default=False)
+    is_hidden = Column(Boolean, nullable=False, default=False)
     grace_period_left = Column(SmallInteger, nullable=False, default=3)
     last_sync_timestamp = Column(DateTime(timezone=True))
     sync_error_log = Column(Text)

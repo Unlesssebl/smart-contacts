@@ -29,6 +29,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- нечёткий поиск (fuz
 | `role` | VARCHAR(32) | NOT NULL, DEFAULT 'employee' | Роль в системе: `employee`, `it_operator` |
 | `is_verified` | BOOLEAN | NOT NULL, DEFAULT FALSE | Пройдена ли проверка Gatekeeper |
 | `is_protected` | BOOLEAN | NOT NULL, DEFAULT FALSE | VIP-защита профиля |
+| `is_hidden` | BOOLEAN | NOT NULL, DEFAULT FALSE | Скрыт ли пользователь из общего справочника (для сервисных УЗ) |
 | `grace_period_left` | SMALLINT | NOT NULL, DEFAULT 3 | Оставшихся попыток «Пропустить» |
 | `last_sync_timestamp` | TIMESTAMPTZ | NULLABLE | Время последней синхронизации из AD |
 | `sync_error_log` | TEXT | NULLABLE | Лог последней ошибки или предупреждение (например, о нескольких группах организации) |

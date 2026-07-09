@@ -120,7 +120,7 @@ export function DirectoryPage() {
 
           {/* Employee Grid */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 min-h-[300px]">
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
               {filteredUsers.length === 0 ? (
                 <motion.div
                   key="empty-state"

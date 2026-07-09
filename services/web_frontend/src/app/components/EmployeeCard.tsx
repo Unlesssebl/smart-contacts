@@ -86,7 +86,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
       <div
         ref={ref}
         onClick={onClick}
-        className="group cursor-pointer p-6 bg-white border border-slate-200/50 rounded-3xl hover:border-slate-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 flex flex-col h-full"
+        className={`group cursor-pointer p-6 bg-white border border-slate-200/50 rounded-3xl hover:border-slate-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 flex flex-col h-full ${user.is_hidden ? 'opacity-60 grayscale-[0.2]' : ''}`}
       >
         {/* TOP: Avatar and Primary Info */}
         <div className="flex items-start gap-4">
@@ -124,6 +124,11 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
                 <span className="inline-flex items-center gap-1 text-rose-500 font-medium mr-1">
                   <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                   {user.role === 'admin' ? 'Админ' : 'IT'}
+                </span>
+              )}
+              {user.is_hidden && (
+                <span className="inline-flex items-center gap-1 text-slate-500 font-medium mr-1 border border-slate-200 rounded px-1.5 py-0.5">
+                  Скрыта
                 </span>
               )}
               {cleanValue(user.organization) && (

@@ -38,6 +38,7 @@ interface AppState {
   globalPresence: Record<string, 'online' | 'away' | 'offline'>;
   setPresence: (id: string, presence: 'online' | 'away' | 'offline') => void;
   setBulkPresence: (presences: Record<string, 'online' | 'away' | 'offline'>) => void;
+  updateUserInStore: (id: string, updates: Partial<User>) => void;
 
   // Change Requests
   changeRequests: ChangeRequest[];
@@ -221,6 +222,13 @@ export const useAppStore = create<AppState>()(
           currentUser: state.currentUser && presences[state.currentUser.id] 
             ? { ...state.currentUser, presence: presences[state.currentUser.id] } 
             : state.currentUser,
+        }));
+      },
+
+      updateUserInStore: (id, updates) => {
+        set((state) => ({
+          users: state.users.map((u) => (u.id === id ? { ...u, ...updates } : u)),
+          currentUser: state.currentUser?.id === id ? { ...state.currentUser, ...updates } : state.currentUser,
         }));
       },
 

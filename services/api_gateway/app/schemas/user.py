@@ -18,6 +18,7 @@ class UserRead(UserBase):
     id: UUID = Field(alias="object_guid")
     tg_id: Optional[int] = None
     manager_id: Optional[str] = None
+    is_hidden: bool
     presence: str = "offline"
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

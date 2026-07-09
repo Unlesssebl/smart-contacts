@@ -127,6 +127,7 @@
   "role": "employee",
   "is_verified": true,
   "is_protected": false,
+  "is_hidden": false,
   "grace_period_left": 3,
   "last_sync_timestamp": "2026-04-27T10:00:00Z"
 }
@@ -176,6 +177,7 @@
       "mobile_phone": "+79161234567",
       "department": "ИТ-отдел",
       "office_location": "Офис А, каб. 301",
+      "is_hidden": false,
       "ad_dn": "CN=Иванов Иван Иванович,OU=ИТ-отдел,DC=domain,DC=local"
     }
   ]
@@ -428,6 +430,26 @@
 Принудительный запуск синхронизации AD. **Доступ**: IT-Operator.
 
 **Ответ 200:** `{ "status": "ok", "message": "Sync requested" }`
+
+---
+
+### `PATCH /admin/users/{user_id}/visibility`
+Скрыть или показать профиль пользователя в общем справочнике. **Доступ**: IT-Operator.
+
+**Тело запроса:**
+```json
+{
+  "is_hidden": true
+}
+```
+
+**Ответ 200:**
+```json
+{
+  "status": "ok",
+  "is_hidden": true
+}
+```
 
 ---
 

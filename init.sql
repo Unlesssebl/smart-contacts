@@ -22,6 +22,7 @@ CREATE TABLE users (
     role VARCHAR(32) NOT NULL DEFAULT 'employee',
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     is_protected BOOLEAN NOT NULL DEFAULT FALSE,
+    is_hidden BOOLEAN NOT NULL DEFAULT FALSE,
     grace_period_left SMALLINT NOT NULL DEFAULT 3,
     last_sync_timestamp TIMESTAMPTZ,
     sync_error_log TEXT,

@@ -16,6 +16,7 @@ export interface User {
   manager_id?: string | null;
   presence?: 'online' | 'away' | 'offline';
   ad_dn?: string | null;
+  is_hidden?: boolean;
 }
 
 export interface UserProfile extends User {
