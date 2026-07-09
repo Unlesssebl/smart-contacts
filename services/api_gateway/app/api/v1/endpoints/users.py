@@ -21,6 +21,7 @@ async def list_users(
     job_title: Optional[str] = Query(None, description="Filter by exact job title"),
     has_phone: Optional[bool] = Query(None, description="Filter by having a phone number"),
     has_email: Optional[bool] = Query(None, description="Filter by having an email address"),
+    hidden_only: Optional[bool] = Query(None, description="Filter by hidden status (Admin only)"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -31,6 +32,8 @@ async def list_users(
     query = db.query(User).filter(User.status != UserStatus.RESIGNED.value)
     if not is_admin:
         query = query.filter(User.is_hidden == False)
+    elif hidden_only:
+        query = query.filter(User.is_hidden == True)
     
     if department:
         query = query.filter(User.department == department)

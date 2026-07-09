@@ -7,6 +7,7 @@ export interface UserFilters {
   job_title?: string;
   has_phone?: boolean;
   has_email?: boolean;
+  hidden_only?: boolean;
 }
 
 export const usersApi = {
@@ -20,6 +21,7 @@ export const usersApi = {
       if (filters.job_title) params.append('job_title', filters.job_title);
       if (filters.has_phone) params.append('has_phone', 'true');
       if (filters.has_email) params.append('has_email', 'true');
+      if (filters.hidden_only) params.append('hidden_only', 'true');
     }
 
     params.append('page', page.toString());

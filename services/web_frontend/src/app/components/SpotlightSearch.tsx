@@ -11,7 +11,8 @@ export function SpotlightSearch() {
   const { 
     searchQuery, setSearchQuery, isSearching, 
     filters, setFilters,
-    departments, organizations, jobTitles, fetchFilterOptions 
+    departments, organizations, jobTitles, fetchFilterOptions,
+    currentUser
   } = useAppStore(useShallow((state) => ({
     searchQuery: state.searchQuery,
     setSearchQuery: state.setSearchQuery,
@@ -22,7 +23,10 @@ export function SpotlightSearch() {
     organizations: state.organizations,
     jobTitles: state.jobTitles,
     fetchFilterOptions: state.fetchFilterOptions,
+    currentUser: state.currentUser,
   })));
+
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'it_operator';
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [localQuery, setLocalQuery] = useState(searchQuery);
@@ -30,7 +34,7 @@ export function SpotlightSearch() {
   // Show filters if any filter is active, or if user explicitly toggles it
   const hasActiveFilters = useMemo(() => Boolean(
     filters.department || filters.organization || filters.job_title || 
-    filters.has_phone || filters.has_email
+    filters.has_phone || filters.has_email || filters.hidden_only
   ), [filters]);
   
   const [showFilters, setShowFilters] = useState(hasActiveFilters);
@@ -153,6 +157,17 @@ export function SpotlightSearch() {
                   />
                   <Label htmlFor="has-email" className="text-sm font-medium cursor-pointer">С email</Label>
                 </div>
+
+                {isAdmin && (
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="hidden-only" 
+                      checked={filters.hidden_only || false}
+                      onCheckedChange={(c) => setFilters({ hidden_only: c })}
+                    />
+                    <Label htmlFor="hidden-only" className="text-sm font-medium cursor-pointer">Скрытые УЗ</Label>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
