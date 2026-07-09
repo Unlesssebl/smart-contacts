@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../../store/useAppStore';
 import { checkSso } from '../../api/auth';
+import { toast } from 'sonner';
 import './LoginPage.css';
 
 export function LoginPage() {
   const [samAccount, setSamAccount] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const navigate = useNavigate();
@@ -41,7 +41,6 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsSubmitting(true);
 
     const result = await login(samAccount, password);
@@ -49,7 +48,7 @@ export function LoginPage() {
       setIsSuccess(true);
       setTimeout(() => navigate('/'), 800);
     } else {
-      setError(result.error || 'Ошибка авторизации');
+      toast.error(result.error || 'Ошибка авторизации');
       setIsSubmitting(false);
     }
   };
@@ -135,28 +134,24 @@ export function LoginPage() {
                 </div>
               </div>
 
-              {error && (
-                <div className="form-error visible animate-fade-up-5">
-                  {error}
-                </div>
-              )}
-
               <button
                 type="submit"
-                className="btn-submit animate-fade-up-6 relative overflow-hidden"
+                className="btn-submit animate-fade-up-6"
                 disabled={isSubmitting || isSuccess}
-                style={{ background: isSuccess ? 'var(--brand-dark)' : '' }}
+                style={{ color: isSuccess ? 'var(--brand-dark)' : '' }}
               >
                 <AnimatePresence mode="popLayout" initial={false}>
                   <motion.span
                     key={isSuccess ? 'success' : isSubmitting ? 'submitting' : 'idle'}
-                    initial={{ y: 30, opacity: 0 }}
+                    initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -30, opacity: 0 }}
+                    exit={{ y: -20, opacity: 0 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="flex items-center justify-center w-full"
+                    className="flex items-center justify-start w-full relative"
                   >
-                    {isSuccess ? 'Успешно' : isSubmitting ? 'Авторизация...' : 'Войти в справочник'}
+                    <span>
+                      {isSuccess ? 'Успешно' : isSubmitting ? 'Авторизация...' : 'Войти в справочник'}
+                    </span>
                   </motion.span>
                 </AnimatePresence>
               </button>

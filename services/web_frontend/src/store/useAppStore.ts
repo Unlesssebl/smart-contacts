@@ -89,11 +89,11 @@ export const useAppStore = create<AppState>()(
           console.error('Login failed:', error);
           let errorMessage = 'Ошибка авторизации. Сервер недоступен.';
           if (error.response?.status === 401) {
-            errorMessage = 'Неверный логин или пароль. Используйте данные вашей учётной записи Windows.';
+            errorMessage = 'Неверный логин или пароль'; // Убрали длинную часть про учетную запись
           } else if (error.response?.status === 429) {
             errorMessage = 'Вход временно ограничен. Превышено количество попыток.';
           }
-          toast.error(errorMessage);
+          // Мы убрали вызов toast.error(errorMessage) здесь, так как он вызывается в LoginPage с красным стилем
           return { success: false, error: errorMessage };
         }
       },

@@ -369,49 +369,55 @@
     font-weight: 500;
 }
 
-/* ── Элегантная кнопка (Apple/Linear style + Brand Colors) ── */
+/* ── Элегантная текстовая кнопка ── */
 .btn-submit {
     width: 100%;
-    margin-top: 12px;
-    padding: 14px 24px;
-    font-size: 14px;
-    font-weight: 500;
+    margin-top: 24px;
+    padding: 12px 0 16px 0;
+    font-size: 13px;
+    font-weight: 600;
     font-family: inherit;
-    letter-spacing: -0.2px;
-    background: var(--brand);
-    color: #ffffff;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: transparent !important;
+    color: var(--brand-dark); /* Цвет как у "Добро пожаловать" */
     border: none;
-    border-radius: 8px;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: color 0.3s ease;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 16px;
     position: relative;
 }
 
+.btn-submit::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--brand); /* Оставим синюю линию при наведении, или можно тоже сделать dark */
+    transition: width 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    z-index: 2;
+}
+
 .btn-submit:hover:not(:disabled) {
-    background: var(--brand-hover);
+    /* Не меняем цвет, оставляем brand-dark */
+}
+
+.btn-submit:hover:not(:disabled)::after {
+    width: 100%;
 }
 
 .btn-submit:active:not(:disabled) {
-    background: var(--brand-dark);
+    transform: translateY(1px);
 }
 
 .btn-submit:disabled {
-    opacity: 0.7;
+    opacity: 0.5;
     cursor: not-allowed;
-}
-
-.btn-submit .arrow {
-    font-size: 16px;
-    font-weight: 400;
-    transition: transform 0.3s ease;
-}
-
-.btn-submit:hover:not(:disabled) .arrow {
-    transform: translateX(4px);
 }
 
 /* ── Футер формы ── */
