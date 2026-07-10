@@ -104,6 +104,33 @@ export function ProfilePage() {
     }
   }, [user]);
 
+  // Sync profile state periodically only if there are pending fields
+  const hasPending = pendingFields && Object.keys(pendingFields).length > 0;
+
+  useEffect(() => {
+    if (!currentUser || currentUser.id !== id || !hasPending) return;
+
+    let isMounted = true;
+    const pollInterval = setInterval(async () => {
+      try {
+        await useAppStore.getState().fetchMyPendingFields();
+        const { usersApi } = await import('../../api/users');
+        const data = await usersApi.getUserByGuid(id);
+        if (isMounted && data) {
+          setUser(data);
+          useAppStore.getState().updateUserInStore(data.id, data);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+    };
+  }, [id, currentUser, hasPending]);
+
 
   const displayValue = (val: string | null | undefined) => {
     const cleaned = cleanValue(val);
