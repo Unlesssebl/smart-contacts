@@ -155,6 +155,7 @@ services/web_frontend/
 | Загрузка списка | Skeleton Loaders (не спиннер) |
 | Пустой результат поиска | Empty State + кнопка «Сбросить фильтры» |
 | Ошибка API | Error Boundary — «Сервис временно недоступен» |
+| Потеря соединения (API Down) | Глобальный оверлей `<ConnectionLostOverlay>` с текстом «Соединение потеряно. Мы пытаемся восстановить связь...». Возникает при 502/504/Network Error от API. |
 | Глобальная проверка сессии | Полноэкранный лоадер |
 | Gatekeeper — мягкая блокировка | Баннер над страницей: «Пожалуйста, проверьте актуальность ваших данных. Осталось пропусков: N» с кнопкой «Проверить» |
 | Gatekeeper — жёсткая блокировка | Страница недоступна; модалку нельзя закрыть; отображается заголовок «Подтвердите ваши данные» |
@@ -177,10 +178,20 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Обработка ответов (Refresh Token и 503)
+// Обработка ответов (Refresh Token, 503 и потери связи)
 apiClient.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // При успешном ответе сбрасываем флаги недоступности
+    if (store.isApiDown) store.setApiDown(false);
+    return res;
+  },
   async (error) => {
+    // Self-healing: Обработка потери связи (Vite proxy 502/504 или Network Error)
+    if (!error.response || error.response.status === 502 || error.response.status === 504) {
+      if (!store.isApiDown) store.setApiDown(true); // Включает полноэкранный оверлей
+      return Promise.reject(error);
+    }
+
     // При 401 → попытка refresh → при неудаче → /login
     if (error.response?.status === 401) {
       // refresh logic...
@@ -189,8 +200,7 @@ apiClient.interceptors.response.use(
     // При 503 → блокировка отправки заявок (AD Sync Unavailable)
     if (error.response?.status === 503) {
       // 1. Установить глобальный флаг adSyncUnavailable в store
-      // 2. Показать глобальный баннер: "Синхронизация с AD временно недоступна..."
-      // 3. Блокировать кнопки "Отправить заявку"
+      // 2. Показать глобальный toast-баннер
     }
 
     return Promise.reject(error);
