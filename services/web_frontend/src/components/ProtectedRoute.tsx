@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { User, PaginatedUsers } from '../types';
+import type { User, PaginatedUsers } from '@/types';
 
 export interface UserFilters {
   department?: string;

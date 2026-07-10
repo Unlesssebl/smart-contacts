@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 import { toast } from 'sonner';
 
 const apiClient = axios.create({

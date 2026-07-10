@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAppStore } from '../../store/useAppStore';
-import { checkSso } from '../../api/auth';
+import { useAppStore } from '@/store/useAppStore';
+import { checkSso } from '@/api/auth';
 import { toast } from 'sonner';
 import './LoginPage.css';
 

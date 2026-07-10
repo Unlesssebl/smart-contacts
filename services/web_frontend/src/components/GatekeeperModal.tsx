@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 

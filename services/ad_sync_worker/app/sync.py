@@ -241,7 +241,12 @@ class SyncWorker:
                     attr_map = {
                         "internal_phone": "telephoneNumber",
                         "mobile_phone": "mobile",
-                        "office_location": "physicalDeliveryOfficeName"
+                        "office_location": "physicalDeliveryOfficeName",
+                        "department": "department",
+                        "job_title": "title",
+                        "full_name": "displayName",
+                        "organization": "company",
+                        "email": "mail"
                     }
                     
                     ad_attr = attr_map.get(cr.attribute_name)
@@ -258,7 +263,8 @@ class SyncWorker:
                         cr.status = "applied"
                         cr.resolved_at = datetime.now(timezone.utc)
                         # Apply changes to local DB user upon success (Plan Option A)
-                        setattr(user, cr.attribute_name, cr.new_value)
+                        final_value = cr.new_value if cr.new_value else None
+                        setattr(user, cr.attribute_name, final_value)
                         user.last_sync_timestamp = datetime.now(timezone.utc)
                         logger.info(f"Applied {cr.attribute_name} for {user.sam_account_name}")
                         

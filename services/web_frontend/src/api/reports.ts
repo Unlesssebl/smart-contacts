@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Report } from '../types';
+import type { Report } from '@/types';
 
 export interface ReportCreate {
   target_user_id: string;

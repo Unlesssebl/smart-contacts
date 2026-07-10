@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Phone, MapPin, Building2, User as UserIcon, Edit, Shield, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import type { User } from '../../types';
-import { useAppStore } from '../../store/useAppStore';
-import { adminApi } from '../../api/admin';
+import type { User } from '@/types';
+import { useAppStore } from '@/store/useAppStore';
+import { adminApi } from '@/api/admin';
 import { ReportModal } from './ReportModal';
 
 interface ProfileModalProps {

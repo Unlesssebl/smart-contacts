@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import type { User } from '../../types';
+import type { User } from '@/types';
 import { Mail, Phone, MapPin, Edit } from 'lucide-react';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 import { ReportModal } from './ReportModal';
 
 const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;

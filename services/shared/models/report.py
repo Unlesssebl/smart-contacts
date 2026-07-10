@@ -12,7 +12,7 @@ class Report(Base):
     target_user_guid = Column(UUID(as_uuid=True), ForeignKey("users.object_guid", ondelete="CASCADE"), nullable=False)
     reporter_user_guid = Column(UUID(as_uuid=True), ForeignKey("users.object_guid", ondelete="SET NULL"))
     attribute_name = Column(String(64), nullable=False)
-    new_value = Column(Text, nullable=False)
+    new_value = Column(Text, nullable=True)
     status = Column(String(20), nullable=False, default="pending", index=True)
     rejection_reason = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

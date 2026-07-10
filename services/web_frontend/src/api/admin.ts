@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { ChangeRequest, Report } from '../types';
+import type { ChangeRequest, Report } from '@/types';
 
 export const adminApi = {
   getChangeRequests: async (): Promise<ChangeRequest[]> => {

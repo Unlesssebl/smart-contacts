@@ -9,27 +9,32 @@ MOBILE_PHONE_PATTERN = r"^\+7\d{10}$"
 
 class ChangeRequestBase(BaseModel):
     attribute_name: str
-    new_value: str
+    new_value: Optional[str] = None
 
+class ChangeRequestCreate(ChangeRequestBase):
     @field_validator("attribute_name")
     @classmethod
     def validate_attribute_name(cls, v: str) -> str:
-        allowed = ["internal_phone", "mobile_phone", "office_location"]
+        allowed = [
+            "internal_phone", "mobile_phone", "office_location",
+            "department", "full_name", "organization", "job_title", "email"
+        ]
         if v not in allowed:
             raise ValueError(f"Attribute {v} is not allowed for change requests")
         return v
 
     @field_validator("new_value")
     @classmethod
-    def validate_new_value(cls, v: str, info) -> str:
+    def validate_new_value(cls, v: Optional[str], info) -> Optional[str]:
+        # Если значение пустое или None, пропускаем валидацию (это запрос на удаление)
+        if not v or v in ("<Удалить>", "[]"):
+            return None
         attr = info.data.get("attribute_name")
         if attr == "internal_phone":
             # Разрешаем 0000 и 00-00
             if not re.match(INTERNAL_PHONE_PATTERN, v):
                 raise ValueError(r"Internal phone must match pattern \d{2}-\d{2} or \d{4}")
         elif attr == "mobile_phone":
-            if not v:
-                return v
             # Нормализация: убираем пробелы, скобки и тире
             v_clean = re.sub(r"[\s\(\)\-]", "", v)
             # Автоматически заменяем 8 на +7
@@ -42,9 +47,6 @@ class ChangeRequestBase(BaseModel):
                 raise ValueError(r"Mobile phone must match pattern +7 (999) 999-99-99")
             return v_clean
         return v
-
-class ChangeRequestCreate(ChangeRequestBase):
-    pass
 
 class ChangeRequestRead(ChangeRequestBase):
     id: UUID

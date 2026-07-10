@@ -12,7 +12,7 @@ class ChangeRequest(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_guid = Column(UUID(as_uuid=True), ForeignKey("users.object_guid", ondelete="CASCADE"), nullable=False, index=True)
     attribute_name = Column(String(64), nullable=False)
-    new_value = Column(Text, nullable=False)
+    new_value = Column(Text, nullable=True)
     source = Column(String(10), nullable=False)
     status = Column(String(32), nullable=False, default=ChangeRequestStatus.PENDING.value, index=True)
     rejection_reason = Column(Text)

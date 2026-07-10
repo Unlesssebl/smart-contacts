@@ -3,10 +3,10 @@ import { useParams, Navigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit, Clock, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { Sidebar } from '../components/Sidebar';
-import { useAppStore } from '../../store/useAppStore';
+import { Sidebar } from '@/components/Sidebar';
+import { useAppStore } from '@/store/useAppStore';
 
-import type { User, UserProfile } from '../../types';
+import type { User, UserProfile } from '@/types';
 
 function EditableField({
   icon: Icon,
@@ -81,7 +81,7 @@ export function ProfilePage() {
       setIsLoading(false);
     } else if (id) {
       setIsLoading(true);
-      import('../../api/users').then(({ usersApi }) => {
+      import('@/api/users').then(({ usersApi }) => {
         usersApi.getUserByGuid(id)
           .then(data => setUser(data))
           .catch(() => setUser(null))

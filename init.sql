@@ -40,7 +40,7 @@ CREATE TABLE change_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
     attribute_name VARCHAR(64) NOT NULL,
-    new_value TEXT NOT NULL,
+    new_value TEXT,
     source VARCHAR(10) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     rejection_reason TEXT,
@@ -51,7 +51,7 @@ CREATE TABLE change_requests (
     -- Ограничения
     CONSTRAINT cr_source_check CHECK (source IN ('web', 'bot')),
     CONSTRAINT cr_status_check CHECK (status IN ('pending', 'conflict', 'approved', 'applied', 'rejected')),
-    CONSTRAINT cr_attribute_check CHECK (attribute_name IN ('internal_phone', 'mobile_phone', 'office_location', 'department', 'full_name'))
+    CONSTRAINT cr_attribute_check CHECK (attribute_name IN ('internal_phone', 'mobile_phone', 'office_location', 'department', 'full_name', 'organization', 'job_title', 'email'))
 );
 
 -- 4. Таблица reports (Жалобы на контакты)
@@ -60,7 +60,7 @@ CREATE TABLE reports (
     target_user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
     reporter_user_guid UUID REFERENCES users(object_guid) ON DELETE SET NULL,
     attribute_name VARCHAR(64) NOT NULL,
-    new_value TEXT NOT NULL,
+    new_value TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     rejection_reason TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

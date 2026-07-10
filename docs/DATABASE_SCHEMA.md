@@ -71,7 +71,7 @@ CREATE INDEX idx_users_is_verified ON users (is_verified) WHERE is_verified = FA
 | `id` | UUID | PK, DEFAULT uuid_generate_v4() | |
 | `user_guid` | UUID | FK → users.object_guid ON DELETE CASCADE, NOT NULL | Чей профиль меняется |
 | `attribute_name` | VARCHAR(64) | NOT NULL | Имя поля: `mobile_phone`, `extension_number`, `office_location` |
-| `new_value` | TEXT | NOT NULL | Новое значение |
+| `new_value` | TEXT | NULLABLE | Новое значение (NULL для удаления) |
 | `source` | VARCHAR(10) | NOT NULL | Источник: `web`, `bot` |
 | `status` | VARCHAR(20) | NOT NULL, DEFAULT 'pending' | `pending`, `conflict`, `approved`, `applied`, `rejected` |
 | `rejection_reason` | TEXT | NULLABLE | Причина отклонения (заполняется IT-Operator) |
@@ -83,7 +83,7 @@ CREATE INDEX idx_users_is_verified ON users (is_verified) WHERE is_verified = FA
 ```sql
 CONSTRAINT cr_source_check CHECK (source IN ('web', 'bot'))
 CONSTRAINT cr_status_check CHECK (status IN ('pending', 'conflict', 'approved', 'applied', 'rejected'))
-CONSTRAINT cr_attribute_check CHECK (attribute_name IN ('internal_phone', 'mobile_phone', 'office_location', 'department', 'full_name'))
+CONSTRAINT cr_attribute_check CHECK (attribute_name IN ('internal_phone', 'mobile_phone', 'office_location', 'department', 'full_name', 'organization', 'job_title', 'email'))
 ```
 
 **Уникальный индекс**: Нельзя создать две активные заявки на одно поле одного пользователя:
@@ -110,7 +110,7 @@ CREATE INDEX idx_cr_status  ON change_requests (status);
 | `target_user_guid` | UUID | FK → users.object_guid ON DELETE CASCADE, NOT NULL | На кого жалоба |
 | `reporter_user_guid` | UUID | FK → users.object_guid ON DELETE SET NULL, NULLABLE | Кто пожаловался |
 | `attribute_name` | VARCHAR(64) | NOT NULL | Имя поля, которое предложено исправить |
-| `new_value` | TEXT | NOT NULL | Новое предложенное значение |
+| `new_value` | TEXT | NULLABLE | Новое предложенное значение (NULL для удаления) |
 | `status` | VARCHAR(20) | NOT NULL, DEFAULT 'pending' | `pending`, `conflict`, `approved`, `rejected` |
 | `rejection_reason` | TEXT | NULLABLE | Причина ошибки в AD или отклонения |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |

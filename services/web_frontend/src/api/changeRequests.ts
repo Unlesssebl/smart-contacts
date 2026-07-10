@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { ChangeRequest } from '../types';
+import type { ChangeRequest } from '@/types';
 
 export interface ChangeRequestCreate {
   attribute_name: string;

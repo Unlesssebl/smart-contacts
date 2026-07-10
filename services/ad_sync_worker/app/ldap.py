@@ -97,7 +97,7 @@ class LDAPClient:
         try:
             from ldap3 import MODIFY_REPLACE
             # To clear an attribute in AD, we must pass an empty list, not a list with an empty string
-            change_value = [] if not value or value in ("[]", "<Удалить>") else [value]
+            change_value = [] if not value else [value]
             self.conn.modify(dn, {attribute: [(MODIFY_REPLACE, change_value)]})
             if self.conn.result["description"] == "success":
                 return True

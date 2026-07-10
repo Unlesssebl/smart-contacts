@@ -5,7 +5,7 @@ from datetime import datetime
 
 class ReportChangeItem(BaseModel):
     attribute_name: str
-    new_value: str
+    new_value: Optional[str] = None
 
 class ReportCreateBulk(BaseModel):
     target_user_id: UUID
@@ -18,7 +18,7 @@ class ReportRead(BaseModel):
     reporter_user_guid: Optional[UUID] = None
     reporter_user_name: Optional[str] = None
     attribute_name: str
-    new_value: str
+    new_value: Optional[str] = None
     status: str
     rejection_reason: Optional[str] = None
     created_at: datetime

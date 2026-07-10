@@ -4,13 +4,13 @@ import { Toaster } from 'sonner';
 import { useEffect } from 'react';
 import { OverlayScrollbars } from 'overlayscrollbars';
 import 'overlayscrollbars/overlayscrollbars.css';
-import { LoginPage } from './pages/LoginPage';
-import { DirectoryPage } from './pages/DirectoryPage';
-import { AdminPage } from './pages/AdminPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { useAppStore } from '../store/useAppStore';
-import { usePresence } from '../hooks/usePresence';
+import { LoginPage } from '@/pages/LoginPage';
+import { DirectoryPage } from '@/pages/DirectoryPage';
+import { AdminPage } from '@/pages/AdminPage';
+import { ProfilePage } from '@/pages/ProfilePage';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAppStore } from '@/store/useAppStore';
+import { usePresence } from '@/hooks/usePresence';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -55,7 +55,7 @@ function AnimatedRoutes() {
   );
 }
 
-import { GatekeeperModal } from './components/GatekeeperModal';
+import { GatekeeperModal } from '@/components/GatekeeperModal';
 import { WifiOff } from 'lucide-react';
 
 function ConnectionLostOverlay() {

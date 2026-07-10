@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sidebar } from '../components/Sidebar';
-import { SpotlightSearch } from '../components/SpotlightSearch';
-import { EmployeeCard } from '../components/EmployeeCard';
-import { ProfileModal } from '../components/ProfileModal';
+import { Sidebar } from '@/components/Sidebar';
+import { SpotlightSearch } from '@/components/SpotlightSearch';
+import { EmployeeCard } from '@/components/EmployeeCard';
+import { ProfileModal } from '@/components/ProfileModal';
 import {
   Pagination,
   PaginationContent,
@@ -12,10 +12,10 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '../components/ui/pagination';
-import { useAppStore } from '../../store/useAppStore';
-import type { User } from '../../types';
-import { getEmployeeWord } from '../../lib/localization';
+} from '@/components/ui/pagination';
+import { useAppStore } from '@/store/useAppStore';
+import type { User } from '@/types';
+import { getEmployeeWord } from '@/lib/localization';
 
 export function DirectoryPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);

@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Check, X, Shield, Plus, Trash2, ChevronDown, ChevronRight, ChevronsUpDown, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Sidebar } from '../components/Sidebar';
-import { useAppStore } from '../../store/useAppStore';
-import { getAttributeLabel, getStatusLabel, getLdapErrorTranslation } from '../../lib/localization';
-import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../components/ui/collapsible';
-import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/tooltip';
+import { Sidebar } from '@/components/Sidebar';
+import { useAppStore } from '@/store/useAppStore';
+import { getAttributeLabel, getStatusLabel, getLdapErrorTranslation } from '@/lib/localization';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 type Tab = 'requests' | 'reports' | 'settings' | 'ou-mapping';
 
@@ -97,7 +97,7 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
       setIsLoadingOus(true);
       setOuLoadError(null);
       try {
-        const { settingsApi } = await import('../../api/settings');
+        const { settingsApi } = await import('@/api/settings');
         const ousTree = await settingsApi.getADOus();
         setAdOusTree(ousTree);
       } catch (e) {
@@ -301,7 +301,7 @@ export function AdminPage() {
   }, [activeTab, fetchLDAPSettings]);
 
   const activeRequests = changeRequests.filter((r) => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved');
-  const activeReports = reports.filter((r) => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved');
+  const activeReports = reports.filter((r) => r.status === 'pending' || r.status === 'conflict');
   
   const activeItems = [
     ...activeRequests.map(r => ({ ...r, item_type: 'request' })),
@@ -444,7 +444,7 @@ export function AdminPage() {
                                 <div className={`inline-flex items-center gap-2 rounded-md px-2 py-1 text-sm shadow-sm ${item.item_type === 'report' ? 'bg-white/80 dark:bg-black/40' : 'bg-white/60 dark:bg-black/20'}`}>
                                   <span className="text-muted-foreground text-xs">Новое:</span>
                                   <span className="font-medium text-foreground text-sm">
-                                    {(!item.new_value || item.new_value === '[]' || item.new_value === '<Удалить>') ? (
+                                    {!item.new_value ? (
                                       <span className="italic font-normal opacity-70 text-rose-500 line-through">Удалить</span>
                                     ) : (
                                       item.new_value
@@ -474,7 +474,7 @@ export function AdminPage() {
                                     <button
                                       onClick={async () => {
                                         if (item.item_type === 'report') {
-                                          const useStore = await import('../../store/useAppStore');
+                                          const useStore = await import('@/store/useAppStore');
                                           await useStore.useAppStore.getState().rejectReport(item.id);
                                         } else {
                                           await rejectChangeRequest(item.id);
@@ -488,7 +488,7 @@ export function AdminPage() {
                                     <button
                                       onClick={async () => {
                                         if (item.item_type === 'report') {
-                                          const useStore = await import('../../store/useAppStore');
+                                          const useStore = await import('@/store/useAppStore');
                                           await useStore.useAppStore.getState().approveReport(item.id);
                                         } else {
                                           await approveChangeRequest(item.id);
@@ -532,7 +532,7 @@ export function AdminPage() {
                     const ad_user = formData.get('ad_user') as string;
                     const ad_password = formData.get('ad_password') as string;
                     
-                    const payload: import('../../api/settings').LDAPSettings = {};
+                    const payload: import('@/api/settings').LDAPSettings = {};
                     if (ad_user !== null) payload.ad_user = ad_user;
                     if (ad_password) payload.ad_password = ad_password;
                     

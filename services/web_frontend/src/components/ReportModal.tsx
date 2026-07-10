@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { X, Trash2 } from 'lucide-react';
 import { IMaskInput } from 'react-imask';
-import type { User } from '../../types';
-import { useAppStore } from '../../store/useAppStore';
+import type { User } from '@/types';
+import { useAppStore } from '@/store/useAppStore';
 
 interface ReportModalProps {
   user: User;
@@ -20,8 +20,8 @@ const FIELD_OPTIONS = [
 ] as const;
 
 export function ReportModal({ user, onClose }: ReportModalProps) {
-  // State holds proposed values for each field
-  const [proposedValues, setProposedValues] = useState<Record<string, string>>({});
+  // State holds proposed values for each field. undefined = unchanged, null = delete
+  const [proposedValues, setProposedValues] = useState<Record<string, string | null>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { addReport } = useAppStore();
@@ -45,7 +45,7 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
   };
 
   const handleMarkToDelete = (fieldKey: string) => {
-    setProposedValues(prev => ({ ...prev, [fieldKey]: '<Удалить>' }));
+    setProposedValues(prev => ({ ...prev, [fieldKey]: null }));
     setError(null);
   };
 
@@ -69,23 +69,25 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
   const handleSubmit = async () => {
     setError(null);
 
-    const changes: { attribute_name: string; new_value: string }[] = [];
+    const changes: { attribute_name: string; new_value: string | null }[] = [];
 
     FIELD_OPTIONS.forEach(field => {
       const currentVal = getCurrentValue(field.value);
       const proposedVal = proposedValues[field.value];
 
-      // If proposed value exists and differs from current (treating empty string as unchanged)
-      if (proposedVal && proposedVal.trim() !== currentVal) {
-        changes.push({
-          attribute_name: field.value,
-          new_value: proposedVal.trim()
-        });
+      if (proposedVal !== undefined) {
+        if (proposedVal === null) {
+          if (currentVal !== '') {
+            changes.push({ attribute_name: field.value, new_value: null });
+          }
+        } else if (proposedVal.trim() !== currentVal) {
+          changes.push({ attribute_name: field.value, new_value: proposedVal.trim() });
+        }
       }
     });
 
     if (changes.length === 0) {
-      setError('Вы не предложили ни одного изменения. Введите новые данные или воспользуйтесь кнопкой корзины для удаления.');
+      setError('Вы не предложили ни одного изменения. Введите новые данные или нажмите на корзину, чтобы предложить удалить данные.');
       return;
     }
 
@@ -119,7 +121,7 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
       />
 
       {/* Modal */}
-      <div 
+      <div
         className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none"
       >
         <motion.div
@@ -153,21 +155,23 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
             <div className="space-y-4">
               {FIELD_OPTIONS.map((field) => {
                 const currentVal = getCurrentValue(field.value);
-                const proposedVal = proposedValues[field.value] || '';
-                const isChanged = proposedVal && proposedVal.trim() !== currentVal;
-                const isDeleted = proposedVal === '<Удалить>';
+                const proposedVal = proposedValues[field.value];
+                const isDeleted = proposedVal === null;
+                const isChanged = proposedVal !== undefined && proposedVal !== null && proposedVal.trim() !== currentVal;
+                const displayVal = proposedVal ?? '';
 
                 return (
-                  <div key={field.value} className={`rounded-xl border p-4 transition-colors ${isChanged ? 'border-primary/30 bg-primary/5' : 'border-black/5 bg-white'}`}>
+                  <div key={field.value} className={`rounded-xl border p-4 transition-colors ${isDeleted ? 'border-rose-200 bg-rose-50/50' : isChanged ? 'border-primary/30 bg-primary/5' : 'border-black/5 bg-white'}`}>
                     <div className="flex flex-col md:flex-row md:items-center gap-4">
-                      
+
                       {/* Left: Info */}
                       <div className="w-full md:w-1/2 shrink-0">
                         <div className="flex items-center gap-2 mb-1">
                           <label className="text-sm font-medium text-foreground">{field.label}</label>
                           {isChanged && !isDeleted && <span className="text-[10px] uppercase font-bold text-primary tracking-wider px-1.5 py-0.5 rounded-sm bg-primary/10">Изменено</span>}
+                          {isDeleted && <span className="text-[10px] uppercase font-bold text-rose-600 tracking-wider px-1.5 py-0.5 rounded-sm bg-rose-100">Удаление</span>}
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className={`text-sm ${isDeleted ? 'text-muted-foreground line-through opacity-70' : 'text-muted-foreground'}`}>
                           {displayCurrentValue(field.value)}
                         </div>
                       </div>
@@ -175,14 +179,14 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
                       {/* Right: Input */}
                       <div className="w-full md:w-1/2 flex items-center gap-2">
                         {isDeleted ? (
-                          <div className="flex-1 h-[42px] px-3 flex items-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 text-sm line-through">
-                            Предлагается к удалению
+                          <div className="flex-1 h-[42px] px-3 flex items-center rounded-lg border border-rose-200/50 bg-white/50 text-rose-600 text-sm font-medium">
+                            Данные будут удалены
                           </div>
                         ) : field.mask ? (
                           // @ts-ignore
                           <IMaskInput
                             mask={field.mask}
-                            value={proposedVal}
+                            value={displayVal}
                             unmask={false}
                             onAccept={(value: string) => handleValueChange(field.value, value)}
                             placeholder={field.placeholder}
@@ -191,13 +195,13 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
                         ) : (
                           <input
                             type="text"
-                            value={proposedVal}
+                            value={displayVal}
                             onChange={(e) => handleValueChange(field.value, e.target.value)}
                             placeholder="Введите новое значение..."
                             className="flex-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
                           />
                         )}
-                        
+
                         {/* Clear/Delete Button */}
                         {!isDeleted && currentVal && (
                           <button

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router';
 import { Home, User, LogOut, Shield } from 'lucide-react';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 import { motion } from 'motion/react';
 
 export function Sidebar() {

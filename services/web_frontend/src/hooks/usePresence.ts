@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 
-import { getWsToken } from '../api/auth';
+import { getWsToken } from '@/api/auth';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const THROTTLE_MS = 2000; // 2 seconds
