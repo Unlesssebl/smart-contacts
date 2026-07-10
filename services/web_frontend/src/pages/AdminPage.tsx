@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Check, X, Shield, Plus, Trash2, ChevronDown, ChevronRight, ChevronsUpDown, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Check, X, Shield, Plus, Trash2, ChevronDown, ChevronRight, ChevronsUpDown, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '@/components/Sidebar';
 import { useAppStore } from '@/store/useAppStore';
@@ -263,7 +263,7 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
           <button 
             onClick={handleAdd}
             disabled={!newOu || !newOrg}
-            className="flex items-center gap-2 h-10 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="btn-secondary h-10 px-4 flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Добавить
@@ -273,7 +273,7 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
         <div className="pt-6 border-t mt-8">
           <button
             onClick={handleSave}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6 py-2"
+            className="btn-primary h-10 px-6"
           >
             Сохранить настройки
           </button>
@@ -317,6 +317,33 @@ export function AdminPage() {
     acc[key].items.push(item);
     return acc;
   }, {} as Record<string, { user_name: string, items: any[] }>);
+
+  const groupCount = Object.keys(groupedItems).length;
+
+  const handleApproveGroup = async (items: any[]) => {
+    const useStore = await import('@/store/useAppStore');
+    for (const item of items) {
+      if (item.status === 'approved') continue;
+      if (item.item_type === 'report') {
+        await useStore.useAppStore.getState().approveReport(item.id);
+      } else {
+        await approveChangeRequest(item.id);
+      }
+    }
+  };
+
+  const handleRejectGroup = async (items: any[]) => {
+    const useStore = await import('@/store/useAppStore');
+    for (const item of items) {
+      if (item.status === 'approved') continue;
+      if (item.item_type === 'report') {
+        await useStore.useAppStore.getState().rejectReport(item.id);
+      } else {
+        await rejectChangeRequest(item.id);
+      }
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
@@ -346,7 +373,7 @@ export function AdminPage() {
                 />
               )}
               <span className="relative z-10">
-                Запросы на изменения {activeItems.length > 0 && `(${activeItems.length})`}
+                Запросы на изменения {groupCount > 0 && `(${groupCount})`}
               </span>
             </button>
 
@@ -409,10 +436,26 @@ export function AdminPage() {
                         animate={{ opacity: 1, x: 0 }}
                         className="rounded-xl border border-black/5 bg-white/60 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5"
                       >
-                        <div className="mb-3 flex items-center gap-2 border-b border-black/5 pb-2 dark:border-white/10">
+                        <div className="mb-3 flex items-center justify-between border-b border-black/5 pb-2 dark:border-white/10">
                           <h4 className="font-semibold text-foreground text-base">
                             {group.user_name || 'Неизвестный'}
                           </h4>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleRejectGroup(group.items)}
+                              className="flex items-center justify-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 shadow-sm"
+                            >
+                              <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                              Отклонить всё
+                            </button>
+                            <button
+                              onClick={() => handleApproveGroup(group.items)}
+                              className="flex items-center justify-center gap-1.5 rounded-md bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-100 shadow-sm"
+                            >
+                              <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                              Одобрить всё
+                            </button>
+                          </div>
                         </div>
                         <div className="space-y-2">
                           {group.items.map((item) => (
@@ -467,7 +510,7 @@ export function AdminPage() {
                               <div className="flex items-center gap-1.5 pt-2 sm:shrink-0 sm:pt-0">
                                 {item.status === 'approved' ? (
                                   <div className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 sm:flex-none">
-                                    В процессе...
+                                    <Loader2 className="h-4 w-4 animate-spin" />
                                   </div>
                                 ) : (
                                   <>
@@ -494,10 +537,10 @@ export function AdminPage() {
                                           await approveChangeRequest(item.id);
                                         }
                                       }}
-                                      className="flex items-center justify-center gap-1.5 rounded-md bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-100 shadow-sm sm:flex-none"
+                                      className="flex items-center justify-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-100 shadow-sm sm:flex-none"
+                                      title={item.status === 'conflict' ? 'Повторить' : 'Одобрить'}
                                     >
                                       <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                      {item.status === 'conflict' ? 'Повторить' : 'Одобрить'}
                                     </button>
                                   </>
                                 )}
@@ -520,7 +563,7 @@ export function AdminPage() {
                   <button 
                     type="button" 
                     onClick={() => forceSync()} 
-                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2 whitespace-nowrap shrink-0"
+                    className="btn-secondary h-9 px-4 whitespace-nowrap shrink-0"
                   >
                     Запустить синхронизацию
                   </button>
@@ -600,7 +643,7 @@ export function AdminPage() {
                   
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                    className="btn-primary h-10 px-4"
                   >
                     Сохранить настройки
                   </button>

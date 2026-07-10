@@ -98,9 +98,9 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
               e.stopPropagation();
               setIsReportModalOpen(true);
             }}
-            className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors opacity-0 group-hover:opacity-100 border border-slate-200 bg-white shadow-sm"
+            className="btn-secondary absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-xs px-3 py-1.5"
           >
-            <Edit className="h-[18px] w-[18px]" strokeWidth={2} />
+            <Edit className="h-[14px] w-[14px]" strokeWidth={2} />
             <span className="text-sm font-medium">Исправить</span>
           </button>
         )}

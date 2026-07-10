@@ -214,26 +214,38 @@ class SyncWorker:
         Push pending/approved changes to AD.
         """
         with SessionLocal() as session:
-            approved_requests = session.execute(
+            from shared.models.report import Report
+            approved_crs = session.execute(
                 select(ChangeRequest).where(ChangeRequest.status == "approved")
             ).scalars().all()
+            
+            approved_reports = session.execute(
+                select(Report).where(Report.status == "approved")
+            ).scalars().all()
 
-            if not approved_requests:
+            if not approved_crs and not approved_reports:
                 return
                 
             logger.info("Starting Push cycle.")
 
+            tasks = []
+            for cr in approved_crs:
+                tasks.append({"item": cr, "user_guid": cr.user_guid, "attribute_name": cr.attribute_name, "new_value": cr.new_value, "id": cr.id, "type": "cr"})
+            for rep in approved_reports:
+                tasks.append({"item": rep, "user_guid": rep.target_user_guid, "attribute_name": rep.attribute_name, "new_value": rep.new_value, "id": rep.id, "type": "report"})
+
             processed_conflicts = set()
 
             with LDAPClient() as ldap:
-                for cr in approved_requests:
-                    user = session.get(User, cr.user_guid)
+                for task in tasks:
+                    item = task["item"]
+                    user = session.get(User, task["user_guid"])
                     if not user:
                         continue
                     
                     if user.is_protected:
-                        cr.status = "conflict" # Or keep approved? Spec says skip.
-                        user.sync_error_log = (user.sync_error_log or "") + f"\nVIP profile, skipping push for {cr.id}"
+                        item.status = "conflict" # Or keep approved? Spec says skip.
+                        user.sync_error_log = (user.sync_error_log or "") + f"\nVIP profile, skipping push for {task['id']}"
                         logger.warning(f"Skipping push for protected user {user.sam_account_name}")
                         continue
                     
@@ -249,38 +261,34 @@ class SyncWorker:
                         "email": "mail"
                     }
                     
-                    ad_attr = attr_map.get(cr.attribute_name)
+                    ad_attr = attr_map.get(task["attribute_name"])
                     if not ad_attr:
                         continue
                     
                     dn = ldap.get_dn_by_guid(str(user.object_guid))
+                    success = False
+                    error_msg = ""
+                    
                     if not dn:
                         logger.error(f"Could not find DN for user {user.object_guid}")
-                        continue
+                        error_msg = "Пользователь не найден в Active Directory"
+                    else:
+                        success = ldap.modify_attribute(dn, ad_attr, task["new_value"])
+                        if not success:
+                            error_msg = ldap.conn.result.get("description", "Unknown LDAP Error")
 
-                    success = ldap.modify_attribute(dn, ad_attr, cr.new_value)
                     if success:
-                        cr.status = "applied"
-                        cr.resolved_at = datetime.now(timezone.utc)
+                        item.status = "applied"
+                        if task["type"] == "cr":
+                            item.resolved_at = datetime.now(timezone.utc)
+                        else:
+                            item.processed_at = datetime.now(timezone.utc)
+                            
                         # Apply changes to local DB user upon success (Plan Option A)
-                        final_value = cr.new_value if cr.new_value else None
-                        setattr(user, cr.attribute_name, final_value)
+                        final_value = task["new_value"] if task["new_value"] else None
+                        setattr(user, task["attribute_name"], final_value)
                         user.last_sync_timestamp = datetime.now(timezone.utc)
-                        logger.info(f"Applied {cr.attribute_name} for {user.sam_account_name}")
-                        
-                        try:
-                            from shared.models.report import Report
-                            reports = session.execute(
-                                select(Report).where(
-                                    Report.target_user_guid == user.object_guid,
-                                    Report.attribute_name == cr.attribute_name,
-                                    Report.status == "approved"
-                                )
-                            ).scalars().all()
-                            for r in reports:
-                                r.status = "applied"
-                        except Exception as e:
-                            logger.error(f"Failed to update reports: {e}")
+                        logger.info(f"Applied {task['attribute_name']} for {user.sam_account_name}")
                         
                         try:
                             redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
@@ -290,47 +298,41 @@ class SyncWorker:
                     else:
                         # Check if another pending or conflict request already exists in DB
                         # or if we already set one to conflict in this cycle.
-                        conflict_key = (str(user.object_guid), cr.attribute_name)
+                        conflict_key = (str(user.object_guid), task["attribute_name"])
                         
-                        existing = session.execute(
-                            select(ChangeRequest).where(
-                                ChangeRequest.user_guid == user.object_guid,
-                                ChangeRequest.attribute_name == cr.attribute_name,
-                                ChangeRequest.id != cr.id,
-                                ChangeRequest.status.in_(["pending", "conflict"])
-                            )
-                        ).scalars().first()
-                        
-                        if existing or conflict_key in processed_conflicts:
-                            cr.status = "rejected"
-                            user.sync_error_log = (user.sync_error_log or "") + f"\nMarked {cr.id} as rejected to avoid duplicate pending/conflict."
-                            logger.warning(f"Duplicate active request found. Marking {cr.id} as rejected.")
-                            new_report_status = "rejected"
+                        existing = False
+                        if task["type"] == "cr":
+                            existing = session.execute(
+                                select(ChangeRequest).where(
+                                    ChangeRequest.user_guid == user.object_guid,
+                                    ChangeRequest.attribute_name == task["attribute_name"],
+                                    ChangeRequest.id != task["id"],
+                                    ChangeRequest.status.in_(["pending", "conflict"])
+                                )
+                            ).scalars().first()
                         else:
-                            cr.status = "conflict"
-                            processed_conflicts.add(conflict_key)
-                            new_report_status = "conflict"
-
-                        error_msg = ldap.conn.result.get("description", "Unknown LDAP Error")
-                        cr.rejection_reason = error_msg
-                        user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {cr.id}: {error_msg}"
-                        logger.error(f"AD Push failed for {cr.id}: {error_msg}")
-                        
-                        try:
                             from shared.models.report import Report
-                            reports = session.execute(
+                            existing = session.execute(
                                 select(Report).where(
                                     Report.target_user_guid == user.object_guid,
-                                    Report.attribute_name == cr.attribute_name,
-                                    Report.status == "approved"
+                                    Report.attribute_name == task["attribute_name"],
+                                    Report.id != task["id"],
+                                    Report.status.in_(["pending", "conflict"])
                                 )
-                            ).scalars().all()
-                            for r in reports:
-                                r.status = new_report_status
-                                r.rejection_reason = error_msg
-                        except Exception as e:
-                            logger.error(f"Failed to update reports: {e}")
-                            
+                            ).scalars().first()
+                        
+                        if existing or conflict_key in processed_conflicts:
+                            item.status = "rejected"
+                            user.sync_error_log = (user.sync_error_log or "") + f"\nMarked {task['id']} as rejected to avoid duplicate pending/conflict."
+                            logger.warning(f"Duplicate active request found. Marking {task['id']} as rejected.")
+                        else:
+                            item.status = "conflict"
+                            processed_conflicts.add(conflict_key)
+
+                        item.rejection_reason = error_msg
+                        user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {task['id']}: {error_msg}"
+                        logger.error(f"AD Push failed for {task['id']}: {error_msg}")
+                        
                         try:
                             redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
                             redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(user.object_guid)}))

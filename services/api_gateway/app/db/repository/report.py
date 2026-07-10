@@ -68,18 +68,6 @@ def approve_report(db: Session, report_id: UUID, admin_guid: UUID) -> Optional[R
     report.processed_at = datetime.utcnow()
     report.processed_by = admin_guid
     
-    # Create ChangeRequest to push to AD
-    cr = ChangeRequest(
-        user_guid=report.target_user_guid,
-        attribute_name=report.attribute_name,
-        new_value=report.new_value,
-        source="web",
-        status="approved",
-        resolved_by=admin_guid,
-        resolved_at=datetime.utcnow()
-    )
-    db.add(cr)
-    
     db.commit()
     return get_report(db, report_id)
 

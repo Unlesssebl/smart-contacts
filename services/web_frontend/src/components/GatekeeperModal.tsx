@@ -50,7 +50,7 @@ export const GatekeeperModal: React.FC = () => {
                 setIsOpen(false);
                 navigate(`/profile/${currentUser.id}`);
               }}
-              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              className="btn-primary w-full py-2.5 px-4"
             >
               <CheckCircle className="w-5 h-5" />
               Перейти к проверке
@@ -59,7 +59,7 @@ export const GatekeeperModal: React.FC = () => {
             {currentUser.grace_period_left > 0 ? (
               <button
                 onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors font-medium"
+                className="btn-secondary w-full py-2.5 px-4"
               >
                 Напомнить позже
               </button>
