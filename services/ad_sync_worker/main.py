@@ -26,20 +26,25 @@ def set_ldap_status(status: str, last_error: str = ""):
     from shared.models.system_setting import SystemSetting
     try:
         with SessionLocal() as session:
+            changed = False
             for k, v in [("LDAP_STATUS", status), ("LDAP_LAST_ERROR", last_error)]:
                 setting = session.get(SystemSetting, k)
                 if setting:
-                    setting.value = v
+                    if setting.value != v:
+                        setting.value = v
+                        changed = True
                 else:
                     session.add(SystemSetting(key=k, value=v))
-            session.commit()
+                    changed = True
             
-            try:
-                import json
-                from app.sync import redis_client
-                redis_client.publish("system_events", json.dumps({"type": "ldap_status_updated"}))
-            except Exception as e:
-                logger.error(f"Failed to publish LDAP status: {e}")
+            if changed:
+                session.commit()
+                try:
+                    import json
+                    from app.sync import redis_client
+                    redis_client.publish("system_events", json.dumps({"type": "ldap_status_updated"}))
+                except Exception as e:
+                    logger.error(f"Failed to publish LDAP status: {e}")
     except Exception as e:
         logger.error(f"Failed to save LDAP status: {e}")
 
