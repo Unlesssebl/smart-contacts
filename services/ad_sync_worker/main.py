@@ -33,8 +33,16 @@ def set_ldap_status(status: str, last_error: str = ""):
                 else:
                     session.add(SystemSetting(key=k, value=v))
             session.commit()
+            
+            try:
+                import json
+                from app.sync import redis_client
+                redis_client.publish("system_events", json.dumps({"type": "ldap_status_updated"}))
+            except Exception as e:
+                logger.error(f"Failed to publish LDAP status: {e}")
     except Exception as e:
         logger.error(f"Failed to save LDAP status: {e}")
+
 
 def get_credentials_version() -> str:
     from app.db import SessionLocal

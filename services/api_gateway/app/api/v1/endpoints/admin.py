@@ -45,6 +45,13 @@ def approve_change_request(
         if not existing:
             raise HTTPException(status_code=404, detail="Change request not found")
         raise HTTPException(status_code=400, detail="Cannot approve request with current status")
+    try:
+        from app.core.redis import redis_client
+        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+        redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(req.user_guid)}))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Redis publish error: {e}")
     return req
 
 @router.patch("/change-requests/{request_id}/reject", response_model=ChangeRequestRead)
@@ -59,6 +66,13 @@ def reject_change_request(
         if not existing:
             raise HTTPException(status_code=404, detail="Change request not found")
         raise HTTPException(status_code=400, detail="Cannot reject request with current status")
+    try:
+        from app.core.redis import redis_client
+        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+        redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(req.user_guid)}))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Redis publish error: {e}")
     return req
 
 @router.get("/reports", response_model=List[ReportRead])
@@ -77,6 +91,13 @@ def approve_report(
     report = report_repo.approve_report(db, report_id, admin.object_guid)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found or cannot be approved")
+    try:
+        from app.core.redis import redis_client
+        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+        redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(report.target_user_guid)}))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Redis publish error: {e}")
     return report
 
 @router.patch("/reports/{report_id}/reject", response_model=ReportRead)
@@ -88,6 +109,13 @@ def reject_report(
     report = report_repo.reject_report(db, report_id, admin.object_guid)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found or cannot be rejected")
+    try:
+        from app.core.redis import redis_client
+        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+        redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(report.target_user_guid)}))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Redis publish error: {e}")
     return report
 
 @router.get("/settings/ldap", response_model=LDAPSettingsRead)

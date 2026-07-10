@@ -1,4 +1,6 @@
 import logging
+import json
+import redis
 
 from datetime import datetime, timezone
 from sqlalchemy import select, update
@@ -13,11 +15,14 @@ from .utils import with_retry
 
 logger = logging.getLogger(__name__)
 
+# Global redis client for the worker
+redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True)
 
 
 class SyncWorker:
     def __init__(self):
         self.last_usn = self._load_last_usn()
+
 
     def _load_last_usn(self) -> int:
         try:
@@ -270,6 +275,12 @@ class SyncWorker:
                                 r.status = "applied"
                         except Exception as e:
                             logger.error(f"Failed to update reports: {e}")
+                        
+                        try:
+                            redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+                            redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(user.object_guid)}))
+                        except Exception as re:
+                            logger.error(f"Redis publish error: {re}")
                     else:
                         # Check if another pending or conflict request already exists in DB
                         # or if we already set one to conflict in this cycle.
@@ -313,6 +324,12 @@ class SyncWorker:
                                 r.rejection_reason = error_msg
                         except Exception as e:
                             logger.error(f"Failed to update reports: {e}")
+                            
+                        try:
+                            redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+                            redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(user.object_guid)}))
+                        except Exception as re:
+                            logger.error(f"Redis publish error: {re}")
             
             # Clean up expired refresh tokens (EC-7)
             try:

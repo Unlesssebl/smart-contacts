@@ -58,6 +58,24 @@ export const usePresence = () => {
           } else if (data.type === 'presence_update') {
             console.log('[Presence] Received update:', data.user_id, data.status);
             setPresence(data.user_id, data.status);
+          } else if (data.type === 'admin_update') {
+            if (window.location.pathname.includes('/admin')) {
+              useAppStore.getState().fetchAdminData();
+            }
+          } else if (data.type === 'ldap_status_updated') {
+            if (window.location.pathname.includes('/admin')) {
+              useAppStore.getState().fetchLDAPSettings(true);
+            }
+          } else if (data.type === 'profile_updated') {
+            const currentUser = useAppStore.getState().currentUser;
+            if (currentUser && currentUser.id === data.user_id) {
+              useAppStore.getState().fetchMyPendingFields();
+              import('../api/users').then(({ usersApi }) => {
+                usersApi.getUserByGuid(data.user_id).then(user => {
+                  useAppStore.getState().updateUserInStore(user.id, user);
+                });
+              });
+            }
           }
         } catch (e) {
           console.error('Failed to parse WS message', e);

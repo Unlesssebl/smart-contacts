@@ -11,7 +11,7 @@ class ConnectionManager:
     def __init__(self):
         # Local connections for this worker: object_guid -> WebSocket
         self.active_connections: Dict[str, WebSocket] = {}
-        self.redis_channel = "presence_updates"
+        self.redis_channel = "system_events"
         self.pubsub = async_redis_client.pubsub()
         self.listener_task = None
 
@@ -43,6 +43,13 @@ class ConnectionManager:
             await async_redis_client.hset("global_presence", user_id, status)
         
         message = json.dumps({"type": "presence_update", "user_id": user_id, "status": status})
+        await async_redis_client.publish(self.redis_channel, message)
+
+    async def broadcast_event(self, event_data: dict):
+        """
+        Publish a generic event to Redis so all workers and clients receive it.
+        """
+        message = json.dumps(event_data)
         await async_redis_client.publish(self.redis_channel, message)
 
     async def send_full_state(self, websocket: WebSocket):

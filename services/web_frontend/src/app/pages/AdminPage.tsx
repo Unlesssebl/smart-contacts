@@ -291,25 +291,13 @@ export function AdminPage() {
     fetchAdminData();
     fetchLDAPSettings();
     fetchOUMapping();
-    
-    // Poll for updates to see transition from approved -> applied/conflict
-    const interval = setInterval(() => {
-      fetchAdminData();
-    }, 5000);
-    
-    return () => clearInterval(interval);
   }, [fetchAdminData, fetchLDAPSettings, fetchOUMapping]);
 
-  // Poll LDAP settings when on settings tab
+  // Initial fetch when switching to settings tab
   useEffect(() => {
-    let interval: NodeJS.Timeout;
     if (activeTab === 'settings') {
       fetchLDAPSettings(true); // silent fetch
-      interval = setInterval(() => {
-        fetchLDAPSettings(true);
-      }, 5000);
     }
-    return () => clearInterval(interval);
   }, [activeTab, fetchLDAPSettings]);
 
   const activeRequests = changeRequests.filter((r) => r.status === 'pending' || r.status === 'conflict' || r.status === 'approved');

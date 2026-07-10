@@ -98,4 +98,12 @@ def create_change_request(
     db.commit()
     db.refresh(new_request, ['user'])
     
+    try:
+        import json
+        from app.core.redis import redis_client
+        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Redis publish error: {e}")
+    
     return new_request
