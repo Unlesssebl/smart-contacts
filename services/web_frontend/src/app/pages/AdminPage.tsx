@@ -514,9 +514,9 @@ export function AdminPage() {
               </div>
             ) : activeTab === 'reports' ? (
               <div className="p-6">
-                {reports.length === 0 ? (
+                {activeReports.length === 0 ? (
                   <div className="py-12 text-center">
-                    <p className="text-lg text-muted-foreground">Жалоб нет</p>
+                    <p className="text-lg text-muted-foreground">Нет активных запросов на изменение</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
