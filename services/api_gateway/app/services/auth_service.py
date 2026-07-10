@@ -218,6 +218,16 @@ class AuthService:
                 detail="User not found"
             )
 
+        # Validate against AD
+        from app.core.ldap import search_user_by_sam
+        ldap_user = search_user_by_sam(user.sam_account_name)
+        if not ldap_user or ldap_user.is_disabled:
+            revoke_refresh_token(db, token)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User account is disabled or not found in Active Directory"
+            )
+
         # Token rotation: revoke old, create new
         revoke_refresh_token(db, token)
         

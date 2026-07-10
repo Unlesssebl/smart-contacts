@@ -5,7 +5,7 @@
 | Уровень | Технология |
 |---------|-----------|
 | Аутентификация | **LDAP BIND** через корпоративный AD (библиотека `ldap3`) / **SSO** (Kerberos) |
-| Сессия | **JWT** (access token, 30 мин) + **Refresh Token** (7 дней, хранится в БД). Передаются в **HttpOnly Cookies**. Дополнительно используется `csrf_token` в cookie. |
+| Сессия | **JWT** (access token, 12 часов) + **Refresh Token** (30 дней, хранится в БД). Передаются в **HttpOnly Cookies**. Дополнительно используется `csrf_token` в cookie. |
 | Статус сотрудника | Парсится из суффикса `sAMAccountName` в AD Sync Worker (`-uv` → `RESIGNED`, `-time` → `ON_LEAVE`) |
 
 ---
@@ -27,6 +27,15 @@
                Создать Refresh Token (UUID v4, сохранить SHA-256 хэш в таблице refresh_tokens)
                        ↓
                Вернуть { user: {...} } в теле JSON и установить Cookies: access_token, refresh_token, csrf_token
+                       
+[Браузер] → POST /auth/refresh (вызывается фронтендом прозрачно при 401 ошибке)
+                       ↓
+               [API Gateway] → Провалидировать Refresh Token в БД
+                       ↓
+               [API Gateway] → Запрос в AD: проверить статус учетной записи (userAccountControl)
+                       ↓
+               Если заблокирован в AD → удалить токен, вернуть 401
+               Если активен → Ротация (удалить старый, создать новые Access и Refresh токены)
 ```
 
 **Важно**: API Gateway **не хранит** пароль пользователя. LDAP BIND — единственная точка проверки. Пароли пользователей никогда не логируются и не сохраняются даже во временных переменных воркера.
@@ -102,8 +111,8 @@ async def require_it_operator(token_data: TokenPayload = Depends(get_current_use
 |-----------|-----------|
 | `SECRET_KEY` | Ключ подписи JWT (min 32 символа, random) |
 | `ALGORITHM` | Алгоритм JWT (`HS256`) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Время жизни access token (default: 30) |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | Время жизни refresh token (default: 7) |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Время жизни access token (default: 720) |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | Время жизни refresh token (default: 30) |
 | `AD_SERVER` | LDAP-сервер для BIND (`ldap://ad.example.local`) |
 | `AD_BASE_DN` | Базовый DN для поиска пользователя (`DC=example,DC=local`) |
 | `DEV_USER` | Логин для обхода AD-аутентификации в целях локальной разработки |
@@ -124,6 +133,6 @@ async def require_it_operator(token_data: TokenPayload = Depends(get_current_use
 ## Защита от атак
 
 - **Brute-force**: После 5 неудачных LDAP BIND подряд — блокировка IP на 15 минут. Счетчик попыток хранится в **Redis**, чтобы обеспечить синхронизацию между несколькими экземплярами API Gateway.
-- **Refresh Token Rotation**: При каждом обновлении access-токена старый refresh-токен должен немедленно аннулироваться (`revoked = true`), а пользователю выдаваться новая пара.
+- **Refresh Token Rotation**: При каждом обновлении access-токена сервер проверяет актуальный статус сотрудника в Active Directory (читает `userAccountControl`). Если сотрудник уволен/заблокирован, токены отзываются. В случае успеха старый refresh-токен аннулируется (`revoked = true`), а пользователю выдается новая пара.
 - **Безопасность паролей**: Пароли пользователей при LDAP BIND никогда не логируются и не сохраняются даже во временных переменных воркера.
 - **HTTPS Only**: В продакшне — только HTTPS. JWT не передаётся в URL.

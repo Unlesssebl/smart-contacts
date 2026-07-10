@@ -19,7 +19,7 @@ def search_user_by_sam(username: str) -> Optional[LdapUser]:
         search_pool_conn.search(
             search_base=settings.AD_BASE_DN,
             search_filter=search_filter,
-            attributes=["objectGUID", "displayName", "department", "title", "distinguishedName", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
+            attributes=["objectGUID", "displayName", "department", "title", "distinguishedName", "mobile", "telephoneNumber", "physicalDeliveryOfficeName", "userAccountControl"]
         )
         entries = list(search_pool_conn.entries)
         if entries:

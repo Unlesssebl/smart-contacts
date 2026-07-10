@@ -24,6 +24,20 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Response interceptor: handle 401 and 503
 apiClient.interceptors.response.use(
   (response) => {
@@ -52,10 +66,36 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized
     const url = originalRequest.url || '';
-    if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login') && !url.endsWith('/auth/ws-token')) {
+    if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login') && !url.endsWith('/auth/refresh') && !url.endsWith('/auth/ws-token')) {
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(() => {
+          return apiClient(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
       originalRequest._retry = true;
-      store.logout();
-      return Promise.reject(error);
+      isRefreshing = true;
+
+      return new Promise(function (resolve, reject) {
+        // Use a new axios instance to avoid interceptor loops
+        axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true })
+          .then(() => {
+            processQueue(null, 'refreshed');
+            resolve(apiClient(originalRequest));
+          })
+          .catch((err) => {
+            processQueue(err, null);
+            store.logout();
+            reject(err);
+          })
+          .finally(() => {
+            isRefreshing = false;
+          });
+      });
     }
 
     // Handle 503 Service Unavailable (AD Sync issues)
