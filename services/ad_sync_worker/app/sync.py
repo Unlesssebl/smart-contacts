@@ -256,6 +256,20 @@ class SyncWorker:
                         setattr(user, cr.attribute_name, cr.new_value)
                         user.last_sync_timestamp = datetime.now(timezone.utc)
                         logger.info(f"Applied {cr.attribute_name} for {user.sam_account_name}")
+                        
+                        try:
+                            from shared.models.report import Report
+                            reports = session.execute(
+                                select(Report).where(
+                                    Report.target_user_guid == user.object_guid,
+                                    Report.attribute_name == cr.attribute_name,
+                                    Report.status == "approved"
+                                )
+                            ).scalars().all()
+                            for r in reports:
+                                r.status = "applied"
+                        except Exception as e:
+                            logger.error(f"Failed to update reports: {e}")
                     else:
                         # Check if another pending or conflict request already exists in DB
                         # or if we already set one to conflict in this cycle.
@@ -274,14 +288,31 @@ class SyncWorker:
                             cr.status = "rejected"
                             user.sync_error_log = (user.sync_error_log or "") + f"\nMarked {cr.id} as rejected to avoid duplicate pending/conflict."
                             logger.warning(f"Duplicate active request found. Marking {cr.id} as rejected.")
+                            new_report_status = "rejected"
                         else:
                             cr.status = "conflict"
                             processed_conflicts.add(conflict_key)
+                            new_report_status = "conflict"
 
                         error_msg = ldap.conn.result.get("description", "Unknown LDAP Error")
                         cr.rejection_reason = error_msg
                         user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {cr.id}: {error_msg}"
                         logger.error(f"AD Push failed for {cr.id}: {error_msg}")
+                        
+                        try:
+                            from shared.models.report import Report
+                            reports = session.execute(
+                                select(Report).where(
+                                    Report.target_user_guid == user.object_guid,
+                                    Report.attribute_name == cr.attribute_name,
+                                    Report.status == "approved"
+                                )
+                            ).scalars().all()
+                            for r in reports:
+                                r.status = new_report_status
+                                r.rejection_reason = error_msg
+                        except Exception as e:
+                            logger.error(f"Failed to update reports: {e}")
             
             # Clean up expired refresh tokens (EC-7)
             try:

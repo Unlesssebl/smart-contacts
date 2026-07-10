@@ -37,22 +37,6 @@ export function DirectoryPage() {
 
       <main className="ml-72 flex-1 relative">
         <div className="mx-auto max-w-[1600px] px-8 lg:px-12 pt-12 pb-12">
-          {/* Hero Section */}
-          <motion.div
-            ref={topRef}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            className="mb-12 text-center"
-          >
-            <h1 className="mb-3 text-4xl font-semibold tracking-tight text-foreground">
-              Справочник сотрудников
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Находите коллег и связывайтесь с ними по всей организации
-            </p>
-          </motion.div>
-
           {/* Spotlight Search */}
           <div className="mb-6">
             <SpotlightSearch />

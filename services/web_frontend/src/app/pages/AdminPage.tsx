@@ -339,21 +339,6 @@ export function AdminPage() {
 
       <main className="ml-72 flex-1 relative">
         <div className="mx-auto max-w-7xl px-8 pt-12 pb-12">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            className="mb-12 text-center"
-          >
-            <h1 className="mb-3 text-4xl font-semibold tracking-tight text-foreground">
-              Панель администратора
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Управление запросами на изменение и жалобами пользователей
-            </p>
-          </motion.div>
-
           {/* Tabs (Apple-style Segmented Control) */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -395,7 +380,7 @@ export function AdminPage() {
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 />
               )}
-              <span className="relative z-10">Жалобы ({reports.length})</span>
+              <span className="relative z-10">Жалобы {activeReports.length > 0 && `(${activeReports.length})`}</span>
             </button>
 
             <button

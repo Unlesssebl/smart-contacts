@@ -154,7 +154,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
                 </span>
               )}
               {cleanValue(user.department) && (
-                <span className="inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10 truncate max-w-full">
+                <span className="inline-flex items-center rounded-md bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary/80 ring-1 ring-inset ring-primary/20 truncate max-w-full">
                   {cleanValue(user.department)}
                 </span>
               )}
@@ -166,19 +166,19 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
         <div className="mt-auto pt-8">
           <div className="flex flex-col gap-3.5">
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/60">
                 <Mail className="h-4 w-4" strokeWidth={2} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.email)}</div>
             </div>
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/60">
                 <Phone className="h-4 w-4" strokeWidth={2} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.internal_phone)}</div>
             </div>
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-slate-50 text-slate-400">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/60">
                 <MapPin className="h-4 w-4" strokeWidth={2} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.office_location)}</div>
