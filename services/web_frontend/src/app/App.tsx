@@ -56,7 +56,32 @@ function AnimatedRoutes() {
 }
 
 import { GatekeeperModal } from './components/GatekeeperModal';
+import { WifiOff } from 'lucide-react';
 
+function ConnectionLostOverlay() {
+  const isApiDown = useAppStore(state => state.isApiDown);
+
+  if (!isApiDown) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center border border-zinc-200 dark:border-zinc-800">
+        <div className="w-16 h-16 bg-red-100 dark:bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+          <WifiOff className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-semibold mb-3 text-zinc-900 dark:text-zinc-100">Соединение потеряно</h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+          Сервер временно недоступен или выполняется обновление. Мы пытаемся восстановить связь...
+        </p>
+        <div className="flex justify-center items-center space-x-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
@@ -81,6 +106,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ConnectionLostOverlay />
       <AnimatedRoutes />
       <GatekeeperModal />
       <Toaster

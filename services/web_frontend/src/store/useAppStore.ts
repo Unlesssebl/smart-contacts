@@ -60,6 +60,8 @@ interface AppState {
   // Infrastructure
   adSyncUnavailable: boolean;
   setAdSyncStatus: (status: boolean) => void;
+  isApiDown: boolean;
+  setApiDown: (status: boolean) => void;
 
   // Settings
   ldapSettings: import('../api/settings').LDAPSettings | null;
@@ -391,6 +393,8 @@ export const useAppStore = create<AppState>()(
       // Infrastructure
       adSyncUnavailable: false,
       setAdSyncStatus: (status: boolean) => set({ adSyncUnavailable: status }),
+      isApiDown: false,
+      setApiDown: (status: boolean) => set({ isApiDown: status }),
 
       // Settings
       ldapSettings: null,
