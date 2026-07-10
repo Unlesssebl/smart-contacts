@@ -12,6 +12,7 @@ export const usePresence = () => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(0);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
   const isActiveRef = useRef<boolean>(false); // tracks whether the current effect is still alive
   
   const { setPresence, setBulkPresence, isAuthenticated } = useAppStore();
@@ -47,6 +48,7 @@ export const usePresence = () => {
       ws.onopen = () => {
         console.log('[Presence] WebSocket connected successfully!');
         statusRef.current = 'online';
+        reconnectAttemptsRef.current = 0; // reset attempts on success
       };
 
       ws.onmessage = (event) => {
@@ -85,13 +87,17 @@ export const usePresence = () => {
       ws.onclose = () => {
         statusRef.current = 'offline';
         if (isActiveRef.current) {
-          reconnectTimerRef.current = setTimeout(connect, 5000);
+          const delay = Math.min(1000 * (2 ** reconnectAttemptsRef.current) + Math.random() * 1000, 30000);
+          reconnectAttemptsRef.current += 1;
+          reconnectTimerRef.current = setTimeout(connect, delay);
         }
       };
       } catch (err) {
         console.error('Failed to setup presence WS', err);
         if (isActiveRef.current) {
-          reconnectTimerRef.current = setTimeout(connect, 5000);
+          const delay = Math.min(1000 * (2 ** reconnectAttemptsRef.current) + Math.random() * 1000, 30000);
+          reconnectAttemptsRef.current += 1;
+          reconnectTimerRef.current = setTimeout(connect, delay);
         }
       }
     };
@@ -142,10 +148,10 @@ export const usePresence = () => {
     // Initial timer start
     handleActivity();
 
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('keydown', handleActivity);
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('scroll', handleActivity);
+    window.addEventListener('mousemove', handleActivity, { passive: true });
+    window.addEventListener('keydown', handleActivity, { passive: true });
+    window.addEventListener('click', handleActivity, { passive: true });
+    window.addEventListener('scroll', handleActivity, { passive: true });
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);

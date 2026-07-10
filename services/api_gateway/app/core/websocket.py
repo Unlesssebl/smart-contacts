@@ -64,12 +64,16 @@ class ConnectionManager:
                 async for message in self.pubsub.listen():
                     if message["type"] == "message":
                         data = json.loads(message["data"])
-                        # Send to all local connections
-                        for ws in self.active_connections.values():
-                            try:
-                                await ws.send_json(data)
-                            except Exception as e:
-                                logger.error(f"Error sending WS message: {e}")
+                        # Send to all local connections concurrently
+                        if self.active_connections:
+                            async def safe_send(ws: WebSocket, payload: dict):
+                                try:
+                                    await ws.send_json(payload)
+                                except Exception as e:
+                                    logger.error(f"Error sending WS message: {e}")
+                            
+                            tasks = [safe_send(ws, data) for ws in self.active_connections.values()]
+                            await asyncio.gather(*tasks)
             except asyncio.CancelledError:
                 break
             except Exception as e:

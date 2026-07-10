@@ -61,6 +61,9 @@ export const getLdapErrorTranslation = (errorMsg: string | null | undefined): st
   if (msg.includes('alreadyexists')) {
     return 'Объект с таким значением уже существует.';
   }
+  if (msg.includes('invalidattributesyntax')) {
+    return 'Синтаксическая ошибка. Недопустимое значение атрибута (возможно, попытка записать пустую строку вместо удаления).';
+  }
   if (msg.includes('operationserror')) {
     return 'Внутренняя ошибка выполнения операции в Active Directory.';
   }
