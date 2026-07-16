@@ -8,6 +8,7 @@ export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set
   users: [],
   searchQuery: '',
   isSearching: false,
+  initialLoaded: false,
   filters: {},
   page: 1,
   limit: 9,
@@ -79,6 +80,7 @@ export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set
       set({
         users: updatedUsers,
         isSearching: false,
+        initialLoaded: true,
         totalUsers: response.total,
       });
     } catch (error: any) {

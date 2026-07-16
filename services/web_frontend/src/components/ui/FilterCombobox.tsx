@@ -38,10 +38,13 @@ export function FilterCombobox({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant="secondary"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between font-normal text-muted-foreground"
+          className={cn(
+            "w-[200px] justify-between font-normal text-slate-600 border border-slate-200 shadow-sm bg-white hover:bg-slate-100",
+            open && "bg-slate-100 text-slate-900 border-slate-300 ring-2 ring-slate-100"
+          )}
         >
           <span className="truncate">
             {value || placeholder}

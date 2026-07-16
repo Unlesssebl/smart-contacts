@@ -90,7 +90,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
       <div
         ref={ref}
         onClick={onClick}
-        className={`relative group cursor-pointer p-6 bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-2xl hover:border-primary/40 hover:bg-white/60 hover:shadow-md transition-all duration-300 flex flex-col h-full overflow-hidden ${user.is_hidden ? 'opacity-60 grayscale-[0.2]' : ''}`}
+        className={`relative group cursor-pointer p-6 bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-2xl hover:-translate-y-1 hover:border-primary/30 hover:bg-white/60 hover:shadow-[0_12px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col h-full overflow-hidden ${user.is_hidden ? 'opacity-60 grayscale-[0.2]' : ''}`}
       >
         {/* Top hover accent line */}
         <div className="absolute top-0 left-0 w-full h-[3px] bg-primary origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 z-10" />

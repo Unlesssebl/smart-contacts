@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 import { AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { OverlayScrollbars } from 'overlayscrollbars';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { LoginPage } from '@/pages/LoginPage';
@@ -58,10 +58,21 @@ function AnimatedRoutes() {
 import { GatekeeperModal } from '@/components/GatekeeperModal';
 import { WifiOff } from 'lucide-react';
 
+
 function ConnectionLostOverlay() {
   const isApiDown = useAppStore(state => state.isApiDown);
+  const [showOverlay, setShowOverlay] = useState<boolean>(false);
 
-  if (!isApiDown) return null;
+  useEffect(() => {
+    if (isApiDown) {
+      const timer = setTimeout(() => setShowOverlay(true), 1500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowOverlay(false);
+    }
+  }, [isApiDown]);
+
+  if (!showOverlay) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">

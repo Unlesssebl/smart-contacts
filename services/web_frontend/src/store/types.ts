@@ -14,6 +14,7 @@ export interface UsersSlice {
   users: User[];
   searchQuery: string;
   isSearching: boolean;
+  initialLoaded: boolean;
   filters: UserFilters;
   page: number;
   limit: number;
