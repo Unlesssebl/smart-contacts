@@ -41,7 +41,7 @@ export function DirectoryPage() {
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-[1920px] px-8 lg:px-12 pr-28 py-8 flex-1 flex flex-col justify-center relative min-h-0">
+        <div className="mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-8 flex-1 flex flex-col justify-center relative min-h-0">
 
           {totalPages > 1 && (
             <RadialPagination 

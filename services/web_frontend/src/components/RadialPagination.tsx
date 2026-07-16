@@ -58,9 +58,28 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
 
         {/* Page Nodes */}
         <div className="relative flex flex-col items-center gap-3 w-full flex-1 justify-center py-2">
+          {/* Decorative Track Line */}
+          <div className="absolute left-1/2 top-2 bottom-2 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-slate-300/40 to-transparent pointer-events-none" />
+          
           <AnimatePresence mode="popLayout">
             {pages.map((p) => {
               if (!p.isValid) {
+                if (p.pageNum === 0) {
+                  const style = getTransform(p.offset);
+                  return (
+                    <motion.div
+                      layout
+                      key={`zero-${p.offset}`}
+                      initial={{ opacity: 0, scale: 0.5, y: style.scale > 0 ? 20 : -20 }}
+                      animate={{ opacity: style.opacity * 0.5, x: style.x, scale: style.scale, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                      className="relative z-10 shrink-0 flex items-center justify-center h-10 w-10 rounded-full font-bold text-[14px] text-slate-400 select-none pointer-events-none"
+                    >
+                      00
+                    </motion.div>
+                  );
+                }
                 return <div key={`empty-${p.offset}`} className="h-10 w-10 shrink-0" />;
               }
 
@@ -80,12 +99,12 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
                     relative z-10 shrink-0 flex items-center justify-center
                     h-10 w-10 rounded-full font-bold text-[14px] transition-colors cursor-pointer
                     ${isActive 
-                      ? 'bg-primary text-white shadow-md shadow-primary/40 ring-2 ring-white/80' 
-                      : 'bg-transparent text-slate-500 hover:bg-white/60 hover:text-primary'
+                      ? 'bg-white text-slate-900 shadow-md shadow-slate-200/50 ring-1 ring-slate-200/60' 
+                      : 'bg-transparent text-slate-500 hover:bg-white/60 hover:text-slate-800'
                     }
                   `}
                 >
-                  {p.pageNum}
+                  {String(p.pageNum).padStart(2, '0')}
                 </motion.button>
               );
             })}
