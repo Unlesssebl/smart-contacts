@@ -79,11 +79,11 @@ export function SpotlightSearch() {
       className="relative mx-auto w-full max-w-3xl"
     >
       <div
-        className="relative overflow-hidden border border-black/5 bg-white/60 backdrop-blur-xl p-0 shadow-sm transition-all focus-within:shadow-md focus-within:bg-white focus-within:border-primary/20"
+        className="relative overflow-hidden border border-primary/10 bg-white/60 backdrop-blur-xl p-0 shadow-sm transition-all focus-within:shadow-md focus-within:bg-white focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/10"
         style={{ borderRadius: 'var(--radius)' }}
       >
         <div className="flex items-center gap-4 px-6 py-4">
-          <Search className={`h-5 w-5 ${isSearching ? 'text-blue-500 animate-pulse' : 'text-muted-foreground'}`} strokeWidth={1.5} />
+          <Search className={`h-5 w-5 ${isSearching ? 'text-primary animate-pulse' : 'text-primary/40'}`} strokeWidth={1.5} />
           <input
             ref={inputRef}
             type="text"
@@ -97,7 +97,7 @@ export function SpotlightSearch() {
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${showFilters || hasActiveFilters
                 ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:bg-black/5 hover:text-foreground'
+                : 'text-primary/60 hover:bg-primary/5 hover:text-primary'
               }`}
           >
             <SlidersHorizontal className="h-4 w-4" />

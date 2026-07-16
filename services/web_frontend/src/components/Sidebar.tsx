@@ -30,7 +30,13 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen w-72 bg-white border-r border-slate-200 z-20 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
+      className="fixed left-0 top-0 h-screen w-72 z-20 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.1)]"
+      style={{
+        backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(53, 114, 179, 0.59), rgba(27, 72, 126, 0.72)), url("/login_background.png")',
+        backgroundSize: '4px 4px, cover, cover',
+        backgroundPosition: '0 0, center, center',
+        backgroundRepeat: 'repeat, no-repeat, no-repeat'
+      }}
     >
       <div className="flex h-full flex-col px-6 py-6">
         {/* Logo */}
@@ -38,48 +44,50 @@ export function Sidebar() {
           <img
             src="/GK_logo.png"
             alt="ТЭМПО"
-            className="h-10 w-auto object-contain"
+            className="h-10 w-auto object-contain invert brightness-0"
           />
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-2 mt-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
+        <div className="flex-1 mt-4">
+          <nav className="flex flex-col space-y-1 bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl shadow-sm">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.path);
 
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors group ${active ? 'text-primary' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                {active && (
-                  <motion.div
-                    layoutId="activeNav"
-                    className="absolute inset-0 rounded-lg bg-primary/10"
-                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                  />
-                )}
-                {!active && (
-                  <div className="absolute inset-0 rounded-lg bg-slate-50 opacity-0 transition-opacity group-hover:opacity-100" />
-                )}
-                <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
-                <span className="relative z-10 text-sm font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors group ${active ? 'text-white' : 'text-white/70 hover:text-white'}`}
+                >
+                  {active && (
+                    <motion.div
+                      layoutId="activeNav"
+                      className="absolute inset-0 rounded-xl bg-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]"
+                      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                    />
+                  )}
+                  {!active && (
+                    <div className="absolute inset-0 rounded-xl bg-white/5 opacity-0 transition-opacity group-hover:opacity-100" />
+                  )}
+                  <Icon className="relative z-10 h-5 w-5" strokeWidth={1.5} />
+                  <span className="relative z-10 text-sm font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* Help / Support Card */}
-        <div className="mt-auto mb-6 rounded-xl bg-slate-50 p-4 border border-slate-100">
-          <h4 className="text-sm font-medium text-slate-900">Нужна помощь?</h4>
-          <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+        <div className="mt-auto mb-6 rounded-2xl bg-white/10 p-4 border border-white/20 backdrop-blur-md shadow-sm">
+          <h4 className="text-sm font-medium text-white">Нужна помощь?</h4>
+          <p className="mt-1 text-xs text-white/70 leading-relaxed">
             Если у вас возникли проблемы с доступом или поиском сотрудников, обратитесь в поддержку.
           </p>
           <a
             href="#"
-            className="mt-3 inline-block text-xs font-medium text-primary transition-colors hover:text-primary/80"
+            className="mt-3 inline-block text-xs font-medium text-white/90 transition-colors hover:text-white"
           >
             Написать в поддержку &rarr;
           </a>
@@ -87,27 +95,26 @@ export function Sidebar() {
 
         {/* User Profile */}
         {currentUser && (
-          <div className="border-t border-slate-100 pt-6 mt-4">
+          <div className="border-t border-white/10 pt-6 mt-4">
             <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
               <div className="relative">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-gradient-to-br from-blue-500/40 to-blue-500/15 backdrop-blur-sm border-blue-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(59,130,246,0.25)] text-blue-800 text-sm font-medium">
                   {getInitials(currentUser.full_name)}
                 </div>
                 <motion.div
-                  className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white ${
-                    currentUser.presence === 'online' ? 'bg-emerald-500' :
+                  className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white ${currentUser.presence === 'online' ? 'bg-emerald-500' :
                     currentUser.presence === 'away' ? 'bg-amber-400' :
-                    'bg-slate-300'
-                  }`}
+                      'bg-slate-300'
+                    }`}
                   animate={currentUser.presence === 'online' ? { scale: [1, 1.2, 1] } : { scale: 1 }}
                   transition={currentUser.presence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
                 />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-medium text-slate-900">
+                <p className="truncate text-sm font-medium text-white">
                   {currentUser.full_name}
                 </p>
-                <p className="truncate text-xs text-slate-500">
+                <p className="truncate text-xs text-white/60">
                   {(!currentUser.job_title || currentUser.job_title === '[]') ? 'Не указано' : currentUser.job_title}
                 </p>
               </div>
@@ -115,7 +122,7 @@ export function Sidebar() {
 
             <button
               onClick={logout}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
             >
               <LogOut className="h-4 w-4" strokeWidth={1.5} />
               Выйти

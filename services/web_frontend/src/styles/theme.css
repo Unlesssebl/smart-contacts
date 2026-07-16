@@ -2,13 +2,13 @@
 
 :root {
   --font-size: 16px;
-  --background: #f3f4f6;
+  --background: #d4e0ee;
   --foreground: #0f1923;
   --card: #ffffff;
   --card-foreground: #0f1923;
   --popover: #ffffff;
   --popover-foreground: #0f1923;
-  --primary: #255b9e;
+  --primary: #1a3f6f;
   --primary-foreground: #ffffff;
   --secondary: rgba(0, 0, 0, 0.05);
   --secondary-foreground: #0f1923;

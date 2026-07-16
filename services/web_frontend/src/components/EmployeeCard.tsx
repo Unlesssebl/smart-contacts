@@ -90,8 +90,10 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
       <div
         ref={ref}
         onClick={onClick}
-        className={`relative group cursor-pointer p-6 bg-white border border-slate-200/50 rounded-3xl hover:border-slate-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 flex flex-col h-full ${user.is_hidden ? 'opacity-60 grayscale-[0.2]' : ''}`}
+        className={`relative group cursor-pointer p-6 bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-2xl hover:border-primary/40 hover:bg-white/60 hover:shadow-md transition-all duration-300 flex flex-col h-full overflow-hidden ${user.is_hidden ? 'opacity-60 grayscale-[0.2]' : ''}`}
       >
+        {/* Top hover accent line */}
+        <div className="absolute top-0 left-0 w-full h-[3px] bg-primary origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 z-10" />
         {!isOwnProfile && (
           <button
             onClick={(e) => {
@@ -154,7 +156,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
                 </span>
               )}
               {cleanValue(user.department) && (
-                <span className="inline-flex items-center rounded-md bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary/80 ring-1 ring-inset ring-primary/20 truncate max-w-full">
+                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary/80 ring-1 ring-inset ring-primary/20 truncate max-w-full">
                   {cleanValue(user.department)}
                 </span>
               )}
@@ -166,20 +168,20 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
         <div className="mt-auto pt-8">
           <div className="flex flex-col gap-3.5">
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/60">
-                <Mail className="h-4 w-4" strokeWidth={2} />
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
+                <Mail className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.email)}</div>
             </div>
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/60">
-                <Phone className="h-4 w-4" strokeWidth={2} />
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
+                <Phone className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.internal_phone)}</div>
             </div>
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/60">
-                <MapPin className="h-4 w-4" strokeWidth={2} />
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
+                <MapPin className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.office_location)}</div>
             </div>

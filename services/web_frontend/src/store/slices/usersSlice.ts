@@ -10,7 +10,7 @@ export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set
   isSearching: false,
   filters: {},
   page: 1,
-  limit: 18,
+  limit: 9,
   totalUsers: 0,
   departments: [],
   organizations: [],
@@ -24,6 +24,11 @@ export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set
 
   setFilters: (newFilters) => {
     set((state) => ({ filters: { ...state.filters, ...newFilters }, page: 1 }));
+    get().fetchUsers(undefined, 1);
+  },
+
+  setLimit: (limit) => {
+    set({ limit, page: 1 });
     get().fetchUsers(undefined, 1);
   },
 

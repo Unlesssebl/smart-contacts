@@ -4,16 +4,9 @@ import { Sidebar } from '@/components/Sidebar';
 import { SpotlightSearch } from '@/components/SpotlightSearch';
 import { EmployeeCard } from '@/components/EmployeeCard';
 import { ProfileModal } from '@/components/ProfileModal';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
+import { RadialPagination } from '@/components/RadialPagination';
 import { useAppStore } from '@/store/useAppStore';
+import { useAdaptiveLimit } from '@/hooks/useAdaptiveLimit';
 import type { User } from '@/types';
 import { getEmployeeWord } from '@/lib/localization';
 
@@ -23,6 +16,7 @@ export function DirectoryPage() {
   
   const totalPages = Math.ceil(totalUsers / limit);
   const topRef = useRef<HTMLDivElement>(null);
+  useAdaptiveLimit();
 
   useEffect(() => {
     fetchUsers();
@@ -32,78 +26,32 @@ export function DirectoryPage() {
   const filteredUsers = users; // Since filtering is done server-side
 
   return (
-    <div className="flex min-h-screen bg-transparent">
+    <div className="flex min-h-screen">
       <Sidebar />
 
-      <main className="ml-72 flex-1 relative">
-        <div className="mx-auto max-w-[1600px] px-8 lg:px-12 pt-12 pb-12">
-          {/* Spotlight Search */}
-          <div className="mb-6">
+      <main className="ml-72 flex-1 relative flex flex-col">
+        {/* Header / Top Bar */}
+        <header className="sticky top-0 z-10 w-full bg-primary/[0.03] backdrop-blur-md border-b border-primary/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] px-8 lg:px-12 py-4 flex items-center justify-between gap-6">
+          <div className="flex-1">
             <SpotlightSearch />
           </div>
-
-          <div className="mb-6 flex min-h-10 flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="text-sm text-muted-foreground">
-              Найдено: {totalUsers} {getEmployeeWord(totalUsers)} (показано {users.length})
-            </div>
-
-            {totalPages > 1 && (
-              <Pagination className="mx-0 w-auto">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={(e) => { 
-                        e.preventDefault(); 
-                        if (page > 1) {
-                          setPage(page - 1);
-                        }
-                      }} 
-                      className={page <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                    .map((p, i, arr) => (
-                      <React.Fragment key={p}>
-                        {i > 0 && arr[i - 1] !== p - 1 && (
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )}
-                        <PaginationItem>
-                          <PaginationLink 
-                            isActive={page === p}
-                            onClick={(e) => { 
-                              e.preventDefault(); 
-                              setPage(p);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            {p}
-                          </PaginationLink>
-                        </PaginationItem>
-                      </React.Fragment>
-                    ))}
-
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={(e) => { 
-                        e.preventDefault(); 
-                        if (page < totalPages) {
-                          setPage(page + 1);
-                        }
-                      }}
-                      className={page >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            )}
+          <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap hidden md:block">
+            Найдено: {totalUsers} {getEmployeeWord(totalUsers)} (показано {users.length})
           </div>
+        </header>
+
+        <div className="mx-auto w-full max-w-[1920px] px-8 lg:px-12 pr-28 py-8 flex-1 flex flex-col justify-center relative min-h-0">
+
+          {totalPages > 1 && (
+            <RadialPagination 
+              currentPage={page} 
+              totalPages={totalPages} 
+              onPageChange={setPage} 
+            />
+          )}
 
           {/* Employee Grid */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 min-h-[300px]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 min-[1921px]:grid-cols-4 content-center w-full">
             <AnimatePresence>
               {filteredUsers.length === 0 ? (
                 <motion.div
@@ -123,10 +71,10 @@ export function DirectoryPage() {
                 filteredUsers.map((user) => (
                   <motion.div
                     key={user.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ duration: 0.2 }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
                     className="h-full"
                   >
                     <EmployeeCard

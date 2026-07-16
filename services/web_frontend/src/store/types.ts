@@ -21,9 +21,12 @@ export interface UsersSlice {
   departments: string[];
   organizations: string[];
   jobTitles: string[];
+  setFilters: (newFilters: Partial<UserFilters>) => void;
+  setPage: (page: number) => void;
   fetchFilterOptions: () => Promise<void>;
   fetchUsers: (query?: string, pageOverride?: number) => Promise<void>;
   getUserById: (id: string) => User | undefined;
+  setLimit: (limit: number) => void;
   globalPresence: Record<string, 'online' | 'away' | 'offline'>;
   setPresence: (id: string, presence: 'online' | 'away' | 'offline') => void;
   setBulkPresence: (presences: Record<string, 'online' | 'away' | 'offline'>) => void;
