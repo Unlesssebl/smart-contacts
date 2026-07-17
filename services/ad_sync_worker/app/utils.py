@@ -57,6 +57,9 @@ def format_phone(phone: str) -> Optional[str]:
         
     digits_only = re.sub(r'\D', '', cleaned)
     
+    if len(digits_only) == 4:
+        return f"{digits_only[:2]}-{digits_only[2:]}"
+    
     if len(digits_only) == 11 and (digits_only.startswith('7') or digits_only.startswith('8')):
         code = digits_only[1:4]
         p1 = digits_only[4:7]
