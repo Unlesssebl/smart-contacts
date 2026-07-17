@@ -41,7 +41,7 @@ export function DirectoryPage() {
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-8 flex-1 flex flex-col justify-center relative min-h-0">
+        <div className="mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-8 flex-1 flex flex-col justify-start relative min-h-0">
 
           {totalPages > 1 && (
             <RadialPagination 
@@ -71,7 +71,7 @@ export function DirectoryPage() {
               ) : (
                 <motion.div
                   key={`grid-${page}-${searchQuery}-${JSON.stringify(filters)}`}
-                  className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 min-[1921px]:grid-cols-4 content-center w-full"
+                  className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 min-[1921px]:grid-cols-4 content-start items-start w-full"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, transition: { duration: 0.15 } }}
