@@ -20,7 +20,9 @@ export function DirectoryPage() {
 
   useEffect(() => {
     fetchUsers();
+    // Предзагружаем опции фильтров и цвета организаций
     useAppStore.getState().fetchFilterOptions();
+    useAppStore.getState().fetchOrgColors();
   }, [fetchUsers]);
 
   const filteredUsers = users; // Since filtering is done server-side

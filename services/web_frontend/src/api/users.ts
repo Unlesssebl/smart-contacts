@@ -11,6 +11,11 @@ export interface UserFilters {
 }
 
 export const usersApi = {
+  getOrgColors: async (): Promise<Record<string, string>> => {
+    const response = await apiClient.get<Record<string, string>>('/users/org-colors');
+    return response.data;
+  },
+
   getUsers: async (q?: string, filters?: UserFilters, page: number = 1, limit: number = 100, signal?: AbortSignal): Promise<PaginatedUsers> => {
     const params = new URLSearchParams();
     if (q) params.append('q', q);

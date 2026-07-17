@@ -39,7 +39,6 @@ const HighlightedText = ({ text, highlight }: { text: string; highlight: string 
     </span>
   );
 };
-
 interface EmployeeCardProps {
   user: User;
   onClick: () => void;
@@ -49,6 +48,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
   ({ user, onClick }, ref) => {
     const searchQuery = useAppStore(state => state.searchQuery);
     const currentUser = useAppStore(state => state.currentUser);
+    const orgColors = useAppStore(state => state.orgColors);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const isOwnProfile = currentUser?.id === user.id;
     
@@ -56,7 +56,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
       const cleaned = cleanValue(val);
       if (!cleaned.trim()) {
         return (
-          <span className="text-slate-300 font-normal">
+          <span className="text-slate-400 font-medium italic text-[13px]">
             Не указано
           </span>
         );
@@ -72,6 +72,9 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
       >
         {/* Top hover accent line */}
         <div className="absolute top-0 left-0 w-full h-[3px] bg-primary origin-left scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 z-10" />
+        {/* Decorative mesh gradient */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/10 via-sky-300/5 to-transparent rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none transition-opacity duration-500 opacity-60 group-hover:opacity-100" />
+        <div className="absolute top-20 left-0 w-48 h-48 bg-gradient-to-tr from-indigo-300/10 to-transparent rounded-full blur-2xl -ml-20 pointer-events-none transition-opacity duration-500 opacity-40 group-hover:opacity-80" />
         {!isOwnProfile && (
           <button
             onClick={(e) => {
@@ -118,12 +121,12 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
                 </span>
               )}
               {cleanValue(user.organization) && (
-                <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 truncate max-w-full">
+                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium truncate max-w-full ring-1 ring-inset ${orgColors[cleanValue(user.organization)!] || 'bg-blue-50 text-blue-700 ring-blue-700/10'}`}>
                   {cleanValue(user.organization)}
                 </span>
               )}
               {cleanValue(user.department) && (
-                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary/80 ring-1 ring-inset ring-primary/20 truncate max-w-full">
+                <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium truncate max-w-full bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-500/10">
                   {cleanValue(user.department)}
                 </span>
               )}
@@ -132,31 +135,31 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
         </div>
 
         {/* BOTTOM: Contact Info Block */}
-        <div className="mt-auto pt-8">
-          <div className="flex flex-col gap-3.5">
+        <div className="mt-auto pt-6">
+          <div className="flex flex-col gap-3 bg-primary/[0.03] rounded-xl p-4 border border-primary/10 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-white text-primary/70 shadow-sm border border-slate-200/50">
                 <Mail className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.email)}</div>
             </div>
             {/* Phone Block (Consistent 2 slots) */}
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-white text-primary/70 shadow-sm border border-slate-200/50">
                 <Phone className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.internal_phone)}</div>
             </div>
             
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-white text-primary/70 shadow-sm border border-slate-200/50">
                 <Smartphone className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.mobile_phone)}</div>
             </div>
 
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
-              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-white text-primary/70 shadow-sm border border-slate-200/50">
                 <MapPin className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.office_location)}</div>

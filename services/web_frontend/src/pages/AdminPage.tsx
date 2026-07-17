@@ -8,6 +8,23 @@ import { getAttributeLabel, getStatusLabel, getLdapErrorTranslation } from '@/li
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { OUMappingValue } from '@/api/settings';
+
+const COLOR_OPTIONS = [
+  { label: 'Синий', value: 'bg-blue-50 text-blue-700 ring-blue-700/10', dotClass: 'bg-blue-500' },
+  { label: 'Индиго', value: 'bg-indigo-50 text-indigo-700 ring-indigo-700/10', dotClass: 'bg-indigo-500' },
+  { label: 'Фиолетовый', value: 'bg-purple-50 text-purple-700 ring-purple-700/10', dotClass: 'bg-purple-500' },
+  { label: 'Розовый', value: 'bg-pink-50 text-pink-700 ring-pink-700/10', dotClass: 'bg-pink-500' },
+  { label: 'Красный', value: 'bg-red-50 text-red-700 ring-red-700/10', dotClass: 'bg-red-500' },
+  { label: 'Оранжевый', value: 'bg-orange-50 text-orange-700 ring-orange-700/10', dotClass: 'bg-orange-500' },
+  { label: 'Желтый', value: 'bg-yellow-50 text-yellow-800 ring-yellow-600/20', dotClass: 'bg-yellow-500' },
+  { label: 'Зеленый', value: 'bg-green-50 text-green-700 ring-green-600/20', dotClass: 'bg-green-500' },
+  { label: 'Изумрудный', value: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dotClass: 'bg-emerald-500' },
+  { label: 'Бирюзовый', value: 'bg-teal-50 text-teal-700 ring-teal-600/20', dotClass: 'bg-teal-500' },
+  { label: 'Голубой', value: 'bg-cyan-50 text-cyan-700 ring-cyan-600/20', dotClass: 'bg-cyan-500' },
+  { label: 'Серый', value: 'bg-slate-50 text-slate-700 ring-slate-600/20', dotClass: 'bg-slate-500' }
+];
 
 type Tab = 'requests' | 'reports' | 'settings' | 'ou-mapping';
 
@@ -79,13 +96,14 @@ function TreeNode({
   );
 }
 
-function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string, string>, updateOUMapping: (mapping: Record<string, string>) => Promise<void> }) {
-  const [localMapping, setLocalMapping] = useState<{ou: string, org: string}[]>(() => 
-    Object.entries(ouMapping || {}).map(([ou, org]) => ({ou, org}))
+function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string, OUMappingValue>, updateOUMapping: (mapping: Record<string, OUMappingValue>) => Promise<void> }) {
+  const [localMapping, setLocalMapping] = useState<{ou: string, org: string, color: string}[]>(() => 
+    Object.entries(ouMapping || {}).map(([ou, val]) => ({ou, org: val.org, color: val.color}))
   );
   
   const [newOu, setNewOu] = useState('');
   const [newOrg, setNewOrg] = useState('');
+  const [newColor, setNewColor] = useState(COLOR_OPTIONS[0].value);
   const [adOusTree, setAdOusTree] = useState<Record<string, any>>({});
   const [isLoadingOus, setIsLoadingOus] = useState(false);
   const [ouLoadError, setOuLoadError] = useState<string | null>(null);
@@ -111,7 +129,7 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
 
   // Update local state when prop changes
   useEffect(() => {
-    setLocalMapping(Object.entries(ouMapping || {}).map(([ou, org]) => ({ou, org})));
+    setLocalMapping(Object.entries(ouMapping || {}).map(([ou, val]) => ({ou, org: val.org, color: val.color})));
   }, [ouMapping]);
 
   const handleAdd = () => {
@@ -124,9 +142,10 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
       toast.error('Такой OU уже существует в маппинге');
       return;
     }
-    setLocalMapping([...localMapping, { ou: shortName, org: newOrg.trim() }]);
+    setLocalMapping([...localMapping, { ou: shortName, org: newOrg.trim(), color: newColor }]);
     setNewOu('');
     setNewOrg('');
+    setNewColor(COLOR_OPTIONS[0].value);
   };
 
   const handleRemove = (ouToRemove: string) => {
@@ -135,9 +154,9 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
 
   const handleSave = async () => {
     const mappingObj = localMapping.reduce((acc, curr) => {
-      acc[curr.ou] = curr.org;
+      acc[curr.ou] = { org: curr.org, color: curr.color };
       return acc;
-    }, {} as Record<string, string>);
+    }, {} as Record<string, OUMappingValue>);
     await updateOUMapping(mappingObj);
   };
 
@@ -153,124 +172,196 @@ function OUMappingTab({ ouMapping, updateOUMapping }: { ouMapping: Record<string
         </p>
       </div>
 
-      <div className="space-y-4 max-w-3xl">
-        {/* Table Header */}
-        <div className="grid grid-cols-[1fr_1fr_auto] gap-4 px-4 py-2 bg-muted/50 rounded-lg text-sm font-medium text-muted-foreground">
-          <div>OU в Active Directory</div>
-          <div>Название в системе</div>
-          <div className="w-10"></div>
-        </div>
-
-        {/* Rows */}
-        <div className="space-y-2">
-          {localMapping.map((item, index) => (
-            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center px-4 py-3 bg-card border rounded-lg shadow-sm">
-              <div className="font-mono text-sm font-medium">{item.ou}</div>
-              <div>{item.org}</div>
-              <button 
-                onClick={() => handleRemove(item.ou)}
-                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                title="Удалить"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-          
-          {localMapping.length === 0 && (
-            <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
-              Нет ни одной записи. Добавьте первую ниже.
-            </div>
-          )}
+      <div className="bg-card border rounded-xl shadow-sm max-w-5xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-muted/50 text-muted-foreground border-b">
+              <tr>
+                <th className="px-4 py-3 font-medium">OU в Active Directory</th>
+                <th className="px-4 py-3 font-medium">Название в системе</th>
+                <th className="px-4 py-3 font-medium w-[300px]">Цвет тега</th>
+                <th className="px-4 py-3 font-medium w-[60px]"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {localMapping.map((item, index) => (
+                <tr key={index} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 font-mono font-medium truncate max-w-[200px]" title={item.ou}>
+                    {item.ou}
+                  </td>
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={item.org}
+                      onChange={(e) => {
+                        const newMapping = [...localMapping];
+                        newMapping[index].org = e.target.value;
+                        setLocalMapping(newMapping);
+                      }}
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      placeholder="Название"
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Select value={item.color || COLOR_OPTIONS[0].value} onValueChange={(val) => {
+                        const newMapping = [...localMapping];
+                        newMapping[index].color = val;
+                        setLocalMapping(newMapping);
+                      }}>
+                        <SelectTrigger className="h-8 w-[140px] text-xs font-medium bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COLOR_OPTIONS.map(c => (
+                            <SelectItem key={c.value} value={c.value}>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full border border-black/10 ${c.dotClass}`} />
+                                <span className="text-xs">{c.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium truncate max-w-[120px] ring-1 ring-inset ${item.color || COLOR_OPTIONS[0].value}`}>
+                        {item.org || 'Превью'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button 
+                      onClick={() => handleRemove(item.ou)}
+                      className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                      title="Удалить"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              
+              {localMapping.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    Нет ни одной записи. Добавьте первую ниже.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* Add New Row */}
-        <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end mt-6 p-4 border border-dashed rounded-lg bg-muted/10">
-          <div className="space-y-1 min-w-0">
-            <label className="text-xs font-medium text-muted-foreground">OU в Active Directory</label>
-            {isLoadingOus ? (
-              <div className="flex h-10 items-center px-3 text-sm text-muted-foreground border border-input rounded-md bg-background">
-                Загрузка OU из AD...
-              </div>
-            ) : ouLoadError || rootKeys.length === 0 ? (
-              // Fallback: text input if AD is unavailable
-              <div className="space-y-1">
-                <input 
-                  type="text" 
-                  placeholder="Например, IT Department" 
-                  value={newOu}
-                  onChange={e => setNewOu(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                />
-                {ouLoadError && <p className="text-xs text-amber-600">{ouLoadError}</p>}
-              </div>
-            ) : (
-              <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="w-full min-w-0">
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-left overflow-hidden"
-                        >
-                          <span className="truncate flex-1 min-w-0 block">
-                            {newOu ? newOu.split('/').pop() : '— Выберите OU —'}
-                          </span>
-                          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
-                        </button>
-                      </PopoverTrigger>
-                    </div>
-                  </TooltipTrigger>
-                  {newOu && (
-                    <TooltipContent side="bottom" className="max-w-[400px] break-all font-mono text-xs">
-                      {newOu}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-                <PopoverContent className="w-[300px] p-2 max-h-[350px] overflow-y-auto" align="start">
-                  <div className="space-y-0.5">
-                    {rootKeys.map(key => (
-                      <TreeNode 
-                        key={key} 
-                        name={key} 
-                        path={key} 
-                        node={adOusTree[key]} 
-                        usedOus={usedOus} 
-                        onSelect={(path) => {
-                          setNewOu(path);
-                          setIsPopoverOpen(false);
-                        }}
-                        selectedPath={newOu}
-                      />
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
-          <div className="space-y-1 min-w-0">
-            <label className="text-xs font-medium text-muted-foreground">Название в системе</label>
-            <input 
-              type="text" 
-              placeholder="Например, АйТи ТЭМПО" 
-              value={newOrg}
-              onChange={e => setNewOrg(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAdd()}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-          </div>
-          <button 
-            onClick={handleAdd}
-            disabled={!newOu || !newOrg}
-            className="btn-secondary h-10 px-4 flex items-center justify-center gap-2"
+        <div className="p-4 bg-muted/10 border-t">
+          <h4 className="text-sm font-medium mb-3">Добавить новую связку</h4>
+          <div 
+            className="grid gap-4 items-end"
+            style={{ gridTemplateColumns: 'minmax(200px, 1fr) minmax(200px, 1fr) 300px auto' }}
           >
-            <Plus className="w-4 h-4" />
-            Добавить
-          </button>
+            <div className="space-y-1 min-w-0">
+              <label className="text-xs font-medium text-muted-foreground">OU в Active Directory</label>
+              {isLoadingOus ? (
+                <div className="flex h-10 items-center px-3 text-sm text-muted-foreground border border-input rounded-md bg-background">
+                  Загрузка OU из AD...
+                </div>
+              ) : ouLoadError || rootKeys.length === 0 ? (
+                // Fallback: text input if AD is unavailable
+                <div className="space-y-1">
+                  <input 
+                    type="text" 
+                    placeholder="Например, IT Department" 
+                    value={newOu}
+                    onChange={e => setNewOu(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  />
+                  {ouLoadError && <p className="text-xs text-amber-600">{ouLoadError}</p>}
+                </div>
+              ) : (
+                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="w-full min-w-0">
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-left overflow-hidden"
+                          >
+                            <span className="truncate flex-1 min-w-0 block">
+                              {newOu ? newOu.split('/').pop() : '— Выберите OU —'}
+                            </span>
+                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+                          </button>
+                        </PopoverTrigger>
+                      </div>
+                    </TooltipTrigger>
+                    {newOu && (
+                      <TooltipContent side="bottom" className="max-w-[400px] break-all font-mono text-xs">
+                        {newOu}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                  <PopoverContent className="w-[300px] p-2 max-h-[350px] overflow-y-auto" align="start">
+                    <div className="space-y-0.5">
+                      {rootKeys.map(key => (
+                        <TreeNode 
+                          key={key} 
+                          name={key} 
+                          path={key} 
+                          node={adOusTree[key]} 
+                          usedOus={usedOus} 
+                          onSelect={(path) => {
+                            setNewOu(path);
+                            setIsPopoverOpen(false);
+                          }}
+                          selectedPath={newOu}
+                        />
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+            <div className="space-y-1 min-w-0">
+              <label className="text-xs font-medium text-muted-foreground">Название в системе</label>
+              <input 
+                type="text" 
+                placeholder="Например, АйТи ТЭМПО" 
+                value={newOrg}
+                onChange={e => setNewOrg(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Цвет тега</label>
+              <Select value={newColor} onValueChange={setNewColor}>
+                <SelectTrigger className="h-10 w-full text-sm font-medium bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COLOR_OPTIONS.map(c => (
+                    <SelectItem key={c.value} value={c.value}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full border border-black/10 ${c.dotClass}`} />
+                        <span className="text-xs">{c.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <button 
+              onClick={handleAdd}
+              disabled={!newOu || !newOrg}
+              className="btn-secondary h-10 px-4 flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить
+            </button>
+          </div>
         </div>
 
-        <div className="pt-6 border-t mt-8">
+        <div className="p-4 border-t bg-muted/5">
           <button
             onClick={handleSave}
             className="btn-primary h-10 px-6"

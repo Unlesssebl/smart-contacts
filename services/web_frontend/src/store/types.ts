@@ -22,10 +22,12 @@ export interface UsersSlice {
   departments: string[];
   organizations: string[];
   jobTitles: string[];
+  orgColors: Record<string, string>;
   setFilters: (newFilters: Partial<UserFilters>) => void;
   setPage: (page: number) => void;
   fetchFilterOptions: () => Promise<void>;
   fetchUsers: (query?: string, pageOverride?: number) => Promise<void>;
+  fetchOrgColors: () => Promise<void>;
   getUserById: (id: string) => User | undefined;
   setLimit: (limit: number) => void;
   globalPresence: Record<string, 'online' | 'away' | 'offline'>;
@@ -66,9 +68,9 @@ export interface SettingsSlice {
   ldapSettings: LDAPSettings | null;
   fetchLDAPSettings: (silent?: boolean) => Promise<void>;
   updateLDAPSettings: (settings: LDAPSettings) => Promise<void>;
-  ouMapping: Record<string, string>;
+  ouMapping: Record<string, import('@/api/settings').OUMappingValue>;
   fetchOUMapping: () => Promise<void>;
-  updateOUMapping: (mapping: Record<string, string>) => Promise<void>;
+  updateOUMapping: (mapping: Record<string, import('@/api/settings').OUMappingValue>) => Promise<void>;
 }
 
 export type AppState = AuthSlice &

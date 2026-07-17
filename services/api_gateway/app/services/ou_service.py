@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import re
 from app.db.session import SessionLocal
 
@@ -19,14 +19,19 @@ def apply_ou_mapping_to_users_bg(mapping: dict):
             
             matches = list(dict.fromkeys(exact_matches + case_insensitive_matches))
             
+            def extract_org(val):
+                if isinstance(val, dict):
+                    return val.get("org")
+                return val
+
             if not matches:
                 org_name = None
             elif len(matches) == 1:
                 key = matches[0]
-                org_name = mapping.get(key) or mapping_lower.get(key.lower())
+                org_name = extract_org(mapping.get(key) or mapping_lower.get(key.lower()))
             else:
                 selected_ou = exact_matches[0] if exact_matches else matches[0]
-                org_name = mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower())
+                org_name = extract_org(mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower()))
                 
             if user.organization != org_name:
                 user.organization = org_name

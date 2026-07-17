@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
 
 class LDAPSettingsUpdate(BaseModel):
     ad_user: Optional[str] = None
@@ -12,4 +12,4 @@ class LDAPSettingsRead(BaseModel):
     last_error: Optional[str] = None
 
 class OuMappingUpdate(BaseModel):
-    mapping: dict[str, str]
+    mapping: dict[str, Any]
