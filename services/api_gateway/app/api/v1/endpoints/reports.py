@@ -9,7 +9,7 @@ from app.schemas.report import ReportCreateBulk
 
 router = APIRouter()
 
-@router.post("/", status_code=201)
+@router.post("", status_code=201)
 def create_reports(
     data: ReportCreateBulk,
     db: Session = Depends(get_db),

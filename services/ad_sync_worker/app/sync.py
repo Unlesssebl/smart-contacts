@@ -235,6 +235,7 @@ class SyncWorker:
                 tasks.append({"item": rep, "user_guid": rep.target_user_guid, "attribute_name": rep.attribute_name, "new_value": rep.new_value, "id": rep.id, "type": "report"})
 
             processed_conflicts = set()
+            events_to_publish = []
 
             with LDAPClient() as ldap:
                 for task in tasks:
@@ -289,12 +290,8 @@ class SyncWorker:
                         setattr(user, task["attribute_name"], final_value)
                         user.last_sync_timestamp = datetime.now(timezone.utc)
                         logger.info(f"Applied {task['attribute_name']} for {user.sam_account_name}")
-                        
-                        try:
-                            redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-                            redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(user.object_guid)}))
-                        except Exception as re:
-                            logger.error(f"Redis publish error: {re}")
+                        events_to_publish.append({"type": "admin_update"})
+                        events_to_publish.append({"type": "profile_updated", "user_id": str(user.object_guid)})
                     else:
                         # Check if another pending or conflict request already exists in DB
                         # or if we already set one to conflict in this cycle.
@@ -333,11 +330,8 @@ class SyncWorker:
                         user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {task['id']}: {error_msg}"
                         logger.error(f"AD Push failed for {task['id']}: {error_msg}")
                         
-                        try:
-                            redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-                            redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(user.object_guid)}))
-                        except Exception as re:
-                            logger.error(f"Redis publish error: {re}")
+                        events_to_publish.append({"type": "admin_update"})
+                        events_to_publish.append({"type": "profile_updated", "user_id": str(user.object_guid)})
             
             # Clean up expired refresh tokens (EC-7)
             try:
@@ -351,6 +345,12 @@ class SyncWorker:
                 logger.error(f"Failed to clean up expired tokens: {e}")
 
             session.commit()
+            
+            for event in events_to_publish:
+                try:
+                    redis_client.publish("system_events", json.dumps(event))
+                except Exception as re:
+                    logger.error(f"Redis publish error: {re}")
         
         logger.info("Push cycle completed.")
 
