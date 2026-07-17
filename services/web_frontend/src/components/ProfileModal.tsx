@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Copy, Mail, Phone, MapPin, X, Building2, User as UserIcon, Edit, Shield } from 'lucide-react';
+import { Copy, Mail, Phone, Smartphone, MapPin, X, Building2, User as UserIcon, Edit, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
@@ -222,45 +222,58 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                        <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Внутренний телефон</p>
-                          <p className="text-sm text-foreground">{displayValue(user.internal_phone)}</p>
-                        </div>
-                      </div>
-
                       {isEditing ? (
-                        <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                          <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                          <div className="flex-1">
-                            <p className="mb-1 text-xs text-muted-foreground">Мобильный телефон</p>
-                            {pendingFields && 'mobile_phone' in pendingFields ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-foreground">{displayValue(user.mobile_phone)}</span>
-                                <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-600">
-                                  Заявка на рассмотрении
-                                </span>
-                              </div>
-                            ) : (
-                              <input
-                                type="text"
-                                value={mobilePhone}
-                                onChange={(e) => setMobilePhone(e.target.value)}
-                                placeholder="Не указано"
-                                className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
-                              />
-                            )}
+                        <>
+                          <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                            <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Внутренний телефон (из AD)</p>
+                              <p className="text-sm text-foreground">{displayValue(user.internal_phone)}</p>
+                            </div>
                           </div>
-                        </div>
+
+                          <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                            <Smartphone className="h-5 w-5 text-primary" strokeWidth={1.5} />
+                            <div className="flex-1">
+                              <p className="mb-1 text-xs text-muted-foreground">Изменить мобильный телефон</p>
+                              {pendingFields && 'mobile_phone' in pendingFields ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-foreground">{displayValue(user.mobile_phone)}</span>
+                                  <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-600">
+                                    Заявка на рассмотрении
+                                  </span>
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={mobilePhone}
+                                  onChange={(e) => setMobilePhone(e.target.value)}
+                                  placeholder="Не указано"
+                                  className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </>
                       ) : (
-                        <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                          <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Мобильный телефон</p>
-                            <p className="text-sm text-foreground">{displayValue(user.mobile_phone)}</p>
-                          </div>
-                        </div>
+                        <>
+                          <>
+                            <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                              <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
+                              <div>
+                                <p className="text-xs text-muted-foreground">Внутренний телефон</p>
+                                <p className="text-sm text-foreground">{displayValue(user.internal_phone)}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                              <Smartphone className="h-5 w-5 text-primary" strokeWidth={1.5} />
+                              <div>
+                                <p className="text-xs text-muted-foreground">Мобильный телефон</p>
+                                <p className="text-sm text-foreground">{displayValue(user.mobile_phone)}</p>
+                              </div>
+                            </div>
+                          </>
+                        </>
                       )}
 
                       {isEditing ? (

@@ -11,7 +11,7 @@ from shared.models.change_request import ChangeRequest
 from .ldap import LDAPClient
 from .logic import determine_status, match_organization_by_ou, save_known_ous
 from shared.utils import ad_guid_to_uuid
-from .utils import with_retry
+from .utils import with_retry, format_phone
 
 logger = logging.getLogger(__name__)
 
@@ -128,8 +128,8 @@ class SyncWorker:
                 office_location=str(entry.get("physicalDeliveryOfficeName", "")),
                 organization=org,
                 ad_dn=dn,
-                internal_phone=str(entry.get("telephoneNumber", "")),
-                mobile_phone=str(entry.get("mobile", "")),
+                internal_phone=format_phone(str(entry.get("telephoneNumber", ""))),
+                mobile_phone=format_phone(str(entry.get("mobile", ""))),
                 sync_error_log="\n".join(warnings) if warnings else None,
                 last_sync_timestamp=datetime.now(timezone.utc) # 4.1 UTC
             )
@@ -199,10 +199,10 @@ class SyncWorker:
             user.office_location = str(entry.get("physicalDeliveryOfficeName", ""))
             
         if "internal_phone" not in pending_fields:
-            user.internal_phone = str(entry.get("telephoneNumber", ""))
+            user.internal_phone = format_phone(str(entry.get("telephoneNumber", "")))
         
         if "mobile_phone" not in pending_fields:
-            user.mobile_phone = str(entry.get("mobile", ""))
+            user.mobile_phone = format_phone(str(entry.get("mobile", "")))
 
         if warnings:
             user.sync_error_log = (user.sync_error_log or "") + "\n" + "\n".join(warnings)

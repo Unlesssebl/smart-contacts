@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { User } from '@/types';
-import { Mail, Phone, MapPin, Edit } from 'lucide-react';
+import { Mail, Phone, Smartphone, MapPin, Edit } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { ReportModal } from './ReportModal';
 import { UserAvatar } from './UserAvatar';
@@ -140,12 +140,21 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.email)}</div>
             </div>
+            {/* Phone Block (Consistent 2 slots) */}
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
               <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
                 <Phone className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(user.internal_phone)}</div>
             </div>
+            
+            <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
+              <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
+                <Smartphone className="h-4 w-4" strokeWidth={2.5} />
+              </div>
+              <div className="truncate flex-1 font-medium">{displayValue(user.mobile_phone)}</div>
+            </div>
+
             <div className="flex items-center gap-3.5 text-[14px] text-slate-700">
               <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/5 text-primary/70 shadow-sm border border-primary/10">
                 <MapPin className="h-4 w-4" strokeWidth={2.5} />
