@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router';
 import { Home, User, LogOut, Shield } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { motion } from 'motion/react';
+import { UserAvatar } from './UserAvatar';
 
 export function Sidebar() {
   const location = useLocation();
@@ -97,19 +98,12 @@ export function Sidebar() {
         {currentUser && (
           <div className="border-t border-white/10 pt-6 mt-4">
             <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
-              <div className="relative">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border bg-gradient-to-br from-blue-500/40 to-blue-500/15 backdrop-blur-sm border-blue-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(59,130,246,0.25)] text-blue-800 text-sm font-medium">
-                  {getInitials(currentUser.full_name)}
-                </div>
-                <motion.div
-                  className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white ${currentUser.presence === 'online' ? 'bg-emerald-500' :
-                    currentUser.presence === 'away' ? 'bg-amber-400' :
-                      'bg-slate-300'
-                    }`}
-                  animate={currentUser.presence === 'online' ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-                  transition={currentUser.presence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
+                <UserAvatar 
+                  name={currentUser.full_name} 
+                  presence={currentUser.presence} 
+                  className="h-10 w-10 text-sm"
+                  statusClassName="h-3 w-3 border-[2px]"
                 />
-              </div>
               <div className="flex-1 overflow-hidden">
                 <p className="truncate text-sm font-medium text-white">
                   {currentUser.full_name}

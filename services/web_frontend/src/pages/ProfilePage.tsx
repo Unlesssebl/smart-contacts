@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, Navigate } from 'react-router';
+import { useParams, Navigate, Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit, Clock, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '@/components/Sidebar';
 import { useAppStore } from '@/store/useAppStore';
+import { UserAvatar } from '@/components/UserAvatar';
 
 import type { User, UserProfile } from '@/types';
 
@@ -191,12 +192,10 @@ export function ProfilePage() {
             <div className="border-b border-black/5 px-8 py-8">
               <div className="flex items-start gap-6">
                 <div className="relative">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-3xl font-medium text-white shadow-xl">
-                    {user.full_name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </div>
+                  <UserAvatar 
+                    name={user.full_name} 
+                    className="h-24 w-24 text-3xl shadow-xl"
+                  />
                 </div>
 
                 <div className="flex-1">

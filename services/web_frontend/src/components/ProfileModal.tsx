@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Mail, Phone, MapPin, Building2, User as UserIcon, Edit, Shield, Copy } from 'lucide-react';
+import { Copy, Mail, Phone, MapPin, X, Building2, User as UserIcon, Edit, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
+import { UserAvatar } from './UserAvatar';
 import { adminApi } from '@/api/admin';
 import { ReportModal } from './ReportModal';
 
@@ -185,23 +186,12 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
 
                 <div className="flex items-start gap-6">
                   {/* Large Avatar */}
-                  <div className="relative">
-                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-3xl font-medium text-white shadow-xl">
-                      {user.full_name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
-                    </div>
-                    <motion.div
-                      className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 ${
-                        currentPresence === 'online' ? 'border-white bg-emerald-500' :
-                        currentPresence === 'away' ? 'border-white bg-amber-400' :
-                        'border-slate-300 bg-white'
-                      }`}
-                      animate={currentPresence === 'online' ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-                      transition={currentPresence === 'online' ? { repeat: Infinity, duration: 2 } : {}}
-                    />
-                  </div>
+                  <UserAvatar 
+                    name={user.full_name} 
+                    presence={currentPresence} 
+                    className="h-24 w-24 text-3xl shadow-xl"
+                    statusClassName="h-5 w-5 border-[3px]"
+                  />
 
                   {/* User Info */}
                   <div className="flex-1">

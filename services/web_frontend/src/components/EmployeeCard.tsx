@@ -3,31 +3,9 @@ import type { User } from '@/types';
 import { Mail, Phone, MapPin, Edit } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { ReportModal } from './ReportModal';
+import { UserAvatar } from './UserAvatar';
 
 const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
-
-const getAvatarColorForName = (name: string) => {
-  const colors = [
-    'from-blue-500/40 to-blue-500/15 text-blue-800 border-blue-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(59,130,246,0.25)]',
-    'from-emerald-500/40 to-emerald-500/15 text-emerald-800 border-emerald-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(16,185,129,0.25)]',
-    'from-purple-500/40 to-purple-500/15 text-purple-800 border-purple-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(168,85,247,0.25)]',
-    'from-rose-500/40 to-rose-500/15 text-rose-800 border-rose-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(244,63,94,0.25)]',
-    'from-amber-500/40 to-amber-500/15 text-amber-800 border-amber-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(245,158,11,0.25)]',
-    'from-teal-500/40 to-teal-500/15 text-teal-800 border-teal-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(20,184,166,0.25)]',
-    'from-indigo-500/40 to-indigo-500/15 text-indigo-800 border-indigo-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(99,102,241,0.25)]',
-    'from-fuchsia-500/40 to-fuchsia-500/15 text-fuchsia-800 border-fuchsia-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(217,70,239,0.25)]',
-    'from-cyan-500/40 to-cyan-500/15 text-cyan-800 border-cyan-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(6,182,212,0.25)]',
-    'from-orange-500/40 to-orange-500/15 text-orange-800 border-orange-500/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.9),0_4px_10px_rgba(249,115,22,0.25)]',
-  ];
-  
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
-};
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
   if (!highlight.trim()) {
@@ -110,23 +88,12 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
         {/* TOP: Avatar and Primary Info */}
         <div className="flex items-start gap-4">
           {/* Avatar with online status */}
-          <div className="relative flex-shrink-0">
-            <div className={`flex h-16 w-16 items-center justify-center rounded-full border bg-gradient-to-br backdrop-blur-sm ${getAvatarColorForName(user.full_name)} text-xl font-medium`}>
-              {user.full_name
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .substring(0, 2)
-                .toUpperCase()}
-            </div>
-            <div
-              className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] ${
-                user.presence === 'online' ? 'border-white bg-emerald-500' :
-                user.presence === 'away' ? 'border-white bg-amber-400' :
-                'border-white bg-slate-200'
-              }`}
-            />
-          </div>
+          <UserAvatar 
+            name={user.full_name} 
+            presence={user.presence} 
+            className="h-16 w-16 text-xl shadow-md"
+            statusClassName="h-4 w-4 border-[3px]"
+          />
 
           {/* Info */}
           <div className="flex-1 min-w-0 pt-1">
