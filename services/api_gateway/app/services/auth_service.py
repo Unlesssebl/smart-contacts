@@ -15,6 +15,15 @@ logger = logging.getLogger(__name__)
 class AuthService:
     @staticmethod
     def login(db: Session, username: str, password: str, client_ip: str) -> AuthResult:
+        # Normalize username (remove domain part if present: 'user@DOMAIN' -> 'user' or 'DOMAIN\user' -> 'user')
+        username_lower = username.lower()
+        if '@' in username_lower:
+            username = username_lower.split('@')[0]
+        elif '\\' in username_lower:
+            username = username_lower.split('\\')[1]
+        else:
+            username = username_lower
+
         # 1. Brute-force protection
         if is_brute_force_blocked(client_ip):
             raise HTTPException(
@@ -74,8 +83,14 @@ class AuthService:
         """
         Handles SSO login after successful Kerberos ticket validation.
         """
-        # 1. Normalize username (remove domain part if present: 'user@DOMAIN' -> 'user')
-        username = full_username.split('@')[0].lower() if '@' in full_username else full_username.lower()
+        # 1. Normalize username (remove domain part if present: 'user@DOMAIN' -> 'user' or 'DOMAIN\user' -> 'user')
+        full_username_lower = full_username.lower()
+        if '@' in full_username_lower:
+            username = full_username_lower.split('@')[0]
+        elif '\\' in full_username_lower:
+            username = full_username_lower.split('\\')[1]
+        else:
+            username = full_username_lower
 
         # 2. User lookup
         user = get_user_by_sam(db, username)
