@@ -36,7 +36,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
   fetchMe: async () => {
     try {
       const profile = await getMe();
-      set({ currentUser: profile });
+      set({ currentUser: profile, isAuthenticated: true });
       await get().fetchMyPendingFields();
     } catch (error) {
       console.error('Failed to fetch profile', error);

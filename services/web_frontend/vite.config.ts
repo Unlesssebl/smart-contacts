@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { mockBackendPlugin } from './mock-plugin'
 
 
 function figmaAssetResolver() {
@@ -23,6 +24,8 @@ export default defineConfig({
     // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
+    // Mock backend for local development (intercepts /api requests before proxy)
+    mockBackendPlugin(),
   ],
   resolve: {
     alias: {
@@ -32,14 +35,14 @@ export default defineConfig({
   },
 
   server: {
-    host: '10.245.19.85', // Listen on specific network interface
-    proxy: {
-      '/api': {
-        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080',
-        changeOrigin: false,
-        ws: true,
-      }
-    },
+    host: 'localhost', // Listen on localhost
+    // proxy: {
+    //   '/api': {
+    //     target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080',
+    //     changeOrigin: false,
+    //     ws: true,
+    //   }
+    // },
     watch: {
       usePolling: true,
     }
