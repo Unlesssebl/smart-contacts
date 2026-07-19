@@ -96,10 +96,10 @@ export function SpotlightSearch() {
       className="relative mx-auto w-full max-w-3xl"
     >
       <div
-        className={`relative overflow-hidden border bg-white/60 backdrop-blur-xl p-0 shadow-sm transition-all hover:border-slate-300 ${
+        className={`relative overflow-hidden border bg-white p-0 shadow-[0_10px_24px_-20px_rgba(15,34,58,0.42)] transition-all hover:border-slate-300 ${
           isInputFocused 
-            ? 'border-slate-300 shadow-md ring-2 ring-slate-200/50' 
-            : 'border-slate-200'
+            ? 'border-[#8daecf] shadow-[0_14px_28px_-20px_rgba(15,34,58,0.52)] ring-4 ring-[#0b4f92]/[0.08]'
+            : 'border-slate-200/90'
         }`}
         style={{ borderRadius: 'var(--radius)' }}
       >
@@ -119,7 +119,7 @@ export function SpotlightSearch() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${showFilters || hasActiveFilters
-                ? 'bg-slate-200 text-slate-900 hover:bg-slate-300'
+                ? 'bg-[#eaf1f8] text-[#0b4f92] hover:bg-[#dfeaf5]'
                 : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
               }`}
           >
@@ -138,7 +138,7 @@ export function SpotlightSearch() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-black/5 bg-white/40"
+              className="overflow-hidden border-t border-slate-900/[0.06] bg-[#f8fafc]"
             >
               <div className="flex flex-wrap items-center gap-4 px-6 py-4">
                 <FilterCombobox

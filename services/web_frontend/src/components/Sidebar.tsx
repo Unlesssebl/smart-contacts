@@ -33,7 +33,7 @@ export function Sidebar() {
     <aside
       className="fixed left-0 top-0 h-screen w-72 z-20 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.1)]"
       style={{
-        backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(53, 114, 179, 0.59), rgba(27, 72, 126, 0.72)), url("/login_background.png")',
+        backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px), linear-gradient(to bottom, rgba(53, 114, 179, 0.7), rgba(27, 72, 126, 0.86)), url("/login_background.png")',
         backgroundSize: '4px 4px, cover, cover',
         backgroundPosition: '0 0, center, center',
         backgroundRepeat: 'repeat, no-repeat, no-repeat'

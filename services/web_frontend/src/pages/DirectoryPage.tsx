@@ -32,18 +32,36 @@ export function DirectoryPage() {
     <div className="flex min-h-screen">
       <Sidebar />
 
-      <main className="ml-72 flex-1 relative flex flex-col">
+      <main className="ml-72 flex-1 relative flex flex-col overflow-hidden">
         {/* Header / Top Bar */}
-        <header className="sticky top-0 z-10 w-full bg-primary/[0.03] backdrop-blur-md border-b border-primary/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] px-8 lg:px-12 py-4 relative">
-          <div className="mx-auto w-full max-w-3xl">
-            <SpotlightSearch />
+        <header className="sticky top-0 z-10 w-full border-b border-slate-900/[0.07] bg-[#fafaf9]/90 px-8 py-4 lg:px-12 relative">
+          <div className="mx-auto flex w-full max-w-[1920px] items-center gap-8">
+            <div className="hidden min-w-52 lg:block">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66809e]">Внутренняя сеть</p>
+              <h1 className="mt-1 text-[22px] font-semibold leading-none tracking-[-0.035em] text-slate-900">Справочник</h1>
+            </div>
+            <div className="mx-auto w-full max-w-2xl flex-1">
+              <SpotlightSearch />
+            </div>
           </div>
-          <div className="absolute right-8 lg:right-12 top-[44px] -translate-y-1/2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 whitespace-nowrap hidden xl:block pointer-events-none">
+          <div className="absolute right-8 lg:right-12 top-[44px] -translate-y-1/2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 whitespace-nowrap hidden xl:block pointer-events-none">
             Найдено: {totalUsers} {getEmployeeWord(totalUsers)}
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-8 flex-1 flex flex-col justify-start relative min-h-0">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-44 -right-72 h-[850px] w-[1180px] opacity-[0.07]"
+          style={{
+            backgroundImage: 'url("/login_background.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            WebkitMaskImage: 'radial-gradient(ellipse 68% 72% at 52% 52%, #000 18%, transparent 74%)',
+            maskImage: 'radial-gradient(ellipse 68% 72% at 52% 52%, #000 18%, transparent 74%)',
+          }}
+        />
+
+        <div className="relative z-[1] mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-8 flex-1 flex flex-col justify-start min-h-0">
 
           {totalPages > 1 && (
             <RadialPagination 
@@ -73,7 +91,7 @@ export function DirectoryPage() {
               ) : (
                 <motion.div
                   key={`grid-${page}-${searchQuery}-${JSON.stringify(filters)}`}
-                  className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 min-[1921px]:grid-cols-4 content-start items-start w-full"
+                  className="grid grid-cols-1 gap-7 lg:grid-cols-2 xl:grid-cols-3 min-[1921px]:grid-cols-4 content-start items-start w-full"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, transition: { duration: 0.15 } }}
