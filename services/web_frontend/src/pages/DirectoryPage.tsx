@@ -32,7 +32,7 @@ export function DirectoryPage() {
     <div className="flex min-h-screen">
       <Sidebar />
 
-      <main className="ml-72 flex-1 relative flex flex-col overflow-hidden">
+      <main className="ml-72 flex-1 relative flex flex-col">
         {/* Header / Top Bar */}
         <header className="sticky top-0 z-10 w-full border-b border-slate-900/[0.07] bg-[#fafaf9]/90 px-8 py-4 lg:px-12 relative">
           <div className="mx-auto flex w-full max-w-[1920px] items-center gap-8">
@@ -49,17 +49,19 @@ export function DirectoryPage() {
           </div>
         </header>
 
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-44 -right-72 h-[850px] w-[1180px] opacity-[0.07]"
-          style={{
-            backgroundImage: 'url("/login_background.png")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            WebkitMaskImage: 'radial-gradient(ellipse 68% 72% at 52% 52%, #000 18%, transparent 74%)',
-            maskImage: 'radial-gradient(ellipse 68% 72% at 52% 52%, #000 18%, transparent 74%)',
-          }}
-        />
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <div
+            aria-hidden
+            className="absolute -bottom-44 -right-72 h-[850px] w-[1180px] opacity-[0.07]"
+            style={{
+              backgroundImage: 'url("/login_background.png")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              WebkitMaskImage: 'radial-gradient(ellipse 68% 72% at 52% 52%, #000 18%, transparent 74%)',
+              maskImage: 'radial-gradient(ellipse 68% 72% at 52% 52%, #000 18%, transparent 74%)',
+            }}
+          />
+        </div>
 
         <div className="relative z-[1] mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-8 flex-1 flex flex-col justify-start min-h-0">
 
