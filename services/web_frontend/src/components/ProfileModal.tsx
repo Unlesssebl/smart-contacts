@@ -188,6 +188,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                   {/* Large Avatar */}
                   <UserAvatar 
                     name={user.full_name} 
+                    avatarColor={user.avatar_color}
                     presence={currentPresence} 
                     className="h-24 w-24 text-3xl shadow-xl"
                     statusClassName="h-5 w-5 border-[3px]"

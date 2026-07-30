@@ -26,6 +26,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- нечёткий поиск (fuz
 | `ad_dn` | VARCHAR(512) | NULLABLE | Distinguished Name пользователя в AD (`distinguishedName`) |
 | `job_title` | VARCHAR(256) | NULLABLE | Должность (`title` из AD) |
 | `email` | VARCHAR(256) | NULLABLE | Электронная почта (`mail` из AD) |
+| `avatar_color` | VARCHAR(7) | NULLABLE | Кастомный цвет аватара в формате HEX (`#RRGGBB`) |
 | `role` | VARCHAR(32) | NOT NULL, DEFAULT 'employee' | Роль в системе: `employee`, `it_operator` |
 | `is_verified` | BOOLEAN | NOT NULL, DEFAULT FALSE | Пройдена ли проверка Gatekeeper |
 | `is_protected` | BOOLEAN | NOT NULL, DEFAULT FALSE | VIP-защита профиля |

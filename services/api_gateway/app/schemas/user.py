@@ -13,6 +13,7 @@ class UserBase(BaseModel):
     job_title: Optional[str] = None
     email: Optional[str] = None
     ad_dn: Optional[str] = None
+    avatar_color: Optional[str] = None
 
 class UserRead(UserBase):
     id: UUID = Field(alias="object_guid")
@@ -48,3 +49,6 @@ class ProfileAcknowledge(BaseModel):
         if v not in ["confirm", "skip"]:
             raise ValueError("Action must be 'confirm' or 'skip'")
         return v
+
+class AvatarColorUpdate(BaseModel):
+    avatar_color: str = Field(..., max_length=7, pattern=r'^#[0-9a-fA-F]{6}$')

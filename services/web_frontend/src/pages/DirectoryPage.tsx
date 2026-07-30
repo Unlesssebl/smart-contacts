@@ -5,6 +5,7 @@ import { SpotlightSearch } from '@/components/SpotlightSearch';
 import { EmployeeCard } from '@/components/EmployeeCard';
 import { ProfileModal } from '@/components/ProfileModal';
 import { RadialPagination } from '@/components/RadialPagination';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppStore } from '@/store/useAppStore';
 import { useAdaptiveLimit } from '@/hooks/useAdaptiveLimit';
 import type { User } from '@/types';
@@ -32,9 +33,10 @@ export function DirectoryPage() {
     <div className="flex min-h-screen">
       <Sidebar />
 
-      <main className="ml-72 flex-1 relative flex flex-col">
-        {/* Header / Top Bar */}
-        <header className="sticky top-0 z-10 w-full border-b border-slate-900/[0.07] bg-[#fafaf9]/90 px-8 py-4 lg:px-12 relative">
+      <ScrollArea className="ml-72 flex-1 h-screen bg-transparent">
+        <main className="relative flex flex-col min-h-full">
+          {/* Header / Top Bar */}
+          <header className="sticky top-0 z-10 w-full border-b border-slate-900/[0.07] bg-[#fafaf9]/90 px-8 py-4 lg:px-12 relative">
           <div className="mx-auto flex w-full max-w-[1920px] items-center gap-8">
             <div className="hidden min-w-52 lg:block">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66809e]">Внутренняя сеть</p>
@@ -119,7 +121,8 @@ export function DirectoryPage() {
 
 
         </div>
-      </main>
+        </main>
+      </ScrollArea>
 
       {/* Profile Modal */}
       <AnimatePresence>

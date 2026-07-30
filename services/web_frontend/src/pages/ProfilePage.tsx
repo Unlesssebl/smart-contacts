@@ -7,6 +7,9 @@ import { Sidebar } from '@/components/Sidebar';
 import { useAppStore } from '@/store/useAppStore';
 import { UserAvatar } from '@/components/UserAvatar';
 
+import { updateAvatarColor } from '@/api/profile';
+import { AVATAR_PALETTE } from '@/utils/avatar';
+
 import type { User, UserProfile } from '@/types';
 
 function EditableField({
@@ -177,6 +180,16 @@ export function ProfilePage() {
     }
   };
 
+  const handleColorSelect = async (color: string) => {
+    try {
+      await updateAvatarColor(color);
+      useAppStore.getState().fetchMe();
+      toast.success('Цвет аватарки обновлен');
+    } catch (e) {
+      toast.error('Не удалось обновить цвет аватарки');
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
@@ -194,6 +207,7 @@ export function ProfilePage() {
                 <div className="relative">
                   <UserAvatar 
                     name={user.full_name} 
+                    avatarColor={user.avatar_color}
                     className="h-24 w-24 text-3xl shadow-xl"
                   />
                 </div>
@@ -265,6 +279,28 @@ export function ProfilePage() {
                         <p className="text-xs text-muted-foreground">Руководитель</p>
                         <p className="text-sm text-foreground">{manager.full_name}</p>
                         <p className="text-xs text-muted-foreground">{displayValue(manager.job_title)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isCurrentUser && (
+                  <div>
+                    <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Внешний вид</h3>
+                    <div className="rounded-xl bg-white/60 border border-white/60 p-5">
+                      <p className="text-sm text-muted-foreground mb-4">Выберите цвет для вашей аватарки в справочнике:</p>
+                      <div className="flex flex-wrap gap-3">
+                        {AVATAR_PALETTE.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => handleColorSelect(color)}
+                            className={`w-10 h-10 rounded-full border-2 transition-transform hover:scale-110 ${
+                              user.avatar_color === color ? 'border-foreground shadow-md scale-110' : 'border-transparent'
+                            }`}
+                            style={{ backgroundColor: color }}
+                            aria-label={`Выбрать цвет ${color}`}
+                          />
+                        ))}
                       </div>
                     </div>
                   </div>

@@ -21,6 +21,7 @@ class User(Base):
     ad_dn = Column(String(512))
     job_title = Column(String(256))
     email = Column(String(256))
+    avatar_color = Column(String(7))
     role = Column(String(32), nullable=False, default=UserRole.EMPLOYEE.value)
     is_verified = Column(Boolean, nullable=False, default=False)
     is_protected = Column(Boolean, nullable=False, default=False)

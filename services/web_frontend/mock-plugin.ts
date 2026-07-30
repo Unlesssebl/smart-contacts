@@ -62,7 +62,7 @@ export function mockBackendPlugin(): Plugin {
               { id: 2, object_guid: 'guid-2', full_name: 'Jane Smith', department: 'HR', organization: 'Mock Org', job_title: 'Manager', email: 'jane@example.com', is_active: true },
               { id: 3, object_guid: 'guid-3', full_name: 'Bob Ross', department: 'Design', organization: 'Acme Corp', job_title: 'Designer', email: 'bob@example.com', phone: '+1987654321', is_active: true }
             ],
-            total: 3,
+            total: 45,
             page: 1,
             size: 100
           }));

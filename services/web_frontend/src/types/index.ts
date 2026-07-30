@@ -17,6 +17,7 @@ export interface User {
   presence?: 'online' | 'away' | 'offline';
   ad_dn?: string | null;
   is_hidden?: boolean;
+  avatar_color?: string | null;
 }
 
 export interface UserProfile extends User {

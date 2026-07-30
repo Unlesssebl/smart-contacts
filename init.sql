@@ -19,6 +19,7 @@ CREATE TABLE users (
     ad_dn VARCHAR(512),
     job_title VARCHAR(256),
     email VARCHAR(256),
+    avatar_color VARCHAR(7),
     role VARCHAR(32) NOT NULL DEFAULT 'employee',
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     is_protected BOOLEAN NOT NULL DEFAULT FALSE,

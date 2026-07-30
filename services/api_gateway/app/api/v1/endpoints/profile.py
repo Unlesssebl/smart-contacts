@@ -5,7 +5,7 @@ from app.api import deps
 from shared.models.user import User
 from shared.models.change_request import ChangeRequest
 from shared.models.enums import ChangeRequestStatus
-from app.schemas.user import ProfileAcknowledge
+from app.schemas.user import ProfileAcknowledge, AvatarColorUpdate
 from app.schemas.change_request import ChangeRequestCreate, ChangeRequestRead
 from typing import List
 
@@ -25,6 +25,22 @@ def get_my_profile(
         "profile": current_user,
         "pending_changes": pending_changes
     }
+
+@router.patch("/me/avatar-color")
+def update_avatar_color(
+    data: AvatarColorUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    user = db.query(User).filter(User.object_guid == current_user.object_guid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.avatar_color = data.avatar_color
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Avatar color updated successfully", "avatar_color": user.avatar_color}
 
 @router.get("/me/change-requests", response_model=List[ChangeRequestRead])
 def get_my_change_requests(

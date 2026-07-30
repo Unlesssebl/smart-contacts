@@ -25,7 +25,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     // Mock backend for local development (intercepts /api requests before proxy)
-    mockBackendPlugin(),
+    // mockBackendPlugin(),
   ],
   resolve: {
     alias: {
@@ -36,13 +36,13 @@ export default defineConfig({
 
   server: {
     host: 'localhost', // Listen on localhost
-    // proxy: {
-    //   '/api': {
-    //     target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080',
-    //     changeOrigin: false,
-    //     ws: true,
-    //   }
-    // },
+    proxy: {
+      '/api': {
+        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080',
+        changeOrigin: false,
+        ws: true,
+      }
+    },
     watch: {
       usePolling: true,
     }

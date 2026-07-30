@@ -98,12 +98,13 @@ export function Sidebar() {
         {currentUser && (
           <div className="border-t border-white/10 pt-6 mt-4">
             <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
-                <UserAvatar 
-                  name={currentUser.full_name} 
-                  presence={currentUser.presence} 
-                  className="h-10 w-10 text-sm"
-                  statusClassName="h-3 w-3 border-[2px]"
-                />
+              <UserAvatar
+                name={currentUser.full_name}
+                avatarColor={currentUser.avatar_color}
+                presence={currentUser.presence}
+                className="h-10 w-10 text-sm"
+                statusClassName="h-3 w-3 border-[2px]"
+              />
               <div className="flex-1 overflow-hidden">
                 <p className="truncate text-sm font-medium text-white">
                   {currentUser.full_name}

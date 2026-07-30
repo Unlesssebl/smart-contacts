@@ -108,6 +108,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
           {/* Avatar with online status */}
           <UserAvatar
             name={user.full_name}
+            avatarColor={user.avatar_color}
             presence={user.presence}
             className="h-16 w-16 text-xl shadow-[0_9px_20px_-10px_rgba(1,25,47,0.65)] ring-4 ring-white/25"
             statusClassName="h-4 w-4 border-[3px]"

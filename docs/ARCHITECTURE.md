@@ -13,7 +13,7 @@
     - `search.py` — Поиск пользователей, маппинг OU.
     - `schemas.py` — Строгая Pydantic-типизация (`LdapUser`) и DRY маппинг атрибутов из Active Directory.
   - **Масштабирование**: Синхронные блокирующие операции (LDAP, PostgreSQL) маршрутизируются в Threadpool, чтобы не блокировать Event Loop. Подробный план будущей миграции на `asyncio` описан в `docs/ASYNC_MIGRATION_NOTE.md`.
-  - **Безопасность**: Защита от Brute-Force атак использует реальные IP клиентов через `ProxyHeadersMiddleware`.
+  - **Безопасность**: Защита от Brute-Force атак использует реальные IP клиентов через `ProxyHeadersMiddleware` (с ограничением `trusted_hosts="10.245.19.85"` для предотвращения подмены `X-Forwarded-For`).
 
 ## 2. Сервис "AD Sync Worker" (Python + ldap3)
 - **Ответственность**: Двунаправленная синхронизация данных между локальной PostgreSQL и Active Directory.
