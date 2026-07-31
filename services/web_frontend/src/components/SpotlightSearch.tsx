@@ -96,12 +96,12 @@ export function SpotlightSearch() {
       className="relative mx-auto w-full max-w-3xl"
     >
       <div
-        className={`relative overflow-hidden border bg-white p-0 shadow-[0_10px_24px_-20px_rgba(15,34,58,0.42)] transition-all hover:border-slate-300 ${
+        className={`relative overflow-hidden border bg-white p-0 transition-all ${
           isInputFocused 
-            ? 'border-[#8daecf] shadow-[0_14px_28px_-20px_rgba(15,34,58,0.52)] ring-4 ring-[#0b4f92]/[0.08]'
-            : 'border-slate-200/90'
+            ? 'border-[#2B5FE0] shadow-[0_0_0_3px_rgba(43,95,224,0.1)]'
+            : 'border-slate-200 shadow-[0_4px_12px_rgba(16,24,40,0.04)]'
         }`}
-        style={{ borderRadius: 'var(--radius)' }}
+        style={{ borderRadius: '12px' }}
       >
         <div className="flex items-center gap-4 px-6 py-4">
           <Search className={`h-5 w-5 transition-colors ${isInputFocused ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={1.5} />

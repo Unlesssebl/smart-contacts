@@ -8,7 +8,13 @@ interface UserAvatarProps {
   statusClassName?: string;
 }
 
-export function UserAvatar({ name, avatarColor, presence, className = "h-10 w-10 text-sm", statusClassName = "h-2.5 w-2.5 border-2" }: UserAvatarProps) {
+export function UserAvatar({ 
+  name, 
+  avatarColor,
+  presence, 
+  className = "h-[56px] w-[56px] min-w-[56px] min-h-[56px] text-[18px]", 
+  statusClassName = "h-[10px] w-[10px] border-[2px]" 
+}: UserAvatarProps) {
   const initials = (name || '')
     .split(' ')
     .filter(Boolean)
@@ -19,22 +25,31 @@ export function UserAvatar({ name, avatarColor, presence, className = "h-10 w-10
 
   const color = getAvatarColor(name, avatarColor);
 
+  let presenceTitle = '';
+  if (presence === 'online') presenceTitle = 'В сети';
+  else if (presence === 'away') presenceTitle = 'Отошел';
+  else if (presence === 'offline') presenceTitle = 'Не в сети';
+
   return (
     <div className="relative flex-shrink-0 inline-flex">
       <div 
-        className={`flex items-center justify-center rounded-full text-white shadow-sm ring-1 ring-inset ring-white/20 font-semibold ${className}`}
+        className={`flex items-center justify-center rounded-full text-white font-semibold shadow-sm ${className}`}
         style={{ backgroundColor: color }}
       >
         {initials}
       </div>
       {presence && (
         <div
-          className={`absolute bottom-0 right-0 rounded-full border-white ${presence === 'online' ? 'bg-emerald-500' :
+          title={presenceTitle}
+          className={`absolute bottom-0 right-0 rounded-full border-white ${
+            presence === 'online' ? 'bg-[#22C55E]' :
             presence === 'away' ? 'bg-amber-400' :
-              'bg-slate-200'
-            } ${statusClassName}`}
+            'bg-[#CBD5E1]'
+          } ${statusClassName}`}
         />
       )}
     </div>
   );
 }
+
+

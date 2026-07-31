@@ -90,6 +90,43 @@ class LDAPClient:
             if "attributes" in entry:
                 yield entry["attributes"]
 
+    def search_deleted(
+        self, 
+        start_usn: int, 
+        page_size: int = 1000
+    ) -> Generator[Dict[str, Any], None, None]:
+        """
+        Searches for deleted objects (tombstones) using the Show Deleted Objects control (1.2.840.113556.1.4.417).
+        """
+        root_dn = ",".join(part for part in settings.AD_BASE_DN.split(",") if part.upper().startswith("DC="))
+        if not root_dn:
+            root_dn = settings.AD_BASE_DN
+
+        # Tombstones in AD often lose objectClass=user — filter only by isDeleted+uSNChanged.
+        # We verify the deleted object was a user by checking sAMAccountName presence.
+        filter_str = f"(&(isDeleted=TRUE)(uSNChanged>={start_usn}))"
+        controls = [("1.2.840.113556.1.4.417", True, None)]
+
+        try:
+            paged_search = self.conn.extend.standard.paged_search(
+                search_base=root_dn,
+                search_filter=filter_str,
+                search_scope=SUBTREE,
+                attributes=["objectGUID", "uSNChanged", "sAMAccountName"],
+                controls=controls,
+                paged_size=page_size,
+                generator=True
+            )
+
+            for entry in paged_search:
+                if "attributes" in entry:
+                    attrs = entry["attributes"]
+                    # Only process entries that belonged to a user (have sAMAccountName)
+                    if attrs.get("sAMAccountName"):
+                        yield attrs
+        except Exception as e:
+            logger.warning(f"LDAP search_deleted failed or control not permitted: {e}")
+
     def modify_attribute(self, dn: str, attribute: str, value: str) -> bool:
         """
         Updates a single attribute for a given DN.

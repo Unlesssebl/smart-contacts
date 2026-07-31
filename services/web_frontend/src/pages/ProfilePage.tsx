@@ -8,7 +8,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { UserAvatar } from '@/components/UserAvatar';
 
 import { updateAvatarColor } from '@/api/profile';
-import { AVATAR_PALETTE, getAvatarColor } from '@/utils/avatar';
+import { CURATED_PALETTE, getAvatarColor } from '@/utils/avatar';
 
 import type { User, UserProfile } from '@/types';
 
@@ -199,7 +199,7 @@ export function ProfilePage() {
     }
   };
 
-  const currentAvatarColor = user ? getAvatarColor(user.full_name, user.avatar_color) : '';
+  const currentAvatarColor = user ? getAvatarColor(user.department, user.avatar_color) : '';
 
   return (
     <div className="flex min-h-screen bg-transparent">
@@ -218,6 +218,7 @@ export function ProfilePage() {
                 <div className="relative">
                   <UserAvatar 
                     name={user.full_name} 
+                    department={user.department}
                     avatarColor={user.avatar_color}
                     className="h-24 w-24 text-3xl shadow-xl"
                   />
@@ -301,7 +302,7 @@ export function ProfilePage() {
                     <div className="rounded-xl bg-white/60 border border-white/60 p-5">
                       <p className="text-sm text-muted-foreground mb-4">Выберите цвет для вашей аватарки в справочнике:</p>
                       <div className="flex flex-wrap gap-3">
-                        {AVATAR_PALETTE.map((color) => (
+                        {CURATED_PALETTE.map((color) => (
                           <button
                             key={color}
                             onClick={() => handleColorSelect(color)}

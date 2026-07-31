@@ -64,7 +64,9 @@ def main():
     worker = SyncWorker()
     
     last_pull_time = 0
+    last_full_sync_time = time.time()  # Worker start time — first full sync after 24h
     pull_interval = settings.AD_PULL_INTERVAL_SECONDS
+    full_sync_interval = 86400  # 24 hours (daily full sync reconciliation)
     push_interval = 5  # Push every 5 seconds
     
     known_cred_version = get_credentials_version()
@@ -97,8 +99,14 @@ def main():
             logger.error(f"Error checking FORCE_SYNC flag: {e}")
         
         try:
-            if force_sync_requested or (current_time - last_pull_time >= pull_interval):
-                worker.pull()
+            if force_sync_requested or (current_time - last_full_sync_time >= full_sync_interval):
+                reason = "admin request" if force_sync_requested else "scheduled 24h interval"
+                logger.info(f"Running FULL sync cycle ({reason})...")
+                worker.pull(full=True)
+                last_pull_time = current_time
+                last_full_sync_time = current_time
+            elif current_time - last_pull_time >= pull_interval:
+                worker.pull(full=False)
                 last_pull_time = current_time
                 
             worker.push()

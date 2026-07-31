@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select, update
 from .config import settings
 from .db import SessionLocal
+from shared.models.enums import UserStatus
 from shared.models.user import User
 from shared.models.change_request import ChangeRequest
 from .ldap import LDAPClient
@@ -49,28 +50,34 @@ class SyncWorker:
         except Exception as e:
             logger.error(f"Error saving last USN to DB: {e}")
 
-    def pull(self):
+    def pull(self, full: bool = False):
         """
-        Poll AD for changes since last_usn.
+        Poll AD for changes since last_usn (or full sync from USN 0 if full=True).
+        During full sync, users present in DB but absent in AD are marked as RESIGNED.
         """
-        logger.info(f"Starting Pull cycle. Last USN: {self.last_usn}")
+        start_usn = 0 if full else self.last_usn
+        logger.info(f"Starting Pull cycle (full={full}). Start USN: {start_usn}")
         
-        filter_str = f"(&(objectClass=user)(objectCategory=person)(uSNChanged>={self.last_usn}))"
+        filter_str = f"(&(objectClass=user)(objectCategory=person)(uSNChanged>={start_usn}))"
         attributes = [
             "objectGUID", "sAMAccountName", "displayName", "mobile", 
             "telephoneNumber", "department", "physicalDeliveryOfficeName", 
-            "userAccountControl", "uSNChanged", "memberOf", "title", "distinguishedName"
+            "userAccountControl", "uSNChanged", "memberOf", "title", "distinguishedName", "mail"
         ]
 
         max_usn = self.last_usn
         collected_ous: set = set()
+        seen_guids: set = set()
 
         with LDAPClient() as ldap:
             # 2.4. Одна сессия на весь цикл Pull
             with SessionLocal() as session:
                 for entry in ldap.search_paged(filter_str, attributes):
                     try:
-                        self._process_ad_entry(session, entry)
+                        guid_str = self._process_ad_entry(session, entry)
+                        if guid_str:
+                            seen_guids.add(guid_str)
+
                         current_usn = int(entry.get("uSNChanged", 0))
                         if current_usn > max_usn:
                             max_usn = current_usn
@@ -88,6 +95,59 @@ class SyncWorker:
                         session.rollback()
                         continue
                 
+                # Tombstone processing for deleted objects
+                tombstone_resigned = 0
+                for del_entry in ldap.search_deleted(start_usn):
+                    try:
+                        guid_bytes = del_entry.get("objectGUID")
+                        if not guid_bytes:
+                            continue
+                        guid_str = ad_guid_to_uuid(guid_bytes)
+                        current_usn = int(del_entry.get("uSNChanged", 0))
+                        if current_usn > max_usn:
+                            max_usn = current_usn
+
+                        user = session.get(User, guid_str)
+                        if user and not user.is_protected and user.status != UserStatus.RESIGNED.value:
+                            user.status = UserStatus.RESIGNED.value
+                            user.last_sync_timestamp = datetime.now(timezone.utc)
+                            tombstone_resigned += 1
+                            logger.info(f"User {user.sam_account_name} ({user.object_guid}) found in AD tombstones -> marked as RESIGNED")
+                    except Exception as e:
+                        logger.error(f"Error processing tombstone deleted entry: {e}")
+
+                if tombstone_resigned > 0:
+                    logger.info(f"Tombstone sync: marked {tombstone_resigned} deleted users as RESIGNED.")
+                    try:
+                        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+                    except Exception as re:
+                        logger.error(f"Failed to publish admin_update event after tombstone processing: {re}")
+                    # Flush tombstone changes before reconciliation SELECT
+                    session.commit()
+
+                if full and seen_guids:
+                    # Reconciliation: mark users absent from AD as RESIGNED.
+                    # Only skip users explicitly protected (is_protected=True).
+                    # All legitimate employees come from AD, so absence from AD = RESIGNED.
+                    all_users = session.execute(select(User)).scalars().all()
+                    resigned_count = 0
+                    for user in all_users:
+                        if user.is_protected:
+                            continue
+                        if str(user.object_guid) not in seen_guids:
+                            if user.status != UserStatus.RESIGNED.value:
+                                user.status = UserStatus.RESIGNED.value
+                                user.last_sync_timestamp = datetime.now(timezone.utc)
+                                resigned_count += 1
+                                logger.info(f"User {user.sam_account_name} ({user.object_guid}) not in AD -> marked as RESIGNED")
+                    
+                    if resigned_count > 0:
+                        logger.info(f"Full sync reconciliation completed: marked {resigned_count} users as RESIGNED.")
+                        try:
+                            redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
+                        except Exception as re:
+                            logger.error(f"Failed to publish admin_update event after full sync reconciliation: {re}")
+
                 # Финальный коммит если остались изменения
                 session.commit()
                 
@@ -101,10 +161,10 @@ class SyncWorker:
         
         logger.info("Pull cycle completed.")
 
-    def _process_ad_entry(self, session, entry: dict):
+    def _process_ad_entry(self, session, entry: dict) -> str:
         guid_bytes = entry.get("objectGUID")
         if not guid_bytes:
-            return
+            return None
         
         guid_str = ad_guid_to_uuid(guid_bytes)
         sam = str(entry.get("sAMAccountName", ""))
@@ -130,6 +190,7 @@ class SyncWorker:
                 ad_dn=dn,
                 internal_phone=format_phone(str(entry.get("telephoneNumber", ""))),
                 mobile_phone=format_phone(str(entry.get("mobile", ""))),
+                email=str(entry.get("mail", "")) if entry.get("mail") else None,
                 sync_error_log="\n".join(warnings) if warnings else None,
                 last_sync_timestamp=datetime.now(timezone.utc) # 4.1 UTC
             )
@@ -144,6 +205,7 @@ class SyncWorker:
 
         # Частичный коммит для сохранения прогресса
         session.commit()
+        return guid_str
 
     def _find_or_link_user(self, session, sam: str, guid_str: str) -> User:
         """
@@ -203,6 +265,9 @@ class SyncWorker:
         
         if "mobile_phone" not in pending_fields:
             user.mobile_phone = format_phone(str(entry.get("mobile", "")))
+
+        if "email" not in pending_fields:
+            user.email = str(entry.get("mail", "")) if entry.get("mail") else None
 
         if warnings:
             user.sync_error_log = (user.sync_error_log or "") + "\n" + "\n".join(warnings)

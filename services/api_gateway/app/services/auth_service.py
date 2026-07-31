@@ -41,6 +41,15 @@ class AuthService:
                 department="IT",
                 job_title="Developer"
             )
+            # Ensure the dev stub is always protected from AD sync reconciliation
+            _dev_guid = "00000000-0000-0000-0000-000000000001"
+            from app.db.session import SessionLocal
+            from app.db.repository.user import get_user_by_guid
+            with SessionLocal() as _db:
+                _dev_user = get_user_by_guid(_db, _dev_guid)
+                if _dev_user and not _dev_user.is_protected:
+                    _dev_user.is_protected = True
+                    _db.commit()
         
         # 3. LDAP BIND (if not dev user)
         if not ldap_user:
@@ -69,8 +78,11 @@ class AuthService:
         user = AuthService._ensure_user_from_ldap(db, username, ldap_user)
 
         # 6. Check for initial admin role
-        init_admins = [a.strip().lower() for a in settings.INIT_ADMINS.split(",") if a.strip()]
-        if username.lower() in init_admins and user.role != UserRole.IT_OPERATOR.value:
+        admin_list = [a.strip().lower() for a in f"{settings.INIT_ADMINS},{settings.ADMINS}".split(",") if a.strip()]
+        if settings.DEV_USER:
+            admin_list.append(settings.DEV_USER.lower())
+
+        if username.lower() in admin_list and user.role != UserRole.IT_OPERATOR.value:
             user.role = UserRole.IT_OPERATOR.value
             db.commit()
             db.refresh(user)

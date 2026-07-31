@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     # Initial admins (comma separated list of samAccountNames)
     INIT_ADMINS: str = ""
+    ADMINS: str = ""
 
     # LDAP / AD
     AD_SERVER: str
