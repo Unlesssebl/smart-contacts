@@ -30,10 +30,9 @@ export function useAdaptiveLimit(containerRef?: React.RefObject<HTMLDivElement |
         if (gridCols && gridCols !== 'none') {
           cols = gridCols.split(' ').filter(Boolean).length;
         } else {
-          // Fallback matching Tailwind breakpoints: md: 2, lg: 3, xl: 4
+          // Fallback matching Tailwind breakpoints: md: 2, lg: 3
           const w = window.innerWidth;
-          if (w >= 1280) cols = 4;
-          else if (w >= 1024) cols = 3;
+          if (w >= 1024) cols = 3;
           else if (w >= 768) cols = 2;
           else cols = 1;
         }
@@ -52,19 +51,20 @@ export function useAdaptiveLimit(containerRef?: React.RefObject<HTMLDivElement |
         const verticalOffsets = 140;
         availableHeight = Math.max(200, window.innerHeight - verticalOffsets);
         const w = window.innerWidth;
-        if (w >= 1280) cols = 4;
-        else if (w >= 1024) cols = 3;
+        if (w >= 1024) cols = 3;
         else if (w >= 768) cols = 2;
         else cols = 1;
       }
 
       const rowHeight = cardHeight + gap;
-      // To strictly adhere to 3 rows on a 2K monitor where innerHeight >= 1200, force it:
       let rows = Math.max(1, Math.floor((availableHeight + gap) / rowHeight));
 
-      // Specifically for 2K monitors (width >= 2560 and height >= 1200), force 3 rows:
+      // Specifically for 2K monitors (width >= 2560 and height >= 1200), force 3 rows;
+      // For FullHD monitors (width <= 1920 or height <= 1080), restrict to 2 rows (2x3 = 6 cards grid):
       if (window.innerWidth >= 2560 && window.innerHeight >= 1200) {
         rows = 3;
+      } else if (window.innerWidth <= 1920 || window.innerHeight <= 1080) {
+        rows = Math.min(rows, 2);
       }
 
       const newLimit = Math.max(cols, rows * cols);

@@ -93,7 +93,7 @@ export function SpotlightSearch() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
-      className="relative mx-auto w-full max-w-3xl"
+      className="relative mx-auto w-full"
     >
       <div
         className={`relative overflow-hidden border bg-white p-0 transition-all ${

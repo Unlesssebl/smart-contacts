@@ -115,17 +115,24 @@ export function DirectoryPage() {
       >
         {/* Header / Top Bar */}
         <header className="shrink-0 z-10 w-full border-b border-slate-200/60 bg-[#F5F6F8]/90 backdrop-blur-md px-8 py-4 lg:px-12 relative">
-          <div className="mx-auto flex w-full max-w-[1920px] items-center gap-8">
-            <div className="hidden min-w-52 lg:block">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66809e]">Внутренняя сеть</p>
-              <h1 className="mt-1 text-[22px] font-semibold leading-none tracking-[-0.035em] text-slate-900">Справочник</h1>
+          <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between gap-4 lg:gap-8">
+            {/* Left Column: Title */}
+            <div className="hidden lg:block flex-1 min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66809e] truncate">Внутренняя сеть</p>
+              <h1 className="mt-1 text-[22px] font-semibold leading-none tracking-[-0.035em] text-slate-900 truncate">Справочник</h1>
             </div>
-            <div className="mx-auto w-full max-w-2xl flex-1">
+
+            {/* Center Column: Search */}
+            <div className="w-full max-w-4xl flex-auto">
               <SpotlightSearch />
             </div>
-          </div>
-          <div className="absolute right-8 lg:right-12 top-[44px] -translate-y-1/2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 whitespace-nowrap hidden xl:block pointer-events-none">
-            Найдено: {totalUsers} {getEmployeeWord(totalUsers)}
+
+            {/* Right Column: Counter / Empty Spacer for perfect centering */}
+            <div className="hidden lg:flex flex-1 min-w-0 justify-end items-center">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 whitespace-nowrap hidden xl:block pointer-events-none">
+                Найдено: {totalUsers} {getEmployeeWord(totalUsers)}
+              </div>
+            </div>
           </div>
         </header>
 
@@ -167,7 +174,7 @@ export function DirectoryPage() {
               ) : (
                 <motion.div
                   key={`grid-${page}-${searchQuery}-${JSON.stringify(filters)}`}
-                  className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full h-full"
+                  className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 w-full h-full"
                   style={{ gridTemplateRows: 'repeat(var(--grid-rows, 1), minmax(0, 1fr))' }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

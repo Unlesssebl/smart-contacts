@@ -75,19 +75,19 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
         data-card
         ref={ref}
         onClick={onClick}
-        className={`relative group cursor-pointer p-6 bg-white border border-slate-200/90 shadow-[0_14px_34px_-28px_rgba(15,34,58,0.42)] rounded-[20px] hover:-translate-y-1 hover:border-[#9fb9d4] hover:shadow-[0_24px_42px_-28px_rgba(15,34,58,0.62)] transition-all duration-300 flex flex-col h-full overflow-hidden ${
+        className={`relative group cursor-pointer p-5 bg-white border border-slate-200/90 shadow-[0_14px_34px_-28px_rgba(15,34,58,0.42)] rounded-[20px] hover:-translate-y-1 hover:border-[#9fb9d4] hover:shadow-[0_24px_42px_-28px_rgba(15,34,58,0.62)] transition-all duration-300 flex flex-col h-full overflow-hidden ${
           user.is_hidden ? 'opacity-60 grayscale-[0.2]' : ''
         }`}
       >
         {/* Top Blue Header Banner */}
         <div
-          className="absolute inset-x-0 top-0 h-[124px] pointer-events-none"
+          className="absolute inset-x-0 top-0 h-[116px] pointer-events-none"
           style={{
             background: 'linear-gradient(135deg, #356b99 0%, #1b497a 100%)',
           }}
         />
         <div
-          className="absolute inset-x-0 top-0 h-[120px] pointer-events-none opacity-[0.03]"
+          className="absolute inset-x-0 top-0 h-[112px] pointer-events-none opacity-[0.03]"
           style={{
             backgroundImage: 'url("/login_background.png")',
             backgroundSize: '460px auto',
@@ -95,8 +95,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
           }}
         />
         <div className="absolute -right-12 top-[-116px] h-56 w-56 rounded-full border border-white/15 pointer-events-none" />
-        <div className="absolute right-9 top-8 h-2.5 w-2.5 rounded-full bg-[#b9d9ee] shadow-[0_0_0_6px_rgba(185,217,238,0.1)] pointer-events-none" />
-        <div className="absolute inset-x-0 top-[122px] h-[2px] bg-[#b9d9ee] pointer-events-none" />
+        <div className="absolute inset-x-0 top-[114px] h-[2px] bg-[#b9d9ee] pointer-events-none" />
 
         {!isOwnProfile && (
           <button
@@ -159,27 +158,27 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
         </div>
 
         {/* BOTTOM: Contact Info Block (Below Banner) */}
-        <div className="mt-auto pt-9">
+        <div className="mt-auto pt-5">
           <div className="flex flex-col divide-y divide-slate-200/85 border-t border-slate-200/85">
-            <div className="flex items-center gap-3.5 py-3 text-[14px] text-slate-700">
+            <div className="flex items-center gap-3.5 py-2.5 text-[14px] text-slate-700">
               <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-[#f0f5fa] text-[#3670a8]">
                 <Mail className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(email)}</div>
             </div>
-            <div className="flex items-center gap-3.5 py-3 text-[14px] text-slate-700">
+            <div className="flex items-center gap-3.5 py-2.5 text-[14px] text-slate-700">
               <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-[#f0f5fa] text-[#3670a8]">
                 <Phone className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(internalPhone)}</div>
             </div>
-            <div className="flex items-center gap-3.5 py-3 text-[14px] text-slate-700">
+            <div className="flex items-center gap-3.5 py-2.5 text-[14px] text-slate-700">
               <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-[#f0f5fa] text-[#3670a8]">
                 <Smartphone className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="truncate flex-1 font-medium">{displayValue(mobilePhone)}</div>
             </div>
-            <div className="flex items-center gap-3.5 py-3 text-[14px] text-slate-700">
+            <div className="flex items-center gap-3.5 py-2.5 text-[14px] text-slate-700">
               <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-[#f0f5fa] text-[#3670a8]">
                 <MapPin className="h-4 w-4" strokeWidth={2.5} />
               </div>
