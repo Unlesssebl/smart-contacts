@@ -124,8 +124,8 @@ export default function App() {
         position="top-right"
         toastOptions={{
           style: {
-            background: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(40px)',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
             border: '0.5px solid rgba(255, 255, 255, 0.5)',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
             borderRadius: '12px',

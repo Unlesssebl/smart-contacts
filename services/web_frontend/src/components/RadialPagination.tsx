@@ -45,7 +45,7 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
   return (
     <div className="fixed right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center">
       {/* Unified Glass Pill Container */}
-      <div className="flex flex-col items-center justify-center gap-2 min-h-[320px] w-[64px] py-4 rounded-full bg-white/50 backdrop-blur-xl border border-white shadow-[0_8px_32px_-4px_rgba(32,92,158,0.15)]">
+      <div className="flex flex-col items-center justify-center gap-2 min-h-[320px] w-[64px] py-4 rounded-full bg-white/85 border border-white shadow-[0_8px_32px_-4px_rgba(32,92,158,0.15)] transform-gpu">
         
         {/* Prev Arrow */}
         <button

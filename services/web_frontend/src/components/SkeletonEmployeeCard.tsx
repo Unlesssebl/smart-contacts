@@ -2,7 +2,7 @@ import React from 'react';
 
 export const SkeletonEmployeeCard = () => {
   return (
-    <div className="relative group p-6 bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-2xl flex flex-col h-[320px] overflow-hidden">
+    <div className="relative group p-6 bg-white/70 border border-white/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-2xl flex flex-col h-[320px] overflow-hidden">
       {/* TOP: Avatar and Primary Info Skeleton */}
       <div className="flex items-start gap-4">
         {/* Avatar skeleton */}

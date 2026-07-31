@@ -31,12 +31,13 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen w-72 z-20 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.1)]"
+      className="fixed left-0 top-0 h-screen w-72 z-20 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.1)] transform-gpu"
       style={{
-        backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px), linear-gradient(to bottom, rgba(53, 114, 179, 0.7), rgba(27, 72, 126, 0.86)), url("/login_background.png")',
-        backgroundSize: '4px 4px, cover, cover',
-        backgroundPosition: '0 0, center, center',
-        backgroundRepeat: 'repeat, no-repeat, no-repeat'
+        backgroundImage: 'linear-gradient(to bottom, rgba(53, 114, 179, 0.9), rgba(27, 72, 126, 0.95)), url("/login_background.png")',
+        backgroundSize: 'cover, cover',
+        backgroundPosition: 'center, center',
+        backgroundRepeat: 'no-repeat, no-repeat',
+        transform: 'translateZ(0)',
       }}
     >
       <div className="flex h-full flex-col px-6 py-6">
@@ -51,7 +52,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <div className="flex-1 mt-4">
-          <nav className="flex flex-col space-y-1 bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl shadow-sm">
+          <nav className="flex flex-col space-y-1 bg-white/15 border border-white/20 p-2 rounded-2xl shadow-sm">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -81,7 +82,7 @@ export function Sidebar() {
         </div>
 
         {/* Help / Support Card */}
-        <div className="mt-auto mb-6 rounded-2xl bg-white/10 p-4 border border-white/20 backdrop-blur-md shadow-sm">
+        <div className="mt-auto mb-6 rounded-2xl bg-white/15 p-4 border border-white/20 shadow-sm">
           <h4 className="text-sm font-medium text-white">Нужна помощь?</h4>
           <p className="mt-1 text-xs text-white/70 leading-relaxed">
             Если у вас возникли проблемы с доступом или поиском сотрудников, обратитесь в поддержку.
