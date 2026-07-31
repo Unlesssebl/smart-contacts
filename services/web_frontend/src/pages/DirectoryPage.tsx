@@ -105,6 +105,11 @@ export function DirectoryPage() {
   const filteredUsers = users; // Filtering handled server-side
   const showEmptyState = initialLoaded && !isSearching && filteredUsers.length === 0;
 
+  // Compute the *actual* number of occupied grid rows from real card count.
+  // This prevents 1fr rows from stretching on partial last pages.
+  const colCount = window.innerWidth >= 1024 ? 3 : window.innerWidth >= 768 ? 2 : 1;
+  const actualGridRows = Math.max(1, Math.ceil(filteredUsers.length / colCount));
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F5F6F8]">
       <Sidebar />
@@ -175,7 +180,7 @@ export function DirectoryPage() {
                 <motion.div
                   key={`grid-${page}-${searchQuery}-${JSON.stringify(filters)}`}
                   className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 w-full h-full"
-                  style={{ gridTemplateRows: 'repeat(var(--grid-rows, 1), minmax(0, 1fr))' }}
+                  style={{ gridTemplateRows: `repeat(${actualGridRows}, minmax(0, 1fr))` }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, transition: { duration: 0.15 } }}
