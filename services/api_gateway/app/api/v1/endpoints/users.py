@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
-from typing import Optional, List
+from typing import Dict, List, Optional
 from app.db.session import get_db
 from app.api import deps
 from shared.models.user import User
@@ -9,13 +9,12 @@ from shared.models.enums import UserStatus, UserRole
 from app.schemas.user import PaginatedUsers, UserFull
 from uuid import UUID
 
+import json
 import re
 
-router = APIRouter()
-
-import json
 from app.core import settings_manager
-from typing import Dict
+
+router = APIRouter()
 
 @router.get("/org-colors", response_model=Dict[str, str])
 def get_org_colors(db: Session = Depends(get_db)):
@@ -52,9 +51,9 @@ async def list_users(
     
     query = db.query(User).filter(User.status != UserStatus.RESIGNED.value)
     if not is_admin:
-        query = query.filter(User.is_hidden == False)
+        query = query.filter(User.is_hidden.is_(False))
     elif hidden_only:
-        query = query.filter(User.is_hidden == True)
+        query = query.filter(User.is_hidden.is_(True))
     
     if department:
         query = query.filter(User.department == department)

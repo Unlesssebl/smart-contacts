@@ -1,14 +1,13 @@
-import uuid
-import re
-from typing import List, Optional, Tuple, Any
+import json
 import logging
+import re
+import time
+from typing import Any, Optional
 
-from .config import settings
+from shared.models.system_setting import SystemSetting
+
 
 logger = logging.getLogger(__name__)
-
-
-from shared.utils import ad_guid_to_uuid
 
 
 def determine_status(uac: int, sam_account_name: str) -> str:
@@ -31,11 +30,7 @@ def determine_status(uac: int, sam_account_name: str) -> str:
     return "ACTIVE"
 
 
-from sqlalchemy import select
-from shared.models.system_setting import SystemSetting
-import json
-
-_ou_mapping_cache: Optional[dict[str, str]] = None
+_ou_mapping_cache: Optional[dict[str, Any]] = None
 _ou_mapping_cache_time: float = 0
 
 
@@ -78,11 +73,9 @@ def get_known_ous(session) -> list[str]:
             return []
     return []
 
-def get_ou_mapping(session) -> dict[str, str]:
+def get_ou_mapping(session) -> dict[str, Any]:
     """Returns OU mapping from DB, cached for 60 seconds."""
     global _ou_mapping_cache, _ou_mapping_cache_time
-    import time
-    
     current_time = time.time()
     if _ou_mapping_cache is not None and current_time - _ou_mapping_cache_time < 60:
         return _ou_mapping_cache
@@ -100,7 +93,14 @@ def get_ou_mapping(session) -> dict[str, str]:
     _ou_mapping_cache_time = current_time
     return _ou_mapping_cache
 
-def match_organization_by_ou(dn: str, session) -> Tuple[Optional[str], List[str]]:
+def _organization_name(mapping_value: Any) -> Optional[str]:
+    if isinstance(mapping_value, dict):
+        value = mapping_value.get("org")
+        return value if isinstance(value, str) and value else None
+    return mapping_value if isinstance(mapping_value, str) and mapping_value else None
+
+
+def match_organization_by_ou(dn: str, session) -> tuple[Optional[str], list[str]]:
     """
     Matches the user's AD Organizational Units (OU) against the mapping in DB.
     """
@@ -128,12 +128,14 @@ def match_organization_by_ou(dn: str, session) -> Tuple[Optional[str], List[str]
     if len(matches) == 1:
         # Get the actual organization name from mapping
         key = matches[0]
-        org_name = mapping.get(key) or mapping_lower.get(key.lower())
+        org_name = _organization_name(mapping.get(key) or mapping_lower.get(key.lower()))
         return org_name, []
     
     # Multiple matches found
     # Try to pick exact case match if exists, otherwise first match
     selected_ou = exact_matches[0] if exact_matches else matches[0]
-    org_name = mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower())
+    org_name = _organization_name(
+        mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower())
+    )
     warning = f"Warning: Multiple OUs matched in DN: {matches}. Using {selected_ou} -> {org_name}."
     return org_name, [warning]

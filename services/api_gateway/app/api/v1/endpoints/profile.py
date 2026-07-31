@@ -8,6 +8,7 @@ from shared.models.enums import ChangeRequestStatus
 from app.schemas.user import ProfileAcknowledge, AvatarColorUpdate
 from app.schemas.change_request import ChangeRequestCreate, ChangeRequestRead
 from typing import List
+from app.services.event_service import publish_admin_update
 
 router = APIRouter()
 
@@ -114,12 +115,6 @@ def create_change_request(
     db.commit()
     db.refresh(new_request, ['user'])
     
-    try:
-        import json
-        from app.core.redis import redis_client
-        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Redis publish error: {e}")
+    publish_admin_update()
     
     return new_request

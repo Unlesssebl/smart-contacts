@@ -1,10 +1,7 @@
 import logging
-import json
-import redis
 
 from datetime import datetime, timezone
 from sqlalchemy import select, update
-from .config import settings
 from .db import SessionLocal
 from shared.models.enums import UserStatus
 from shared.models.user import User
@@ -13,11 +10,20 @@ from .ldap import LDAPClient
 from .logic import determine_status, match_organization_by_ou, save_known_ous
 from shared.utils import ad_guid_to_uuid
 from .utils import with_retry, format_phone
+from .events import publish_admin_update, publish_profile_update
 
 logger = logging.getLogger(__name__)
 
-# Global redis client for the worker
-redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True)
+AD_ATTRIBUTE_MAP = {
+    "internal_phone": "telephoneNumber",
+    "mobile_phone": "mobile",
+    "office_location": "physicalDeliveryOfficeName",
+    "department": "department",
+    "job_title": "title",
+    "full_name": "displayName",
+    "organization": "company",
+    "email": "mail",
+}
 
 
 class SyncWorker:
@@ -118,10 +124,7 @@ class SyncWorker:
 
                 if tombstone_resigned > 0:
                     logger.info(f"Tombstone sync: marked {tombstone_resigned} deleted users as RESIGNED.")
-                    try:
-                        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-                    except Exception as re:
-                        logger.error(f"Failed to publish admin_update event after tombstone processing: {re}")
+                    publish_admin_update()
                     # Flush tombstone changes before reconciliation SELECT
                     session.commit()
 
@@ -143,10 +146,7 @@ class SyncWorker:
                     
                     if resigned_count > 0:
                         logger.info(f"Full sync reconciliation completed: marked {resigned_count} users as RESIGNED.")
-                        try:
-                            redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-                        except Exception as re:
-                            logger.error(f"Failed to publish admin_update event after full sync reconciliation: {re}")
+                        publish_admin_update()
 
                 # Финальный коммит если остались изменения
                 session.commit()
@@ -315,19 +315,7 @@ class SyncWorker:
                         logger.warning(f"Skipping push for protected user {user.sam_account_name}")
                         continue
                     
-                    # Map internal attribute names to AD attributes
-                    attr_map = {
-                        "internal_phone": "telephoneNumber",
-                        "mobile_phone": "mobile",
-                        "office_location": "physicalDeliveryOfficeName",
-                        "department": "department",
-                        "job_title": "title",
-                        "full_name": "displayName",
-                        "organization": "company",
-                        "email": "mail"
-                    }
-                    
-                    ad_attr = attr_map.get(task["attribute_name"])
+                    ad_attr = AD_ATTRIBUTE_MAP.get(task["attribute_name"])
                     if not ad_attr:
                         continue
                     
@@ -412,10 +400,10 @@ class SyncWorker:
             session.commit()
             
             for event in events_to_publish:
-                try:
-                    redis_client.publish("system_events", json.dumps(event))
-                except Exception as re:
-                    logger.error(f"Redis publish error: {re}")
+                if event["type"] == "admin_update":
+                    publish_admin_update()
+                else:
+                    publish_profile_update(event["user_id"])
         
         logger.info("Push cycle completed.")
 

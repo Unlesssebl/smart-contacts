@@ -67,7 +67,7 @@ def verify_refresh_token(db: Session, token: str) -> Optional[RefreshToken]:
                 expires_at=datetime.now(timezone.utc) + timedelta(minutes=1),
                 revoked=False
             )
-    except Exception as e:
+    except Exception:
         # Игнорируем ошибки Redis
         pass
         

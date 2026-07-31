@@ -6,6 +6,7 @@ from shared.models.user import User
 from app.db.repository import report as report_repo
 from app.db.repository import user as user_repo
 from app.schemas.report import ReportCreateBulk
+from app.services.event_service import publish_admin_update
 
 router = APIRouter()
 
@@ -35,12 +36,6 @@ def create_reports(
         data.changes
     )
     
-    try:
-        import json
-        from app.core.redis import redis_client
-        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Redis publish error: {e}")
+    publish_admin_update()
     
     return {"created_count": len(new_reports)}

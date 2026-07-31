@@ -1,7 +1,8 @@
+import re
 import random
 import time
-from typing import Callable, TypeVar, Any
 import logging
+from typing import Any, Callable, Optional, TypeVar
 
 from .config import settings
 
@@ -38,9 +39,6 @@ def with_retry(func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     
     # Should not reach here
     raise RuntimeError("Retry loop exited unexpectedly")
-
-import re
-from typing import Optional
 
 def format_phone(phone: str) -> Optional[str]:
     """

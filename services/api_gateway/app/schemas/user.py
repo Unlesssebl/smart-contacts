@@ -52,3 +52,7 @@ class ProfileAcknowledge(BaseModel):
 
 class AvatarColorUpdate(BaseModel):
     avatar_color: str = Field(..., max_length=7, pattern=r'^#[0-9a-fA-F]{6}$')
+
+
+class UserVisibilityUpdate(BaseModel):
+    is_hidden: bool

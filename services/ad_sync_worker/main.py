@@ -4,6 +4,7 @@ import sys
 from app.config import settings
 from app.sync import SyncWorker
 from app.ldap import InvalidLDAPCredentialsError
+from app.events import publish_ldap_status_update
 
 # Configure file handler for WARNING and above
 file_handler = logging.FileHandler("worker_errors.log", encoding="utf-8")
@@ -39,12 +40,7 @@ def set_ldap_status(status: str, last_error: str = ""):
             
             if changed:
                 session.commit()
-                try:
-                    import json
-                    from app.sync import redis_client
-                    redis_client.publish("system_events", json.dumps({"type": "ldap_status_updated"}))
-                except Exception as e:
-                    logger.error(f"Failed to publish LDAP status: {e}")
+                publish_ldap_status_update()
     except Exception as e:
         logger.error(f"Failed to save LDAP status: {e}")
 

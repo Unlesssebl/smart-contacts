@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
 from shared.models.user import User
-from shared.models.enums import UserRole
 from app.db.repository import change_request as cr_repo
 from app.db.repository import report as report_repo
 from app.schemas.change_request import ChangeRequestRead
@@ -14,21 +13,15 @@ from typing import List, Dict, Any
 from uuid import UUID
 import json
 from app.services.ou_service import apply_ou_mapping_to_users_bg
+from app.services.event_service import publish_moderation_update
+from app.schemas.user import UserVisibilityUpdate
 
 router = APIRouter()
-
-def check_admin_auth(current_user: User = Depends(deps.get_current_user)):
-    if current_user.role not in [UserRole.IT_OPERATOR.value, UserRole.ADMIN.value]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user does not have enough privileges"
-        )
-    return current_user
 
 @router.get("/change-requests", response_model=List[ChangeRequestRead])
 def list_change_requests(
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     return cr_repo.get_change_requests(db)
 
@@ -36,7 +29,7 @@ def list_change_requests(
 def approve_change_request(
     request_id: UUID,
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     req = cr_repo.approve_request(db, request_id, admin.object_guid)
     if not req:
@@ -45,20 +38,14 @@ def approve_change_request(
         if not existing:
             raise HTTPException(status_code=404, detail="Change request not found")
         raise HTTPException(status_code=400, detail="Cannot approve request with current status")
-    try:
-        from app.core.redis import redis_client
-        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-        redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(req.user_guid)}))
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Redis publish error: {e}")
+    publish_moderation_update(req.user_guid)
     return req
 
 @router.patch("/change-requests/{request_id}/reject", response_model=ChangeRequestRead)
 def reject_change_request(
     request_id: UUID,
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     req = cr_repo.reject_request(db, request_id, admin.object_guid)
     if not req:
@@ -66,19 +53,13 @@ def reject_change_request(
         if not existing:
             raise HTTPException(status_code=404, detail="Change request not found")
         raise HTTPException(status_code=400, detail="Cannot reject request with current status")
-    try:
-        from app.core.redis import redis_client
-        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-        redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(req.user_guid)}))
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Redis publish error: {e}")
+    publish_moderation_update(req.user_guid)
     return req
 
 @router.get("/reports", response_model=List[ReportRead])
 def list_reports(
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     return report_repo.get_reports(db)
 
@@ -86,42 +67,30 @@ def list_reports(
 def approve_report(
     report_id: UUID,
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     report = report_repo.approve_report(db, report_id, admin.object_guid)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found or cannot be approved")
-    try:
-        from app.core.redis import redis_client
-        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-        redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(report.target_user_guid)}))
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Redis publish error: {e}")
+    publish_moderation_update(report.target_user_guid)
     return report
 
 @router.patch("/reports/{report_id}/reject", response_model=ReportRead)
 def reject_report(
     report_id: UUID,
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     report = report_repo.reject_report(db, report_id, admin.object_guid)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found or cannot be rejected")
-    try:
-        from app.core.redis import redis_client
-        redis_client.publish("system_events", json.dumps({"type": "admin_update"}))
-        redis_client.publish("system_events", json.dumps({"type": "profile_updated", "user_id": str(report.target_user_guid)}))
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Redis publish error: {e}")
+    publish_moderation_update(report.target_user_guid)
     return report
 
 @router.get("/settings/ldap", response_model=LDAPSettingsRead)
 def get_ldap_settings(
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     ad_user = settings_manager.get_setting(db, "AD_USER")
     ad_password = settings_manager.get_setting(db, "AD_PASSWORD")
@@ -138,7 +107,7 @@ def get_ldap_settings(
 def update_ldap_settings(
     settings_data: LDAPSettingsUpdate,
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     if settings_data.ad_user is not None:
         settings_manager.set_setting(db, "AD_USER", settings_data.ad_user)
@@ -153,7 +122,7 @@ def update_ldap_settings(
 @router.get("/settings/ou-mapping", response_model=OuMappingUpdate)
 def get_ou_mapping(
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     mapping_str = settings_manager.get_setting(db, "OU_MAPPING")
     mapping = {}
@@ -171,7 +140,7 @@ def update_ou_mapping(
     data: OuMappingUpdate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     mapping_str = json.dumps(data.mapping, ensure_ascii=False)
     settings_manager.set_setting(db, "OU_MAPPING", mapping_str)
@@ -183,7 +152,7 @@ def update_ou_mapping(
 @router.get("/ldap/ous", response_model=Dict[str, Any])
 def list_ad_ous(
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     """Returns list of known OUs collected by the sync worker during the last sync cycle."""
     from shared.models.system_setting import SystemSetting
@@ -198,23 +167,18 @@ def list_ad_ous(
 @router.post("/sync/force")
 def force_sync(
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     """Signals the AD sync worker to perform an immediate sync cycle."""
     settings_manager.set_setting(db, "FORCE_SYNC", "1")
     return {"status": "ok", "message": "Sync requested"}
-
-from pydantic import BaseModel
-
-class UserVisibilityUpdate(BaseModel):
-    is_hidden: bool
 
 @router.patch("/users/{user_id}/visibility")
 def update_user_visibility(
     user_id: UUID,
     data: UserVisibilityUpdate,
     db: Session = Depends(get_db),
-    admin: User = Depends(check_admin_auth)
+    admin: User = Depends(deps.require_admin)
 ):
     user = db.query(User).filter(User.object_guid == user_id).first()
     if not user:

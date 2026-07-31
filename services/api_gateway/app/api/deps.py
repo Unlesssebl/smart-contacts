@@ -5,7 +5,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.db.repository.user import get_user_by_guid
 from shared.models.user import User
-from shared.models.enums import UserStatus
+from shared.models.enums import UserRole, UserStatus
 from jose.exceptions import JWTError
 
 def get_current_user_guid(request: Request) -> str:
@@ -54,3 +54,12 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
         
     return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in (UserRole.IT_OPERATOR.value, UserRole.ADMIN.value):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user does not have enough privileges",
+        )
+    return current_user
