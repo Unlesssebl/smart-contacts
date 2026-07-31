@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 
 export const GatekeeperModal: React.FC = () => {
-  const { currentUser, logout } = useAppStore();
+  const { currentUser, logout } = useAppStore(
+    useShallow((state) => ({ currentUser: state.currentUser, logout: state.logout })),
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const navigate = useNavigate();

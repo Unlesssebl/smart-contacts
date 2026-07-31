@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router';
 import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -7,7 +8,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
-  const { isAuthenticated, currentUser } = useAppStore();
+  const { isAuthenticated, currentUser } = useAppStore(
+    useShallow((state) => ({
+      isAuthenticated: state.isAuthenticated,
+      currentUser: state.currentUser,
+    })),
+  );
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

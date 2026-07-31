@@ -3,16 +3,17 @@ import { reportsApi } from '@/api/reports';
 import { adminApi } from '@/api/admin';
 import { toast } from 'sonner';
 import type { AppState, ReportsSlice } from '../types';
+import { getErrorStatus } from '@/api/errors';
 
-export const createReportsSlice: StateCreator<AppState, [], [], ReportsSlice> = (set, get) => ({
+export const createReportsSlice: StateCreator<AppState, [], [], ReportsSlice> = (set) => ({
   reports: [],
 
   addReport: async (report) => {
     try {
       await reportsApi.createReport(report);
       toast.success('Заявка успешно отправлена');
-    } catch (error: any) {
-      if (error.response?.status === 409) {
+    } catch (error: unknown) {
+      if (getErrorStatus(error) === 409) {
         toast.error('Вы уже предложили правку для этого пользователя');
       } else {
         console.error('Failed to create report', error);

@@ -9,14 +9,13 @@ import { Label } from './ui/label';
 
 export function SpotlightSearch() {
   const {
-    searchQuery, setSearchQuery, isSearching,
+    searchQuery, setSearchQuery,
     filters, setFilters,
     departments, organizations, jobTitles, fetchFilterOptions,
     currentUser
   } = useAppStore(useShallow((state) => ({
     searchQuery: state.searchQuery,
     setSearchQuery: state.setSearchQuery,
-    isSearching: state.isSearching,
     filters: state.filters,
     setFilters: state.setFilters,
     departments: state.departments,

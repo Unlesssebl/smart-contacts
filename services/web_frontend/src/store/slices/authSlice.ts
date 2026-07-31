@@ -1,6 +1,8 @@
 import type { StateCreator } from 'zustand';
 import { login, getMe } from '@/api/auth';
+import apiClient from '@/api/client';
 import type { AppState, AuthSlice } from '../types';
+import { getErrorStatus } from '@/api/errors';
 
 export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, get) => ({
   currentUser: null,
@@ -12,12 +14,12 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
       set({ isAuthenticated: true });
       await get().fetchMe();
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login failed:', error);
       let errorMessage = 'Ошибка авторизации. Сервер недоступен.';
-      if (error.response?.status === 401) {
+      if (getErrorStatus(error) === 401) {
         errorMessage = 'Неверный логин или пароль';
-      } else if (error.response?.status === 429) {
+      } else if (getErrorStatus(error) === 429) {
         errorMessage = 'Вход временно ограничен. Превышено количество попыток.';
       }
       return { success: false, error: errorMessage };
@@ -27,7 +29,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
   logout: async () => {
     set({ currentUser: null, isAuthenticated: false, users: [], changeRequests: [], reports: [] });
     try {
-      await import('@/api/client').then(m => m.default.post('/auth/logout'));
+      await apiClient.post('/auth/logout');
     } catch (e) {
       console.error('Logout API failed', e);
     }

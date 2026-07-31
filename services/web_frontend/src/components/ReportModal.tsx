@@ -11,7 +11,14 @@ interface ReportModalProps {
   onClose: () => void;
 }
 
-const FIELD_OPTIONS = [
+interface ReportFieldOption {
+  value: 'mobile_phone' | 'internal_phone' | 'job_title' | 'department' | 'office_location';
+  label: string;
+  mask?: string;
+  placeholder?: string;
+}
+
+const FIELD_OPTIONS: readonly ReportFieldOption[] = [
   { value: 'mobile_phone', label: 'Мобильный телефон', mask: '+7 000 000 00 00', placeholder: '+7 999 800 70 70' },
   { value: 'internal_phone', label: 'Внутренний телефон', mask: '00-00', placeholder: '20-20' },
   { value: 'job_title', label: 'Должность' },
@@ -24,7 +31,7 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
   const [proposedValues, setProposedValues] = useState<Record<string, string | null>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { addReport } = useAppStore();
+  const addReport = useAppStore((state) => state.addReport);
 
   const getCurrentValue = (fieldKey: string) => {
     const val = user[fieldKey as keyof User];
@@ -98,7 +105,7 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
         changes
       });
       onClose(); // Success, close modal
-    } catch (e) {
+    } catch {
       // errors handled by useAppStore (toasts)
     } finally {
       setIsSubmitting(false);
@@ -183,13 +190,12 @@ export function ReportModal({ user, onClose }: ReportModalProps) {
                             Данные будут удалены
                           </div>
                         ) : field.mask ? (
-                          // @ts-ignore
                           <IMaskInput
                             mask={field.mask}
                             value={displayVal}
                             unmask={false}
                             onAccept={(value: string) => handleValueChange(field.value, value)}
-                            placeholder={field.placeholder}
+                            placeholder={field.placeholder ?? ''}
                             className="flex-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
                           />
                         ) : (

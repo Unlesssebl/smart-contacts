@@ -72,7 +72,7 @@ export function FilterCombobox({
                 <CommandItem
                   key={option}
                   value={option}
-                  onSelect={(currentValue) => {
+                  onSelect={() => {
                     // CommandItem converts value to lowercase internally for searching in some implementations, 
                     // but we need the exact casing. Actually, let's just use `option` directly in onChange to preserve case.
                     onChange(option === value ? undefined : option)

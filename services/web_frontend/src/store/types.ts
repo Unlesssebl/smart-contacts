@@ -23,6 +23,7 @@ export interface UsersSlice {
   organizations: string[];
   jobTitles: string[];
   orgColors: Record<string, string>;
+  setSearchQuery: (query: string) => void;
   setFilters: (newFilters: Partial<UserFilters>) => void;
   setPage: (page: number) => void;
   fetchFilterOptions: () => Promise<void>;

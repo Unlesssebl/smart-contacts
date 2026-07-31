@@ -1,45 +1,20 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Copy, Mail, Phone, Smartphone, MapPin, X, Building2, User as UserIcon, Edit, Shield } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Copy, Mail, Phone, Smartphone, MapPin, X, Building2, User as UserIcon, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { UserAvatar } from './UserAvatar';
 import { adminApi } from '@/api/admin';
 import { ReportModal } from './ReportModal';
+import { cleanProfileValue as cleanValue, formatActiveDirectoryPath } from '@/features/profile/lib/profileValues';
+import { useProfileEdit } from '@/features/profile/hooks/useProfileEdit';
 
 interface ProfileModalProps {
   user: User;
   onClose: () => void;
 }
-
-const formatAdPath = (dn: string | null | undefined) => {
-  if (!dn) return { raw: '', domain: '', path: '', hierarchy: [] };
-  const parts = dn.split(',').map(part => part.trim());
-  const ous: string[] = [];
-  let cn = '';
-  const dcs: string[] = [];
-  
-  parts.forEach(part => {
-    const [key, val] = part.split('=');
-    if (!key || !val) return;
-    const cleanKey = key.toUpperCase();
-    if (cleanKey === 'OU') {
-      ous.unshift(val);
-    } else if (cleanKey === 'CN') {
-      cn = val;
-    } else if (cleanKey === 'DC') {
-      dcs.push(val);
-    }
-  });
-
-  return {
-    raw: dn,
-    domain: dcs.join('.'),
-    path: [...ous, cn].filter(Boolean).join(' ➔ '),
-    hierarchy: [...ous, cn].filter(Boolean)
-  };
-};
 
 const copyToClipboard = async (text: string) => {
   try {
@@ -73,7 +48,6 @@ const copyToClipboard = async (text: string) => {
 };
 
 export function ProfileModal({ user, onClose }: ProfileModalProps) {
-  const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
   const displayValue = (val: string | null | undefined) => {
     const cleaned = cleanValue(val);
     if (!cleaned.trim()) {
@@ -86,21 +60,36 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
     return cleaned;
   };
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
   const [isHidden, setIsHidden] = useState(user.is_hidden || false);
-  const [mobilePhone, setMobilePhone] = useState(cleanValue(user.mobile_phone));
-  const [officeLocation, setOfficeLocation] = useState(cleanValue(user.office_location));
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Глобальный стейт — загружается при логине (fetchMe) и поддерживается в актуальном состоянии
-  const { addChangeRequest, currentUser, getUserById, globalPresence, pendingFields, updateUserInStore } = useAppStore();
+  const { addChangeRequest, currentUser, getUserById, globalPresence, pendingFields, updateUserInStore } = useAppStore(
+    useShallow((state) => ({
+      addChangeRequest: state.addChangeRequest,
+      currentUser: state.currentUser,
+      getUserById: state.getUserById,
+      globalPresence: state.globalPresence,
+      pendingFields: state.pendingFields,
+      updateUserInStore: state.updateUserInStore,
+    })),
+  );
 
   const manager = user.manager_id ? getUserById(user.manager_id) : null;
   const currentPresence = globalPresence[user.id] || user.presence;
-  const isOwnProfile = currentUser?.id === user.id;
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'it_operator';
+  const {
+    isEditing,
+    setIsEditing,
+    isSubmitting,
+    mobilePhone,
+    setMobilePhone,
+    officeLocation,
+    setOfficeLocation,
+    reset: resetProfileEdit,
+    submit: handleSubmitChange,
+  } = useProfileEdit({ user, pendingFields, addChangeRequest });
 
   // Блокировка скролла специально для OverlayScrollbars
   // Модификация body ломала OverlayScrollbars и вызывала ремаунт всего приложения
@@ -127,32 +116,6 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleSubmitChange = async () => {
-    if (isSubmitting || !pendingFields) return;
-    setIsSubmitting(true);
-    let hasError = false;
-
-    if (mobilePhone !== cleanValue(user.mobile_phone) && !('mobile_phone' in pendingFields)) {
-      try {
-        await addChangeRequest({ attribute_name: 'mobile_phone', new_value: mobilePhone || '' });
-      } catch (e) {
-        hasError = true;
-      }
-    }
-
-    if (officeLocation !== cleanValue(user.office_location) && !('office_location' in pendingFields)) {
-      try {
-        await addChangeRequest({ attribute_name: 'office_location', new_value: officeLocation });
-      } catch (e) {
-        hasError = true;
-      }
-    }
-
-    setIsSubmitting(false);
-    if (!hasError) {
-      setIsEditing(false);
-    }
-  };
 
   return (
     <>
@@ -340,7 +303,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                             
                             {/* Breadcrumb Path */}
                             {(() => {
-                              const formatted = formatAdPath(user.ad_dn);
+                              const formatted = formatActiveDirectoryPath(user.ad_dn);
                               return (
                                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground font-medium">
                                   {formatted.hierarchy.map((item, idx) => (
@@ -391,7 +354,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                               setIsHidden(newHiddenState);
                               updateUserInStore(user.id, { is_hidden: newHiddenState });
                               toast.success(newHiddenState ? 'Учетная запись скрыта' : 'Учетная запись теперь видима');
-                            } catch (e) {
+                            } catch {
                               toast.error('Ошибка при обновлении видимости');
                             } finally {
                               setIsUpdatingVisibility(false);
@@ -429,8 +392,7 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                           onClick={() => {
                             if (isSubmitting) return;
                             setIsEditing(false);
-                            setMobilePhone(cleanValue(user.mobile_phone));
-                            setOfficeLocation(cleanValue(user.office_location));
+                            resetProfileEdit();
                           }}
                           disabled={isSubmitting}
                           className={`btn-secondary px-6 py-3 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}

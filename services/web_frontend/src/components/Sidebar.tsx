@@ -1,12 +1,15 @@
 import { Link, useLocation } from 'react-router';
 import { Home, User, LogOut, Shield } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { motion } from 'motion/react';
 import { UserAvatar } from './UserAvatar';
 
 export function Sidebar() {
   const location = useLocation();
-  const { currentUser, logout } = useAppStore();
+  const { currentUser, logout } = useAppStore(
+    useShallow((state) => ({ currentUser: state.currentUser, logout: state.logout })),
+  );
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'it_operator';
 

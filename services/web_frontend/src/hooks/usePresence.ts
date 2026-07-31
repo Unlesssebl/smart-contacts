@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 import { getWsToken } from '@/api/auth';
+import { usersApi } from '@/api/users';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const THROTTLE_MS = 2000; // 2 seconds
@@ -9,13 +11,19 @@ const THROTTLE_MS = 2000; // 2 seconds
 export const usePresence = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const statusRef = useRef<'online' | 'away' | 'offline'>('offline');
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef<number>(0);
-  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const isActiveRef = useRef<boolean>(false); // tracks whether the current effect is still alive
   
-  const { setPresence, setBulkPresence, isAuthenticated } = useAppStore();
+  const { setPresence, setBulkPresence, isAuthenticated } = useAppStore(
+    useShallow((state) => ({
+      setPresence: state.setPresence,
+      setBulkPresence: state.setBulkPresence,
+      isAuthenticated: state.isAuthenticated,
+    })),
+  );
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -72,10 +80,8 @@ export const usePresence = () => {
             const currentUser = useAppStore.getState().currentUser;
             if (currentUser && currentUser.id === data.user_id) {
               useAppStore.getState().fetchMyPendingFields();
-              import('../api/users').then(({ usersApi }) => {
-                usersApi.getUserByGuid(data.user_id).then(user => {
-                  useAppStore.getState().updateUserInStore(user.id, user);
-                });
+              usersApi.getUserByGuid(data.user_id).then(user => {
+                useAppStore.getState().updateUserInStore(user.id, user);
               });
             }
           }

@@ -1,6 +1,12 @@
 import apiClient from './client';
 import type { User, PaginatedUsers } from '@/types';
 
+interface UserApiItem extends User {
+  object_guid?: string;
+}
+
+type PaginatedUsersApiResponse = Omit<PaginatedUsers, 'items'> & { items: UserApiItem[] };
+
 export interface UserFilters {
   department?: string;
   organization?: string;
@@ -32,19 +38,19 @@ export const usersApi = {
     params.append('page', page.toString());
     params.append('limit', limit.toString());
     
-    const response = await apiClient.get(`/users?${params.toString()}`, { signal });
+    const response = await apiClient.get<PaginatedUsersApiResponse>(`/users?${params.toString()}`, { signal });
     const data = response.data;
     if (data && data.items) {
-      data.items = data.items.map((item: any) => ({
+      data.items = data.items.map((item) => ({
         ...item,
         id: item.object_guid || item.id,
       }));
     }
-    return data;
+    return data as PaginatedUsers;
   },
 
   getUserByGuid: async (guid: string): Promise<User> => {
-    const response = await apiClient.get(`/users/${guid}`);
+    const response = await apiClient.get<UserApiItem>(`/users/${guid}`);
     return {
       ...response.data,
       id: response.data.object_guid || response.data.id,

@@ -4,9 +4,7 @@ import { Mail, Phone, Smartphone, MapPin, Edit } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { ReportModal } from './ReportModal';
 import { UserAvatar } from './UserAvatar';
-import { getOrgColor } from '@/theme/departmentColors';
-
-const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
+import { cleanProfileValue as cleanValue } from '@/features/profile/lib/profileValues';
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
   if (!highlight.trim()) {
@@ -48,11 +46,8 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
   ({ user, onClick }, ref) => {
     const searchQuery = useAppStore(state => state.searchQuery);
     const currentUser = useAppStore(state => state.currentUser);
-    const orgColors = useAppStore(state => state.orgColors);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const isOwnProfile = currentUser?.id === user.id;
-
-    const orgColor = getOrgColor(user.organization, orgColors);
 
     const email = cleanValue(user.email);
     const internalPhone = cleanValue(user.internal_phone);

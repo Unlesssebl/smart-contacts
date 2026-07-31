@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand';
 import { usersApi } from '@/api/users';
 import type { AppState, UsersSlice } from '../types';
+import { isCanceledRequest } from '@/api/errors';
 
 let searchAbortController: AbortController | null = null;
 
@@ -93,8 +94,8 @@ export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set
         initialLoaded: true,
         totalUsers: response.total,
       });
-    } catch (error: any) {
-      if (error.name === 'CanceledError' || error.message?.includes('abort') || error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (isCanceledRequest(error)) {
         return; // Игнорируем отмененные запросы
       }
       console.error('Failed to fetch users', error);

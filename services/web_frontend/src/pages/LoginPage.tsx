@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { checkSso } from '@/api/auth';
 import { toast } from 'sonner';
 import './LoginPage.css';
@@ -13,7 +14,13 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const navigate = useNavigate();
-  const { login, fetchMe, isAuthenticated } = useAppStore();
+  const { login, fetchMe, isAuthenticated } = useAppStore(
+    useShallow((state) => ({
+      login: state.login,
+      fetchMe: state.fetchMe,
+      isAuthenticated: state.isAuthenticated,
+    })),
+  );
 
   // Тихая проверка Kerberos SSO при загрузке страницы.
   // Бэкенд НЕ возвращает WWW-Authenticate: Negotiate, поэтому
@@ -37,7 +44,7 @@ export function LoginPage() {
     };
 
     trySso();
-  }, []);
+  }, [fetchMe, isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

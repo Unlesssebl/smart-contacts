@@ -3,6 +3,7 @@ import { changeRequestsApi } from '@/api/changeRequests';
 import { adminApi } from '@/api/admin';
 import { toast } from 'sonner';
 import type { AppState, ChangeRequestsSlice } from '../types';
+import { getErrorStatus } from '@/api/errors';
 
 export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeRequestsSlice> = (set, get) => ({
   changeRequests: [],
@@ -15,7 +16,7 @@ export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeReq
       const activePending: Record<string, string> = {};
       requests.forEach((r) => {
         if (r.status === 'pending' || r.status === 'conflict' || r.status === 'approved') {
-          const fieldKey = r.field_name || (r as any).attribute_name;
+          const fieldKey = r.field_name;
           if (fieldKey) activePending[fieldKey] = r.new_value;
         }
       });
@@ -36,11 +37,11 @@ export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeReq
           : { [request.attribute_name]: request.new_value },
       }));
       toast.success('Заявка на изменение контактов успешно создана');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create change request', error);
-      if (error.response?.status === 422) {
+      if (getErrorStatus(error) === 422) {
         toast.error('Неверный формат введённых данных');
-      } else if (error.response?.status === 409) {
+      } else if (getErrorStatus(error) === 409) {
         set((state) => ({
           pendingFields: state.pendingFields
             ? { ...state.pendingFields, [request.attribute_name]: request.new_value }

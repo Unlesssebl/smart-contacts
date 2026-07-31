@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { mockBackendPlugin } from './mock-plugin'
 
 
 function figmaAssetResolver() {
@@ -24,8 +23,6 @@ export default defineConfig({
     // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
-    // Mock backend for local development (intercepts /api requests before proxy)
-    // mockBackendPlugin(),
   ],
   resolve: {
     alias: {
@@ -46,6 +43,26 @@ export default defineConfig({
     watch: {
       usePolling: true,
     }
+  },
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-core': [
+            'react',
+            'react-dom',
+            'react-router',
+            'zustand',
+            'axios',
+            'motion',
+            'lucide-react',
+            'sonner',
+            'overlayscrollbars',
+          ],
+        },
+      },
+    },
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.

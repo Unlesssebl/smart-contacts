@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sidebar } from '@/components/Sidebar';
 import { SpotlightSearch } from '@/components/SpotlightSearch';
@@ -6,13 +6,27 @@ import { EmployeeCard } from '@/components/EmployeeCard';
 import { ProfileModal } from '@/components/ProfileModal';
 import { RadialPagination } from '@/components/RadialPagination';
 import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useAdaptiveLimit } from '@/hooks/useAdaptiveLimit';
 import type { User } from '@/types';
 import { getEmployeeWord } from '@/lib/localization';
 
 export function DirectoryPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const { users, fetchUsers, isSearching, initialLoaded, page, limit, totalUsers, setPage, searchQuery, filters } = useAppStore();
+  const { users, fetchUsers, isSearching, initialLoaded, page, limit, totalUsers, setPage, searchQuery, filters } = useAppStore(
+    useShallow((state) => ({
+      users: state.users,
+      fetchUsers: state.fetchUsers,
+      isSearching: state.isSearching,
+      initialLoaded: state.initialLoaded,
+      page: state.page,
+      limit: state.limit,
+      totalUsers: state.totalUsers,
+      setPage: state.setPage,
+      searchQuery: state.searchQuery,
+      filters: state.filters,
+    })),
+  );
   
   const totalPages = Math.ceil(totalUsers / limit);
   const gridContainerRef = useRef<HTMLDivElement>(null);
@@ -98,7 +112,6 @@ export function DirectoryPage() {
         if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
       };
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps — intentional. All live values read via refs above.
 
 

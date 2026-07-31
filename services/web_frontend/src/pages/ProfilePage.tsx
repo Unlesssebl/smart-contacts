@@ -1,79 +1,32 @@
 import { useState, useEffect } from 'react';
-import { useParams, Navigate, Link, useNavigate } from 'react-router';
+import { useParams, Navigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit, Clock, ShieldCheck } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '@/components/Sidebar';
 import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { UserAvatar } from '@/components/UserAvatar';
 
 import { updateAvatarColor } from '@/api/profile';
 import { CURATED_PALETTE, getAvatarColor } from '@/utils/avatar';
+import { cleanProfileValue as cleanValue } from '@/features/profile/lib/profileValues';
+import { useProfileEdit } from '@/features/profile/hooks/useProfileEdit';
+import { usersApi } from '@/api/users';
+import { EditableProfileField as EditableField } from '@/features/profile/components/EditableProfileField';
 
 import type { User, UserProfile } from '@/types';
 
-function EditableField({
-  icon: Icon,
-  label,
-  value,
-  pendingValue,
-  isEditing,
-  onChange,
-  placeholder = "Не указано",
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  pendingValue?: string;
-  isEditing?: boolean;
-  onChange?: (val: string) => void;
-  placeholder?: string;
-}) {
-  const displayValue = (val: string) => {
-    if (!val.trim()) {
-      return (
-        <span className="inline-flex items-center rounded-full bg-black/5 px-2.5 py-0.5 text-xs font-medium text-muted-foreground/70">
-          Не указано
-        </span>
-      );
-    }
-    return val;
-  };
-
-  return (
-    <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-      <Icon className="h-5 w-5 text-primary shrink-0" strokeWidth={1.5} />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground mb-1">{label}</p>
-        
-        {pendingValue !== undefined ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-foreground line-through opacity-50 truncate">{displayValue(value)}</span>
-            <span className="text-sm text-foreground font-medium truncate">{displayValue(pendingValue)}</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-600 shrink-0">
-              <Clock className="w-3 h-3" />
-              На рассмотрении
-            </span>
-          </div>
-        ) : isEditing && onChange ? (
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/40"
-          />
-        ) : (
-          <p className="text-sm text-foreground truncate">{displayValue(value)}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
-  const { getUserById, currentUser, addChangeRequest, pendingFields: globalPendingFields } = useAppStore();
+  const { getUserById, currentUser, addChangeRequest, globalPendingFields } = useAppStore(
+    useShallow((state) => ({
+      getUserById: state.getUserById,
+      currentUser: state.currentUser,
+      addChangeRequest: state.addChangeRequest,
+      globalPendingFields: state.pendingFields,
+    })),
+  );
   
   const storeUser = id ? getUserById(id) : null;
   const [user, setUser] = useState<User | null>(storeUser || null);
@@ -85,28 +38,26 @@ export function ProfilePage() {
       setIsLoading(false);
     } else if (id) {
       setIsLoading(true);
-      import('@/api/users').then(({ usersApi }) => {
-        usersApi.getUserByGuid(id)
-          .then(data => setUser(data))
-          .catch(() => setUser(null))
-          .finally(() => setIsLoading(false));
-      });
+      usersApi.getUserByGuid(id)
+        .then(data => setUser(data))
+        .catch(() => setUser(null))
+        .finally(() => setIsLoading(false));
     }
   }, [id, storeUser]);
-  const cleanValue = (val: string | null | undefined) => (val === '[]' || !val) ? '' : val;
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mobilePhone, setMobilePhone] = useState(cleanValue(user?.mobile_phone));
-  const [officeLocation, setOfficeLocation] = useState(cleanValue(user?.office_location));
   const pendingFields = currentUser?.id === user?.id ? (globalPendingFields || null) : {};
-
-  useEffect(() => {
-    if (user) {
-      setMobilePhone(cleanValue(user.mobile_phone));
-      setOfficeLocation(cleanValue(user.office_location));
-    }
-  }, [user]);
+  const {
+    isEditing,
+    setIsEditing,
+    isSubmitting,
+    mobilePhone,
+    setMobilePhone,
+    officeLocation,
+    setOfficeLocation,
+    hasChanges,
+    reset: resetProfileEdit,
+    submit: handleSubmitChange,
+  } = useProfileEdit({ user, pendingFields, addChangeRequest });
 
   useEffect(() => {
     if (currentUser?.id === user?.id) {
@@ -143,42 +94,6 @@ export function ProfilePage() {
 
   const manager = user.manager_id ? getUserById(user.manager_id) : null;
   const isCurrentUser = currentUser?.id === user.id;
-  const hasChanges = mobilePhone !== cleanValue(user.mobile_phone) || officeLocation !== cleanValue(user.office_location);
-
-  const handleSubmitChange = async () => {
-    if (isSubmitting || !hasChanges || pendingFields === null) return;
-    setIsSubmitting(true);
-    let hasError = false;
-
-    if (mobilePhone !== cleanValue(user.mobile_phone) && !('mobile_phone' in pendingFields)) {
-      try {
-        await addChangeRequest({
-          attribute_name: 'mobile_phone',
-          new_value: mobilePhone || '',
-        });
-      } catch (e) {
-        hasError = true;
-      }
-    }
-
-    if (officeLocation !== cleanValue(user.office_location) && !('office_location' in pendingFields)) {
-      try {
-        await addChangeRequest({
-          attribute_name: 'office_location',
-          new_value: officeLocation,
-        });
-      } catch (e) {
-        hasError = true;
-      }
-    }
-
-    setIsSubmitting(false);
-    if (!hasError) {
-      setIsEditing(false);
-      setMobilePhone(cleanValue(user.mobile_phone));
-      setOfficeLocation(cleanValue(user.office_location));
-    }
-  };
 
   const handleColorSelect = async (color: string) => {
     if (!user) return;
@@ -191,7 +106,7 @@ export function ProfilePage() {
     try {
       await updateAvatarColor(color);
       toast.success('Цвет аватарки обновлен');
-    } catch (e) {
+    } catch {
       // Revert on error
       setUser((prev) => (prev ? { ...prev, avatar_color: previousColor } : null));
       useAppStore.getState().updateUserInStore(user.id, { avatar_color: previousColor });
@@ -218,7 +133,6 @@ export function ProfilePage() {
                 <div className="relative">
                   <UserAvatar 
                     name={user.full_name} 
-                    department={user.department}
                     avatarColor={user.avatar_color}
                     className="h-24 w-24 text-3xl shadow-xl"
                   />
@@ -334,8 +248,7 @@ export function ProfilePage() {
                         onClick={() => {
                           if (isSubmitting) return;
                           setIsEditing(false);
-                          setMobilePhone(cleanValue(user.mobile_phone));
-                          setOfficeLocation(cleanValue(user.office_location));
+                          resetProfileEdit();
                         }}
                         disabled={isSubmitting}
                         className={`btn-secondary px-6 py-3 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}

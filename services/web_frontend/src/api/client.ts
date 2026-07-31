@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { InternalAxiosRequestConfig } from 'axios';
 import { useAppStore } from '@/store/useAppStore';
 import { toast } from 'sonner';
 
@@ -24,15 +25,24 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
-const processQueue = (error: any, token: string | null = null) => {
+interface RefreshQueueItem {
+  resolve: () => void;
+  reject: (reason?: unknown) => void;
+}
+
+let isRefreshing = false;
+let failedQueue: RefreshQueueItem[] = [];
+
+const processQueue = (error?: unknown) => {
   failedQueue.forEach(prom => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve();
     }
   });
   failedQueue = [];
@@ -53,7 +63,7 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as RetryableRequestConfig | undefined;
     const store = useAppStore.getState();
 
     // Handle Network Error or Vite proxy errors (502, 504)
@@ -65,11 +75,11 @@ apiClient.interceptors.response.use(
     }
 
     // Handle 401 Unauthorized
-    const url = originalRequest.url || '';
+    const url = originalRequest?.url || '';
     if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login') && !url.endsWith('/auth/refresh') && !url.endsWith('/auth/ws-token')) {
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
-          failedQueue.push({ resolve, reject });
+          failedQueue.push({ resolve: () => resolve(undefined), reject });
         }).then(() => {
           return apiClient(originalRequest);
         }).catch(err => {
@@ -84,11 +94,11 @@ apiClient.interceptors.response.use(
         // Use a new axios instance to avoid interceptor loops
         axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true })
           .then(() => {
-            processQueue(null, 'refreshed');
+            processQueue();
             resolve(apiClient(originalRequest));
           })
           .catch((err) => {
-            processQueue(err, null);
+            processQueue(err);
             store.logout();
             reject(err);
           })

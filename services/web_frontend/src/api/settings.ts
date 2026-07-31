@@ -5,6 +5,33 @@ export interface OUMappingValue {
   color: string;
 }
 
+export interface ADOrganizationalUnitTree {
+  [name: string]: ADOrganizationalUnitTree;
+}
+
+const DEFAULT_ORG_COLOR = 'bg-blue-50 text-blue-700 ring-blue-700/10';
+
+function normalizeOUMapping(raw: Record<string, unknown>): Record<string, OUMappingValue> {
+  const normalized: Record<string, OUMappingValue> = {};
+
+  for (const [ou, value] of Object.entries(raw)) {
+    if (typeof value === 'string') {
+      normalized[ou] = { org: value, color: DEFAULT_ORG_COLOR };
+      continue;
+    }
+
+    if (value && typeof value === 'object') {
+      const candidate = value as Partial<OUMappingValue>;
+      normalized[ou] = {
+        org: typeof candidate.org === 'string' ? candidate.org : '',
+        color: typeof candidate.color === 'string' ? candidate.color : DEFAULT_ORG_COLOR,
+      };
+    }
+  }
+
+  return normalized;
+}
+
 
 export interface LDAPSettings {
   ad_user?: string;
@@ -26,35 +53,17 @@ export const settingsApi = {
   },
 
   getOUMapping: async (): Promise<Record<string, OUMappingValue>> => {
-    const response = await apiClient.get<{ mapping: Record<string, any> }>('/admin/settings/ou-mapping');
-    const raw = response.data.mapping || {};
-    const normalized: Record<string, OUMappingValue> = {};
-    for (const [ou, val] of Object.entries(raw)) {
-      if (typeof val === 'string') {
-        normalized[ou] = { org: val, color: 'bg-blue-50 text-blue-700 ring-blue-700/10' };
-      } else if (val && typeof val === 'object') {
-        normalized[ou] = { org: val.org || '', color: val.color || 'bg-blue-50 text-blue-700 ring-blue-700/10' };
-      }
-    }
-    return normalized;
+    const response = await apiClient.get<{ mapping: Record<string, unknown> }>('/admin/settings/ou-mapping');
+    return normalizeOUMapping(response.data.mapping || {});
   },
 
   updateOUMapping: async (mapping: Record<string, OUMappingValue>): Promise<Record<string, OUMappingValue>> => {
-    const response = await apiClient.post<{ mapping: Record<string, any> }>('/admin/settings/ou-mapping', { mapping });
-    const raw = response.data.mapping || {};
-    const normalized: Record<string, OUMappingValue> = {};
-    for (const [ou, val] of Object.entries(raw)) {
-      if (typeof val === 'string') {
-        normalized[ou] = { org: val, color: 'bg-blue-50 text-blue-700 ring-blue-700/10' };
-      } else if (val && typeof val === 'object') {
-        normalized[ou] = { org: val.org || '', color: val.color || 'bg-blue-50 text-blue-700 ring-blue-700/10' };
-      }
-    }
-    return normalized;
+    const response = await apiClient.post<{ mapping: Record<string, unknown> }>('/admin/settings/ou-mapping', { mapping });
+    return normalizeOUMapping(response.data.mapping || {});
   },
 
-  getADOus: async (): Promise<Record<string, any>> => {
-    const response = await apiClient.get<Record<string, any>>('/admin/ldap/ous');
+  getADOus: async (): Promise<ADOrganizationalUnitTree> => {
+    const response = await apiClient.get<ADOrganizationalUnitTree>('/admin/ldap/ous');
     return response.data || {};
   },
 };

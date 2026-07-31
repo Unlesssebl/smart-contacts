@@ -4,12 +4,12 @@
 
 | Слой | Технология |
 |------|-----------|
-| Фреймворк | **React 18** + **Vite** |
+| Фреймворк | **React 19** + **Vite 7** |
 | Язык | **TypeScript** |
-| Маршрутизация | **React Router v6** |
-| UI-библиотека | **Ant Design 5** |
+| Маршрутизация | **React Router v8** |
+| UI-библиотека | **Radix UI / shadcn-style components** + **Tailwind CSS 4** |
 | Анимации | **motion/react** (Framer Motion) |
-| HTTP-клиент | **Axios** (с interceptor для JWT и обработки 503) |
+| HTTP-клиент | **Axios** (cookie-сессия, CSRF, refresh и обработка 503) |
 | Управление состоянием | **Zustand** (useAppStore) + **persist** |
 | Сборка | Vite (`npm run dev` → порт 5173) |
 
@@ -18,7 +18,7 @@
 ## Дизайн-система
 
 - **Шрифт:** Inter
-- **Цветовые токены Ant Design:**
+- **Цветовые токены CSS/Tailwind:**
   - `colorPrimary` — основной цвет компании
   - `colorSuccess` — верифицирован
   - `colorWarning` — ожидает действий (Gatekeeper, заявки)
@@ -30,9 +30,10 @@
 
 ## Управление состоянием
 
-Для сохранения состояния авторизации и статуса Gatekeeper при перезагрузке страницы необходимо использовать middleware **persist** в Zustand:
+Для сохранения минимального состояния интерфейса при перезагрузке используется middleware **persist** в Zustand:
 - **Storage:** `localStorage`
-- **Сохраняемые данные:** `accessToken`, `role`, `is_verified`, `grace_period_left`.
+- **Сохраняемые данные:** `isAuthenticated`, `currentUser`, `adSyncUnavailable`.
+- **Сессионные токены:** защищённые cookie; JavaScript не хранит access token.
 - **Логика:** При инициализации приложения Zustand автоматически восстанавливает состояние из хранилища.
 
 ### Производительность и оптимизация рендеринга
@@ -65,8 +66,15 @@ services/web_frontend/
 │   │   ├── users.ts
 │   │   ├── changeRequests.ts
 │   │   └── reports.ts
-│   ├── stores/
-│   │   └── useAppStore.ts      # Единый стор: auth, user, ui_states
+│   ├── app/
+│   │   ├── AppRouter.tsx       # Маршруты и lazy loading страниц
+│   │   └── AppLifecycle.tsx    # Глобальные эффекты приложения
+│   ├── features/
+│   │   ├── administration/     # Нормализация административной очереди
+│   │   └── profile/            # Общая логика редактирования профиля
+│   ├── store/
+│   │   ├── useAppStore.ts      # Композиция Zustand slices
+│   │   └── slices/
 │   ├── pages/
 │   │   ├── LoginPage.tsx
 │   │   ├── ProfilePage.tsx
@@ -74,11 +82,12 @@ services/web_frontend/
 │   │   └── AdminPage.tsx
 │   ├── components/
 │   │   ├── GatekeeperModal.tsx
-│   │   ├── UserCard.tsx
-│   │   ├── ChangeRequestTable.tsx
-│   │   ├── ReportsTable.tsx
+│   │   ├── EmployeeCard.tsx
+│   │   ├── ProfileModal.tsx
+│   │   ├── ReportModal.tsx
+│   │   ├── ConnectionLostOverlay.tsx
 │   │   └── ProtectedRoute.tsx
-│   ├── router.tsx
+│   ├── App.tsx                 # Корневая композиция providers и overlays
 │   └── main.tsx
 ├── Dockerfile
 ├── package.json
@@ -117,7 +126,7 @@ services/web_frontend/
 
 ---
 
-### `/directory` — Справочник сотрудников
+### `/` — Справочник сотрудников
 **Доступ:** все авторизованные.
 
 **UI:** Поисковая строка по центру с кнопкой раскрытия расширенных фильтров. В панели фильтров доступны: выбор организации, отдела, должности (через `FilterCombobox`), а также переключатели «С телефоном» и «С email». Поддерживается пагинация (18 сотрудников на странице). Результаты — карточки (`<EmployeeCard>`). При загрузке — Skeleton Loaders. Если результатов нет — Empty State с кнопкой «Сбросить фильтры».
@@ -172,10 +181,10 @@ const apiClient = axios.create({
   timeout: 10000,
 });
 
-// Добавляет Bearer token из authStore
+// Добавляет CSRF-токен из cookie для изменяющих запросов
 apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const csrfToken = getCookie('csrf_token');
+  if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken;
   return config;
 });
 
@@ -243,6 +252,7 @@ VITE_API_BASE_URL=/api/v1
 cd services/web_frontend
 npm install
 npm run dev   # http://localhost:5173
+npm run check # typecheck + lint + tests + production build
 ```
 
 ---

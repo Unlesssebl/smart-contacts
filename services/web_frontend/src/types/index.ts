@@ -1,6 +1,6 @@
 export type UserRole = 'employee' | 'it_operator' | 'admin';
 export type ChangeRequestStatus = 'pending' | 'approved' | 'rejected' | 'conflict';
-export type ReportStatus = 'new' | 'pending' | 'processed';
+export type ReportStatus = 'pending' | 'processed' | 'approved' | 'rejected' | 'conflict';
 
 export interface User {
   id: string; // From object_guid
@@ -18,6 +18,7 @@ export interface User {
   ad_dn?: string | null;
   is_hidden?: boolean;
   avatar_color?: string | null;
+  role?: UserRole;
 }
 
 export interface UserProfile extends User {
@@ -54,7 +55,10 @@ export interface Report {
   target_user_name?: string | null;
   reporter_user_guid?: string | null;
   reporter_user_name?: string | null;
-  description: string; // from reason
+  attribute_name: string;
+  new_value: string | null;
+  rejection_reason?: string | null;
+  description?: string;
   status: ReportStatus;
   created_at: string;
 }

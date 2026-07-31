@@ -3,7 +3,7 @@ import { adminApi } from '@/api/admin';
 import { toast } from 'sonner';
 import type { AppState, AdminSlice } from '../types';
 
-export const createAdminSlice: StateCreator<AppState, [], [], AdminSlice> = (set, get) => ({
+export const createAdminSlice: StateCreator<AppState, [], [], AdminSlice> = (set) => ({
   fetchAdminData: async () => {
     try {
       const [requests, reportsData] = await Promise.all([
