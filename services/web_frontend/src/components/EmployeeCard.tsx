@@ -72,6 +72,7 @@ export const EmployeeCard = React.forwardRef<HTMLDivElement, EmployeeCardProps>(
 
     return (
       <div
+        data-card
         ref={ref}
         onClick={onClick}
         className={`relative group cursor-pointer p-6 bg-white border border-slate-200/90 shadow-[0_14px_34px_-28px_rgba(15,34,58,0.42)] rounded-[20px] hover:-translate-y-1 hover:border-[#9fb9d4] hover:shadow-[0_24px_42px_-28px_rgba(15,34,58,0.62)] transition-all duration-300 flex flex-col h-full overflow-hidden ${

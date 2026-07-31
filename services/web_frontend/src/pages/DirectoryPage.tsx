@@ -5,7 +5,6 @@ import { SpotlightSearch } from '@/components/SpotlightSearch';
 import { EmployeeCard } from '@/components/EmployeeCard';
 import { ProfileModal } from '@/components/ProfileModal';
 import { RadialPagination } from '@/components/RadialPagination';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppStore } from '@/store/useAppStore';
 import { useAdaptiveLimit } from '@/hooks/useAdaptiveLimit';
 import type { User } from '@/types';
@@ -16,8 +15,26 @@ export function DirectoryPage() {
   const { users, fetchUsers, isSearching, initialLoaded, page, limit, totalUsers, setPage, searchQuery, filters } = useAppStore();
   
   const totalPages = Math.ceil(totalUsers / limit);
-  const topRef = useRef<HTMLDivElement>(null);
-  useAdaptiveLimit();
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  // Refs to always expose fresh values inside the stable wheel handler
+  const pageRef = useRef(page);
+  const totalPagesRef = useRef(totalPages);
+  const selectedUserRef = useRef(selectedUser);
+  const setPageRef = useRef(setPage);
+  pageRef.current = page;
+  totalPagesRef.current = totalPages;
+  selectedUserRef.current = selectedUser;
+  setPageRef.current = setPage;
+
+  // Cooldown state — persists across re-renders, not reset on page change
+  const isCoolingDownRef = useRef(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const accumulatedRef = useRef(0);
+  const lastEventTimeRef = useRef(0);
+
+  useAdaptiveLimit(gridContainerRef);
 
   useEffect(() => {
     fetchUsers();
@@ -26,17 +43,78 @@ export function DirectoryPage() {
     useAppStore.getState().fetchOrgColors();
   }, [fetchUsers]);
 
-  const filteredUsers = users; // Since filtering is done server-side
+  // Wheel event listener — registered ONCE (empty deps).
+  // All live values (page, totalPages, selectedUser) are read via refs
+  // so the closure never goes stale and the cooldown state is never reset.
+  useEffect(() => {
+    const COOLDOWN_MS = 450; // ms to lock after a page switch (reduced by 1.5x)
+    const THRESHOLD = 60;    // accumulated deltaY to trigger a switch
+
+    const handleWheel = (e: WheelEvent) => {
+      // Do not trigger pagination when profile modal is open
+      if (selectedUserRef.current) return;
+
+      // Prevent default vertical page scroll
+      e.preventDefault();
+
+      // While cooling down, swallow all wheel input
+      if (isCoolingDownRef.current) return;
+
+      const now = Date.now();
+      // Reset accumulator if there was a pause in scrolling (> 150ms gap)
+      if (now - lastEventTimeRef.current > 150) {
+        accumulatedRef.current = 0;
+      }
+      lastEventTimeRef.current = now;
+      accumulatedRef.current += e.deltaY;
+
+      const currentPage = pageRef.current;
+      const currentTotalPages = totalPagesRef.current;
+
+      let switched = false;
+      if (accumulatedRef.current >= THRESHOLD && currentPage < currentTotalPages) {
+        setPageRef.current(currentPage + 1);
+        switched = true;
+      } else if (accumulatedRef.current <= -THRESHOLD && currentPage > 1) {
+        setPageRef.current(currentPage - 1);
+        switched = true;
+      }
+
+      if (switched) {
+        accumulatedRef.current = 0;
+        isCoolingDownRef.current = true;
+        if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+        cooldownTimerRef.current = setTimeout(() => {
+          isCoolingDownRef.current = false;
+        }, COOLDOWN_MS);
+      }
+    };
+
+    const mainEl = mainContainerRef.current;
+    if (mainEl) {
+      mainEl.addEventListener('wheel', handleWheel, { passive: false });
+      return () => {
+        mainEl.removeEventListener('wheel', handleWheel);
+        if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+      };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps — intentional. All live values read via refs above.
+
+
+  const filteredUsers = users; // Filtering handled server-side
   const showEmptyState = initialLoaded && !isSearching && filteredUsers.length === 0;
 
   return (
-    <div className="flex min-h-screen bg-[#F5F6F8]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F5F6F8]">
       <Sidebar />
 
-      <ScrollArea className="ml-72 flex-1 h-screen bg-[#F5F6F8]">
-        <main className="relative flex flex-col min-h-full bg-[#F5F6F8]">
-          {/* Header / Top Bar */}
-          <header className="sticky top-0 z-10 w-full border-b border-slate-200/60 bg-[#F5F6F8]/90 backdrop-blur-md px-8 py-4 lg:px-12 relative">
+      <main
+        ref={mainContainerRef}
+        className="ml-72 flex-1 h-screen overflow-hidden relative flex flex-col bg-[#F5F6F8]"
+      >
+        {/* Header / Top Bar */}
+        <header className="shrink-0 z-10 w-full border-b border-slate-200/60 bg-[#F5F6F8]/90 backdrop-blur-md px-8 py-4 lg:px-12 relative">
           <div className="mx-auto flex w-full max-w-[1920px] items-center gap-8">
             <div className="hidden min-w-52 lg:block">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66809e]">Внутренняя сеть</p>
@@ -59,7 +137,7 @@ export function DirectoryPage() {
           }}
         />
 
-        <div className="relative z-[1] mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-8 flex-1 flex flex-col justify-start min-h-0">
+        <div className="relative z-[1] mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-6 flex-1 flex flex-col justify-start min-h-0 overflow-hidden">
 
           {totalPages > 1 && (
             <RadialPagination 
@@ -69,8 +147,8 @@ export function DirectoryPage() {
             />
           )}
 
-          {/* Employee Grid */}
-          <div className="w-full">
+          {/* Employee Grid Container */}
+          <div ref={gridContainerRef} className="w-full flex-1 min-h-0 overflow-hidden">
             <AnimatePresence mode="wait">
               {showEmptyState ? (
                 <motion.div
@@ -89,7 +167,8 @@ export function DirectoryPage() {
               ) : (
                 <motion.div
                   key={`grid-${page}-${searchQuery}-${JSON.stringify(filters)}`}
-                  className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4 content-start items-start w-full"
+                  className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full h-full"
+                  style={{ gridTemplateRows: 'repeat(var(--grid-rows, 1), minmax(0, 1fr))' }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, transition: { duration: 0.15 } }}
@@ -114,8 +193,7 @@ export function DirectoryPage() {
           </div>
 
         </div>
-        </main>
-      </ScrollArea>
+      </main>
 
       {/* Profile Modal */}
       <AnimatePresence>
@@ -130,4 +208,3 @@ export function DirectoryPage() {
     </div>
   );
 }
-
