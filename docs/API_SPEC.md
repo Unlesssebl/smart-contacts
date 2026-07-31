@@ -75,7 +75,8 @@
     "full_name": "Иванов Иван Иванович",
     "role": "employee",
     "is_verified": false,
-    "grace_period_left": 3
+    "grace_period_left": 3,
+    "avatar_color": "#2563eb"
   }
 }
 ```
@@ -129,7 +130,8 @@
   "is_protected": false,
   "is_hidden": false,
   "grace_period_left": 3,
-  "last_sync_timestamp": "2026-04-27T10:00:00Z"
+  "last_sync_timestamp": "2026-04-27T10:00:00Z",
+  "avatar_color": "#2563eb"
 }
 ```
 

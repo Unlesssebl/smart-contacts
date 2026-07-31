@@ -108,7 +108,8 @@ def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Session = D
         is_verified=user.is_verified,
         is_protected=user.is_protected,
         grace_period_left=user.grace_period_left,
-        last_sync_timestamp=user.last_sync_timestamp.isoformat() if user.last_sync_timestamp else None
+        last_sync_timestamp=user.last_sync_timestamp.isoformat() if user.last_sync_timestamp else None,
+        avatar_color=user.avatar_color
     )
 
 @router.get("/ws-token")

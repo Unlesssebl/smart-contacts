@@ -15,6 +15,7 @@ class UserAuthResponse(BaseModel):
     role: str
     is_verified: bool
     grace_period_left: int
+    avatar_color: Optional[str] = None
 
 class LoginResponse(BaseModel):
     user: UserAuthResponse
@@ -40,3 +41,4 @@ class UserProfile(BaseModel):
     is_protected: bool
     grace_period_left: int
     last_sync_timestamp: Optional[str]
+    avatar_color: Optional[str] = None

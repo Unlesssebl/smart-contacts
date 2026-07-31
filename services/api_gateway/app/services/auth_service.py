@@ -140,7 +140,8 @@ class AuthService:
                 full_name=user.full_name,
                 role=user.role,
                 is_verified=user.is_verified,
-                grace_period_left=user.grace_period_left
+                grace_period_left=user.grace_period_left,
+                avatar_color=user.avatar_color
             )
         )
 

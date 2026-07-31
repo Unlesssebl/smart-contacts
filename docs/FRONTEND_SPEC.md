@@ -219,6 +219,7 @@ apiClient.interceptors.response.use(
   - `grace_period_left == 2` → Жёлтый (Warning).
   - `grace_period_left == 1` → Красный (Error), текст «Последний пропуск».
   - `grace_period_left == 0` → Жёсткая блокировка.
+- **Подавление и сессионный пропуск**: Модалка автоматически не отображается на страницах профиля (`/profile/*`) и подавляется после выбора «Напомнить позже» до смены пользователя.
 
 **Действия:**
 - «Всё верно» → `POST /profile/me/acknowledge { action: "confirm" }`.

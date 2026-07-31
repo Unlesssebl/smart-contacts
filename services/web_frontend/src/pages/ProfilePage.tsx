@@ -8,7 +8,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { UserAvatar } from '@/components/UserAvatar';
 
 import { updateAvatarColor } from '@/api/profile';
-import { AVATAR_PALETTE } from '@/utils/avatar';
+import { AVATAR_PALETTE, getAvatarColor } from '@/utils/avatar';
 
 import type { User, UserProfile } from '@/types';
 
@@ -181,14 +181,25 @@ export function ProfilePage() {
   };
 
   const handleColorSelect = async (color: string) => {
+    if (!user) return;
+    const previousColor = user.avatar_color;
+
+    // Optimistically update local state & global store
+    setUser((prev) => (prev ? { ...prev, avatar_color: color } : null));
+    useAppStore.getState().updateUserInStore(user.id, { avatar_color: color });
+
     try {
       await updateAvatarColor(color);
-      useAppStore.getState().fetchMe();
       toast.success('Цвет аватарки обновлен');
     } catch (e) {
+      // Revert on error
+      setUser((prev) => (prev ? { ...prev, avatar_color: previousColor } : null));
+      useAppStore.getState().updateUserInStore(user.id, { avatar_color: previousColor });
       toast.error('Не удалось обновить цвет аватарки');
     }
   };
+
+  const currentAvatarColor = user ? getAvatarColor(user.full_name, user.avatar_color) : '';
 
   return (
     <div className="flex min-h-screen bg-transparent">
@@ -295,7 +306,7 @@ export function ProfilePage() {
                             key={color}
                             onClick={() => handleColorSelect(color)}
                             className={`w-10 h-10 rounded-full border-2 transition-transform hover:scale-110 ${
-                              user.avatar_color === color ? 'border-foreground shadow-md scale-110' : 'border-transparent'
+                              currentAvatarColor === color ? 'border-foreground shadow-md scale-110' : 'border-transparent'
                             }`}
                             style={{ backgroundColor: color }}
                             aria-label={`Выбрать цвет ${color}`}

@@ -1,27 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 
 export const GatekeeperModal: React.FC = () => {
   const { currentUser, logout } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isProfilePage = location.pathname.startsWith('/profile');
 
   useEffect(() => {
-    if (currentUser && !currentUser.is_verified) {
-      if (currentUser.grace_period_left > 0) {
-        setIsOpen(true);
-      } else {
-        // Hard block - they cannot skip it. In this UI we just force them to verify.
-        setIsOpen(true);
-      }
+    setIsDismissed(false);
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (currentUser && !currentUser.is_verified && !isDismissed && !isProfilePage) {
+      setIsOpen(true);
     } else {
       setIsOpen(false);
     }
-  }, [currentUser]);
+  }, [currentUser, isDismissed, isProfilePage]);
 
-  if (!isOpen || !currentUser) return null;
+  if (!isOpen || !currentUser || isProfilePage) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -47,6 +50,7 @@ export const GatekeeperModal: React.FC = () => {
           <div className="flex flex-col w-full gap-3">
             <button
               onClick={() => {
+                setIsDismissed(true);
                 setIsOpen(false);
                 navigate(`/profile/${currentUser.id}`);
               }}
@@ -58,7 +62,10 @@ export const GatekeeperModal: React.FC = () => {
             
             {currentUser.grace_period_left > 0 ? (
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  setIsDismissed(true);
+                  setIsOpen(false);
+                }}
                 className="btn-secondary w-full py-2.5 px-4"
               >
                 Напомнить позже
