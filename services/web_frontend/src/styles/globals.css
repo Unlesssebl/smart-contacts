@@ -1,7 +1,7 @@
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Arial, sans-serif;
   background-color: var(--background);
-  background-image: linear-gradient(145deg, #fafcfe 0%, #f1f5f9 100%);
+  background-image: linear-gradient(145deg, #f9fbfc 0%, #eef2f5 100%);
   color: var(--foreground);
   min-height: 100vh;
 }

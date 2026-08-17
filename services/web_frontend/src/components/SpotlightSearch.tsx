@@ -39,6 +39,10 @@ export function SpotlightSearch() {
 
   const [showFilters, setShowFilters] = useState(hasActiveFilters);
 
+  const toggleFilters = () => {
+    setShowFilters((isOpen) => !isOpen);
+  };
+
   useEffect(() => {
     fetchFilterOptions();
   }, [fetchFilterOptions]);
@@ -94,15 +98,22 @@ export function SpotlightSearch() {
       transition={{ duration: 0.2 }}
       className="relative mx-auto w-full"
     >
-      <div
-        className={`relative overflow-hidden border bg-white p-0 transition-all ${
+      <motion.div
+        animate={{
+          borderBottomLeftRadius: showFilters ? 0 : 12,
+          borderBottomRightRadius: showFilters ? 0 : 12,
+        }}
+        transition={{
+          duration: showFilters ? 0.24 : 0.18,
+          ease: showFilters ? [0.22, 1, 0.36, 1] : [0.4, 0, 1, 1],
+        }}
+        className={`relative rounded-t-xl border bg-white p-0 transition-[border-color,box-shadow] duration-200 ${
           isInputFocused 
-            ? 'border-[#2B5FE0] shadow-[0_0_0_3px_rgba(43,95,224,0.1)]'
-            : 'border-slate-200 shadow-[0_4px_12px_rgba(16,24,40,0.04)]'
+            ? 'border-[#668aab] shadow-[0_0_0_3px_rgba(62,111,154,0.1),0_10px_25px_-18px_rgba(26,54,84,0.35)]'
+            : 'border-[#dce3ea] shadow-[0_10px_24px_-20px_rgba(26,54,84,0.32)]'
         }`}
-        style={{ borderRadius: '12px' }}
       >
-        <div className="flex items-center gap-4 px-6 py-4">
+        <div className="flex min-h-[64px] items-center gap-4 px-6 py-3.5">
           <Search className={`h-5 w-5 transition-colors ${isInputFocused ? 'text-slate-900' : 'text-slate-400'}`} strokeWidth={1.5} />
           <input
             ref={inputRef}
@@ -116,8 +127,9 @@ export function SpotlightSearch() {
           />
 
           <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${showFilters || hasActiveFilters
+            onClick={toggleFilters}
+            aria-expanded={showFilters}
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-[background-color,color,transform] duration-200 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#356b99]/35 ${showFilters || hasActiveFilters
                 ? 'bg-[#eaf1f8] text-[#0b4f92] hover:bg-[#dfeaf5]'
                 : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
               }`}
@@ -131,71 +143,104 @@ export function SpotlightSearch() {
         </div>
 
         {/* Filters Panel */}
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {showFilters && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-slate-900/[0.06] bg-[#f8fafc]"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                transition: {
+                  duration: 0.24,
+                  ease: [0.22, 1, 0.36, 1],
+                  opacity: { duration: 0.16, ease: 'easeOut' },
+                },
+              }}
+              exit={{
+                opacity: 0,
+                y: -4,
+                transition: {
+                  duration: 0.18,
+                  ease: [0.4, 0, 1, 1],
+                  opacity: { duration: 0.1, ease: 'linear' },
+                },
+              }}
+              className="absolute -left-px -right-px top-full z-30 -mt-px rounded-b-xl shadow-[0_18px_36px_-20px_rgba(26,54,84,0.38)]"
             >
-              <div className="flex flex-wrap items-center gap-4 px-6 py-4">
-                <FilterCombobox
-                  options={organizations}
-                  value={filters.organization}
-                  onChange={(v) => setFilters({ organization: v })}
-                  placeholder="Организация"
-                />
-
-                <FilterCombobox
-                  options={departments}
-                  value={filters.department}
-                  onChange={(v) => setFilters({ department: v })}
-                  placeholder="Отдел"
-                />
-
-                <FilterCombobox
-                  options={jobTitles}
-                  value={filters.job_title}
-                  onChange={(v) => setFilters({ job_title: v })}
-                  placeholder="Должность"
-                />
-
-                <div className="flex items-center space-x-2 ml-auto">
-                  <Switch
-                    id="has-phone"
-                    checked={filters.has_phone || false}
-                    onCheckedChange={(c) => setFilters({ has_phone: c })}
-                  />
-                  <Label htmlFor="has-phone" className="text-sm font-medium cursor-pointer">С телефоном</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="has-email"
-                    checked={filters.has_email || false}
-                    onCheckedChange={(c) => setFilters({ has_email: c })}
-                  />
-                  <Label htmlFor="has-email" className="text-sm font-medium cursor-pointer">С email</Label>
-                </div>
-
-                {isAdmin && (
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="hidden-only"
-                      checked={filters.hidden_only || false}
-                      onCheckedChange={(c) => setFilters({ hidden_only: c })}
+              <motion.div
+                initial={{ clipPath: 'inset(0 0 100% 0)' }}
+                animate={{
+                  clipPath: 'inset(0 0 0% 0)',
+                  transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+                }}
+                exit={{
+                  clipPath: 'inset(0 0 100% 0)',
+                  transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
+                }}
+                className="overflow-hidden rounded-b-xl border border-t-0 border-[#dce3ea] bg-[#f8fafc]"
+              >
+                <div className="flex flex-col gap-4 px-6 py-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <FilterCombobox
+                      options={organizations}
+                      value={filters.organization}
+                      onChange={(v) => setFilters({ organization: v })}
+                      placeholder="Организация"
                     />
-                    <Label htmlFor="hidden-only" className="text-sm font-medium cursor-pointer">Скрытые УЗ</Label>
+
+                    <FilterCombobox
+                      options={departments}
+                      value={filters.department}
+                      onChange={(v) => setFilters({ department: v })}
+                      placeholder="Отдел"
+                    />
+
+                    <FilterCombobox
+                      options={jobTitles}
+                      value={filters.job_title}
+                      onChange={(v) => setFilters({ job_title: v })}
+                      placeholder="Должность"
+                    />
                   </div>
-                )}
-              </div>
+
+                  <div className="flex items-center gap-5 overflow-x-auto">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Switch
+                        id="has-phone"
+                        checked={filters.has_phone || false}
+                        onCheckedChange={(c) => setFilters({ has_phone: c })}
+                      />
+                      <Label htmlFor="has-phone" className="cursor-pointer whitespace-nowrap text-sm font-medium">С телефоном</Label>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Switch
+                        id="has-email"
+                        checked={filters.has_email || false}
+                        onCheckedChange={(c) => setFilters({ has_email: c })}
+                      />
+                      <Label htmlFor="has-email" className="cursor-pointer whitespace-nowrap text-sm font-medium">С email</Label>
+                    </div>
+
+                    {isAdmin && (
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Switch
+                          id="hidden-only"
+                          checked={filters.hidden_only || false}
+                          onCheckedChange={(c) => setFilters({ hidden_only: c })}
+                        />
+                        <Label htmlFor="hidden-only" className="cursor-pointer whitespace-nowrap text-sm font-medium">Скрытые УЗ</Label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
 
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

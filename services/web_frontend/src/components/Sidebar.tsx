@@ -26,27 +26,27 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen w-72 z-20 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.1)] transform-gpu"
+      className="fixed left-0 top-0 z-20 flex h-screen w-[17.25rem] flex-col shadow-[18px_0_48px_rgba(16,45,79,0.12)] transform-gpu"
       style={{
-        backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(53, 114, 179, 0.59), rgba(27, 72, 126, 0.72)), url("/login_background.png")',
-        backgroundSize: '4px 4px, cover, cover',
+        backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.11) 0.8px, transparent 0.8px), linear-gradient(155deg, rgba(48, 96, 146, 0.8), rgba(20, 58, 104, 0.92)), url("/login_background.png")',
+        backgroundSize: '4px 4px, cover, auto 100%',
         backgroundPosition: '0 0, center, center',
         backgroundRepeat: 'repeat, no-repeat, no-repeat'
       }}
     >
-      <div className="flex h-full flex-col px-6 py-6">
+      <div className="flex h-full flex-col px-3.5 pb-5 pt-5">
         {/* Logo */}
-        <div className="mb-8 flex items-center justify-start">
+        <div className="mb-10 flex items-center justify-start px-0.5">
           <img
             src="/GK_logo.png"
             alt="ТЭМПО"
-            className="h-10 w-auto object-contain invert brightness-0"
+            className="h-10 w-auto object-contain brightness-0 invert"
           />
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 mt-4">
-          <nav className="flex flex-col space-y-1 bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl shadow-sm">
+        <div className="flex-1">
+          <nav className="flex flex-col space-y-1 rounded-[18px] border border-white/20 bg-white/[0.11] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -55,14 +55,14 @@ export function Sidebar() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors group ${
+                  className={`group relative flex min-h-10 items-center gap-3 rounded-xl px-3 py-2.5 transition-[color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
                     active ? 'text-white' : 'text-white/70 hover:text-white'
                   }`}
                 >
                   {active && (
                     <motion.div
                       layoutId="activeNav"
-                      className="absolute inset-0 rounded-xl bg-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]"
+                      className="absolute inset-0 rounded-xl bg-white/[0.24] shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_7px_18px_rgba(7,31,60,0.12)]"
                       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                     />
                   )}
@@ -78,14 +78,14 @@ export function Sidebar() {
         </div>
 
         {/* Help / Support Card */}
-        <div className="mt-auto mb-6 rounded-2xl bg-white/10 p-4 border border-white/20 backdrop-blur-md shadow-sm">
-          <h4 className="text-sm font-medium text-white">Нужна помощь?</h4>
+        <div className="mb-6 mt-auto rounded-2xl border border-white/20 bg-white/[0.11] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
+          <h4 className="text-sm font-semibold text-white">Нужна помощь?</h4>
           <p className="mt-1 text-xs text-white/70 leading-relaxed">
             Если у вас возникли проблемы с доступом или поиском сотрудников, обратитесь в поддержку.
           </p>
           <a
             href="#"
-            className="mt-3 inline-block text-xs font-medium text-white/90 transition-colors hover:text-white"
+            className="mt-3 inline-block rounded text-xs font-semibold text-white/90 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
             Написать в поддержку &rarr;
           </a>
@@ -114,7 +114,7 @@ export function Sidebar() {
 
             <button
               onClick={logout}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-300 transition-[background-color,color,transform] duration-200 hover:bg-rose-300/10 hover:text-rose-200 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             >
               <LogOut className="h-4 w-4" strokeWidth={1.5} />
               Выйти

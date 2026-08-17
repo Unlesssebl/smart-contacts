@@ -48,7 +48,7 @@ export function DirectoryPage() {
   const accumulatedRef = useRef(0);
   const lastEventTimeRef = useRef(0);
 
-  useAdaptiveLimit(gridContainerRef);
+  const { isReady: isGridReady } = useAdaptiveLimit(gridContainerRef);
 
   useEffect(() => {
     fetchUsers();
@@ -118,26 +118,21 @@ export function DirectoryPage() {
   const filteredUsers = users; // Filtering handled server-side
   const showEmptyState = initialLoaded && !isSearching && filteredUsers.length === 0;
 
-  // Compute the *actual* number of occupied grid rows from real card count.
-  // This prevents 1fr rows from stretching on partial last pages.
-  const colCount = window.innerWidth >= 1024 ? 3 : window.innerWidth >= 768 ? 2 : 1;
-  const actualGridRows = Math.max(1, Math.ceil(filteredUsers.length / colCount));
-
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F5F6F8]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#f4f6f8]">
       <Sidebar />
 
       <main
         ref={mainContainerRef}
-        className="ml-72 flex-1 h-screen overflow-hidden relative flex flex-col bg-[#F5F6F8]"
+        className="relative ml-[17.25rem] flex h-screen flex-1 flex-col overflow-hidden bg-[#f4f6f8]"
       >
         {/* Header / Top Bar */}
-        <header className="shrink-0 z-10 w-full border-b border-slate-200/60 bg-[#F5F6F8]/90 backdrop-blur-md px-8 py-4 lg:px-12 relative">
+        <header className="relative z-10 w-full shrink-0 border-b border-[#dfe5eb]/80 bg-[#f4f6f8]/90 px-8 py-3 backdrop-blur-md lg:px-12">
           <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between gap-4 lg:gap-8">
             {/* Left Column: Title */}
             <div className="hidden lg:block flex-1 min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#66809e] truncate">Внутренняя сеть</p>
-              <h1 className="mt-1 text-[22px] font-semibold leading-none tracking-[-0.035em] text-slate-900 truncate">Справочник</h1>
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6c83a0]">Внутренняя сеть</p>
+              <h1 className="mt-1 truncate text-[22px] font-semibold leading-none tracking-[-0.035em] text-[#152036]">Справочник</h1>
             </div>
 
             {/* Center Column: Search */}
@@ -147,7 +142,7 @@ export function DirectoryPage() {
 
             {/* Right Column: Counter / Empty Spacer for perfect centering */}
             <div className="hidden lg:flex flex-1 min-w-0 justify-end items-center">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 whitespace-nowrap hidden xl:block pointer-events-none">
+              <div className="pointer-events-none hidden whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.15em] text-[#637792] xl:block">
                 Найдено: {totalUsers} {getEmployeeWord(totalUsers)}
               </div>
             </div>
@@ -158,11 +153,11 @@ export function DirectoryPage() {
         <div 
           className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
           style={{
-            background: 'radial-gradient(circle at top left, rgba(43, 95, 224, 0.03), transparent 40%)'
+            background: 'radial-gradient(circle at 20% 0%, rgba(68, 113, 155, 0.055), transparent 34%), radial-gradient(circle at 92% 100%, rgba(91, 126, 155, 0.035), transparent 30%)'
           }}
         />
 
-        <div className="relative z-[1] mx-auto w-full max-w-[1920px] pl-8 lg:pl-12 pr-24 lg:pr-32 py-6 flex-1 flex flex-col justify-start min-h-0 overflow-hidden">
+        <div className="relative z-[1] mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 flex-col justify-start overflow-hidden py-6 pl-8 pr-24 lg:pl-12 lg:pr-32">
 
           {totalPages > 1 && (
             <RadialPagination 
@@ -173,7 +168,12 @@ export function DirectoryPage() {
           )}
 
           {/* Employee Grid Container */}
-          <div ref={gridContainerRef} className="w-full flex-1 min-h-0 overflow-hidden">
+          <div
+            ref={gridContainerRef}
+            className={`min-h-0 w-full flex-1 overflow-hidden transition-opacity duration-200 ${
+              isGridReady ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
             <AnimatePresence mode="wait">
               {showEmptyState ? (
                 <motion.div
@@ -192,8 +192,8 @@ export function DirectoryPage() {
               ) : (
                 <motion.div
                   key={`grid-${page}-${searchQuery}-${JSON.stringify(filters)}`}
-                  className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 w-full h-full"
-                  style={{ gridTemplateRows: `repeat(${actualGridRows}, minmax(0, 1fr))` }}
+                  data-adaptive-grid
+                  className="grid w-full grid-cols-1 content-start items-start gap-5 pt-2 md:grid-cols-2 lg:grid-cols-3"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, transition: { duration: 0.15 } }}
@@ -204,7 +204,7 @@ export function DirectoryPage() {
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: Math.min(index * 0.02, 0.4) }}
-                      className="h-full"
+                      className="w-full"
                     >
                       <EmployeeCard
                         user={user}

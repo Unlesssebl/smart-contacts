@@ -43,23 +43,24 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
   };
 
   return (
-    <div className="fixed right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center justify-center">
+    <div className="fixed right-5 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center justify-center">
       {/* Unified Glass Pill Container */}
-      <div className="flex flex-col items-center justify-center gap-2 min-h-[320px] w-[64px] py-4 rounded-full bg-white/85 border border-white shadow-[0_8px_32px_-4px_rgba(32,92,158,0.15)] transform-gpu">
+      <div className="flex min-h-[320px] w-[64px] transform-gpu flex-col items-center justify-center gap-2 rounded-full border border-white/90 bg-white/88 py-4 shadow-[0_16px_42px_-18px_rgba(32,73,112,0.32)] backdrop-blur-xl">
         
         {/* Prev Arrow */}
         <button
           onClick={handlePrev}
           disabled={currentPage === 1}
-          className="p-2 rounded-full text-primary/60 hover:text-primary hover:bg-white/60 transition-colors disabled:opacity-30 disabled:pointer-events-none shadow-sm border border-transparent hover:border-white/50"
+          aria-label="Предыдущая страница"
+          className="rounded-full border border-transparent p-2 text-primary/60 shadow-sm transition-[background-color,color,transform] hover:border-white/50 hover:bg-white/60 hover:text-primary active:translate-y-px disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <ChevronUp className="h-5 w-5" />
         </button>
 
         {/* Page Nodes */}
         <div className="relative flex flex-col items-center gap-3 w-full flex-1 justify-center py-2">
-          {/* Decorative Track Line */}
-          <div className="absolute left-1/2 top-2 bottom-2 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-slate-300/40 to-transparent pointer-events-none" />
+          {/* Soft guide: visually interrupted by the page labels */}
+          <div className="pointer-events-none absolute bottom-3 left-1/2 top-3 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#9db9ce]/30 to-transparent" />
           
           <AnimatePresence mode="popLayout">
             {pages.map((p) => {
@@ -76,7 +77,7 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
                       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                       className="relative z-10 shrink-0 flex items-center justify-center h-10 w-10 rounded-full font-bold text-[14px] text-slate-400 select-none pointer-events-none"
                     >
-                      00
+                      <span className="rounded-[4px] bg-white/95 px-1.5 shadow-[0_0_0_3px_rgba(255,255,255,0.72)]">00</span>
                     </motion.div>
                   );
                 }
@@ -95,6 +96,8 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
                   exit={{ opacity: 0, scale: 0.5 }}
                   transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                   onClick={() => onPageChange(p.pageNum)}
+                  aria-label={`Страница ${p.pageNum}`}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`
                     relative z-10 shrink-0 flex items-center justify-center
                     h-10 w-10 rounded-full font-bold text-[14px] transition-colors cursor-pointer
@@ -104,7 +107,9 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
                     }
                   `}
                 >
-                  {String(p.pageNum).padStart(2, '0')}
+                  <span className={isActive ? undefined : 'rounded-[4px] bg-white/95 px-1.5 shadow-[0_0_0_3px_rgba(255,255,255,0.72)]'}>
+                    {String(p.pageNum).padStart(2, '0')}
+                  </span>
                 </motion.button>
               );
             })}
@@ -115,7 +120,8 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
         <button
           onClick={handleNext}
           disabled={currentPage === totalPages}
-          className="p-2 rounded-full text-primary/60 hover:text-primary hover:bg-white/60 transition-colors disabled:opacity-30 disabled:pointer-events-none shadow-sm border border-transparent hover:border-white/50"
+          aria-label="Следующая страница"
+          className="rounded-full border border-transparent p-2 text-primary/60 shadow-sm transition-[background-color,color,transform] hover:border-white/50 hover:bg-white/60 hover:text-primary active:translate-y-px disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           <ChevronDown className="h-5 w-5" />
         </button>
