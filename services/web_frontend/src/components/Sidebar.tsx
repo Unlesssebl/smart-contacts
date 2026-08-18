@@ -36,7 +36,7 @@ export function Sidebar() {
     >
       <div className="flex h-full flex-col px-3.5 pb-5 pt-5">
         {/* Logo */}
-        <div className="mb-10 flex items-center justify-start px-0.5">
+        <div className="mb-10 flex items-center justify-center">
           <img
             src="/GK_logo.png"
             alt="ТЭМПО"

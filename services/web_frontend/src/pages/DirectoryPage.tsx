@@ -130,9 +130,23 @@ export function DirectoryPage() {
         <header className="relative z-10 w-full shrink-0 border-b border-[#dfe5eb]/80 bg-[#f4f6f8]/90 px-8 py-3 backdrop-blur-md lg:px-12">
           <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between gap-4 lg:gap-8">
             {/* Left Column: Title */}
-            <div className="hidden lg:block flex-1 min-w-0">
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6c83a0]">Внутренняя сеть</p>
-              <h1 className="mt-1 truncate text-[22px] font-semibold leading-none tracking-[-0.035em] text-[#152036]">Справочник</h1>
+            <div className="hidden min-w-0 flex-1 items-center lg:flex">
+              <div className="flex items-center gap-4">
+                <img
+                  src="/dit-logo.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="h-14 w-auto shrink-0 object-contain"
+                />
+                <div className="flex flex-col text-[#245f9f]">
+                  <span className="text-[11px] font-bold uppercase leading-none tracking-[0.18em]">
+                    Департамент
+                  </span>
+                  <span className="mt-1.5 text-[18px] font-bold uppercase leading-none tracking-[0.14em]">
+                    ИТ
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Center Column: Search */}

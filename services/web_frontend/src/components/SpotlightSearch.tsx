@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { FilterCombobox } from './ui/FilterCombobox';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
@@ -41,6 +41,17 @@ export function SpotlightSearch() {
 
   const toggleFilters = () => {
     setShowFilters((isOpen) => !isOpen);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      organization: undefined,
+      department: undefined,
+      job_title: undefined,
+      has_phone: false,
+      has_email: false,
+      hidden_only: false,
+    });
   };
 
   useEffect(() => {
@@ -109,7 +120,7 @@ export function SpotlightSearch() {
         }}
         className={`relative rounded-t-xl border bg-white p-0 transition-[border-color,box-shadow] duration-200 ${
           isInputFocused 
-            ? 'border-[#668aab] shadow-[0_0_0_3px_rgba(62,111,154,0.1),0_10px_25px_-18px_rgba(26,54,84,0.35)]'
+            ? 'border-[#668aab] shadow-[0_10px_25px_-18px_rgba(26,54,84,0.35)]'
             : 'border-[#dce3ea] shadow-[0_10px_24px_-20px_rgba(26,54,84,0.32)]'
         }`}
       >
@@ -143,20 +154,20 @@ export function SpotlightSearch() {
         </div>
 
         {/* Filters Panel */}
-        <AnimatePresence initial={false}>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }}
-              animate={{
+        <motion.div
+          initial={false}
+          animate={showFilters
+            ? {
                 opacity: 1,
                 y: 0,
+                visibility: 'visible',
                 transition: {
                   duration: 0.24,
                   ease: [0.22, 1, 0.36, 1],
                   opacity: { duration: 0.16, ease: 'easeOut' },
                 },
-              }}
-              exit={{
+              }
+            : {
                 opacity: 0,
                 y: -4,
                 transition: {
@@ -164,21 +175,26 @@ export function SpotlightSearch() {
                   ease: [0.4, 0, 1, 1],
                   opacity: { duration: 0.1, ease: 'linear' },
                 },
+                transitionEnd: { visibility: 'hidden' },
               }}
-              className="absolute -left-px -right-px top-full z-30 -mt-px rounded-b-xl shadow-[0_18px_36px_-20px_rgba(26,54,84,0.38)]"
-            >
-              <motion.div
-                initial={{ clipPath: 'inset(0 0 100% 0)' }}
-                animate={{
-                  clipPath: 'inset(0 0 0% 0)',
-                  transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
-                }}
-                exit={{
-                  clipPath: 'inset(0 0 100% 0)',
-                  transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
-                }}
-                className="overflow-hidden rounded-b-xl border border-t-0 border-[#dce3ea] bg-[#f8fafc]"
-              >
+          aria-hidden={!showFilters}
+          inert={!showFilters}
+          className="absolute -left-px -right-px top-full z-30 -mt-px rounded-b-xl shadow-[0_18px_36px_-20px_rgba(26,54,84,0.38)]"
+          style={{ pointerEvents: showFilters ? 'auto' : 'none' }}
+        >
+          <motion.div
+            initial={false}
+            animate={{
+              clipPath: showFilters ? 'inset(0 0 0% 0)' : 'inset(0 0 100% 0)',
+              transition: {
+                duration: showFilters ? 0.24 : 0.18,
+                ease: showFilters ? [0.22, 1, 0.36, 1] : [0.4, 0, 1, 1],
+              },
+            }}
+            className={`overflow-hidden rounded-b-xl border border-t-0 bg-[#f8fafc] transition-colors duration-200 ${
+              isInputFocused ? 'border-[#668aab]' : 'border-[#dce3ea]'
+            }`}
+          >
                 <div className="flex flex-col gap-4 px-6 py-4">
                   <div className="flex flex-wrap items-center gap-4">
                     <FilterCombobox
@@ -201,6 +217,15 @@ export function SpotlightSearch() {
                       onChange={(v) => setFilters({ job_title: v })}
                       placeholder="Должность"
                     />
+
+                    <button
+                      type="button"
+                      disabled={!hasActiveFilters}
+                      onClick={clearFilters}
+                      className="ml-auto flex shrink-0 items-center rounded-md border border-rose-200 bg-rose-50/70 px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-rose-300 hover:bg-rose-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-white disabled:text-slate-400 disabled:shadow-none disabled:hover:border-slate-200 disabled:hover:bg-white"
+                    >
+                      Очистить всё
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-5 overflow-x-auto">
@@ -232,12 +257,11 @@ export function SpotlightSearch() {
                         <Label htmlFor="hidden-only" className="cursor-pointer whitespace-nowrap text-sm font-medium">Скрытые УЗ</Label>
                       </div>
                     )}
+
                   </div>
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        </motion.div>
 
 
       </motion.div>
