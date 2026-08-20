@@ -163,7 +163,7 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
             setIsTabExtended(false);
           }
         }}
-        className={`group relative h-[328px] cursor-pointer overflow-visible rounded-[20px] border border-[#d9e5ee] bg-white shadow-[0_16px_36px_-28px_rgba(35,74,110,0.38)] transition-[transform,border-color,box-shadow,opacity,filter] duration-300 hover:-translate-y-0.5 hover:border-[#9fbcd2] hover:shadow-[0_24px_44px_-28px_rgba(35,74,110,0.52)] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
+        className={`group relative h-[328px] cursor-pointer overflow-visible rounded-[20px] border border-[#d9e5ee] bg-white shadow-[0_16px_36px_-28px_rgba(35,74,110,0.38)] transition-[transform,border-color,box-shadow,opacity,filter] duration-300 hover:z-20 focus-within:z-20 hover:-translate-y-0.5 hover:border-[#9fbcd2] hover:shadow-[0_24px_44px_-28px_rgba(35,74,110,0.52)] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
           user.is_hidden ? 'opacity-65 grayscale-[0.12]' : ''
         }`}
       >

@@ -207,7 +207,7 @@ export function DirectoryPage() {
                 <motion.div
                   key={`grid-${page}-${searchQuery}-${JSON.stringify(filters)}`}
                   data-adaptive-grid
-                  className="grid w-full grid-cols-1 content-start items-start gap-5 pt-2 xl:grid-cols-2 2xl:grid-cols-3"
+                  className="grid w-full grid-cols-1 content-start items-start gap-5 pt-7 xl:grid-cols-2 2xl:grid-cols-3"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, transition: { duration: 0.15 } }}
