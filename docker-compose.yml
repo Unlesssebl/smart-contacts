@@ -96,17 +96,14 @@ services:
     build:
       context: ./services/web_frontend
       dockerfile: Dockerfile
-      target: build
     container_name: smart_contacts_web
     restart: always
-    command: npm run dev -- --host 0.0.0.0 --port 80
     volumes:
-      - ./services/web_frontend:/app
-      - /app/node_modules
-    environment:
-      - VITE_PROXY_TARGET=http://api_gateway:8000
+      - ./certs:/etc/nginx/certs:ro
+      - ./services/web_frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "10.245.19.85:80:80"
+      - "80:80"
+      - "443:443"
     depends_on:
       - api_gateway
     networks:

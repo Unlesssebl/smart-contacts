@@ -28,4 +28,4 @@ ldap_server = Server(
     use_ssl=use_ssl,
     tls=tls_config
 )
-server_pool = ServerPool([ldap_server], ROUND_ROBIN, active=True, exhaust=True)
+server_pool = ServerPool([ldap_server], ROUND_ROBIN, active=False)

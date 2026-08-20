@@ -62,3 +62,10 @@ redisdata/
 .cgr-hash-cache.json
 .qdrant_code_embeddings/
 *.db
+
+# Certificates
+certs/
+*.pem
+*.key
+*.crt
+sing-box-config.json

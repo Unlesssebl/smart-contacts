@@ -20,7 +20,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="10.245.19.85")
+trusted_proxies = [h.strip() for h in settings.TRUSTED_PROXIES.split(",") if h.strip()]
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_proxies)
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -53,4 +54,4 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="10.245.19.85", port=8080, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8080, reload=True)

@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Smart Contacts API Gateway"
     API_V1_STR: str = "/api/v1"
     ALLOWED_ORIGINS: str = "http://localhost,http://localhost:5173,http://127.0.0.1:5173"
+    TRUSTED_PROXIES: str = "127.0.0.1,172.28.10.0/24,172.18.128.32"
 
     # PostgreSQL (Required)
     POSTGRES_USER: str
