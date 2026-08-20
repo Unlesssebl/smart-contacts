@@ -5,6 +5,7 @@ import ssl
 import logging
 import base64
 import hashlib
+import re
 from cryptography.fernet import Fernet
 from app.db import SessionLocal
 from shared.models.system_setting import SystemSetting
@@ -126,6 +127,23 @@ class LDAPClient:
                         yield attrs
         except Exception as e:
             logger.warning(f"LDAP search_deleted failed or control not permitted: {e}")
+
+    def search_ou_paths(self) -> Optional[set[tuple[str, ...]]]:
+        """Returns an authoritative snapshot of OU paths from AD objects."""
+        try:
+            paths: set[tuple[str, ...]] = set()
+            for entry in self.search_paged(
+                "(objectClass=organizationalUnit)",
+                ["distinguishedName"],
+            ):
+                dn = str(entry.get("distinguishedName", ""))
+                ous = re.findall(r"OU=([^,]+)", dn)
+                if ous:
+                    paths.add(tuple(reversed(ous)))
+            return paths
+        except Exception as e:
+            logger.error(f"Failed to fetch authoritative OU tree from AD: {e}")
+            return None
 
     def modify_attribute(self, dn: str, attribute: str, value: str) -> bool:
         """

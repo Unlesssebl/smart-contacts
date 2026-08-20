@@ -5,13 +5,13 @@ Run from ``services/api_gateway``:
     uv run python scripts/seed_ou_mapping.py          # preview
     uv run python scripts/seed_ou_mapping.py --apply  # save and update users
 
-Existing mapping entries always win, so the script is safe to run repeatedly.
+Existing entries for current OUs win; mappings absent from the current AD tree
+are removed when ``--apply`` is used.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
@@ -31,23 +31,24 @@ from shared.models.user import User  # noqa: E402
 CORPORATE_ROOT = "CORPORATE_USERS"
 EXCLUDED_FIRST_LEVEL_OUS = {
     "!\u0414\u0443\u0431\u043b\u0438 \u0443\u0447\u0451\u0442\u043d\u044b\u0445 \u0437\u0430\u043f\u0438\u0441\u0435\u0439",
+    "!\u041f\u0415\u0420\u0415\u041d\u041e\u0421",
     "SERVICE_USERS",
     "WIFI GUEST",
     "\u0424\u0438\u043b\u0438\u0430\u043b\u044b \u043e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u0439",
 }
 
 COLORS = (
-    "bg-blue-50 text-blue-700 ring-blue-700/10",
-    "bg-indigo-50 text-indigo-700 ring-indigo-700/10",
-    "bg-purple-50 text-purple-700 ring-purple-700/10",
-    "bg-pink-50 text-pink-700 ring-pink-700/10",
-    "bg-red-50 text-red-700 ring-red-700/10",
-    "bg-orange-50 text-orange-700 ring-orange-700/10",
-    "bg-green-50 text-green-700 ring-green-600/20",
-    "bg-slate-50 text-slate-700 ring-slate-600/20",
+    "#2B5FE0", "#1D4ED8", "#4F46E5", "#4338CA", "#7C3AED",
+    "#9333EA", "#A21CAF", "#C026D3", "#DB2777", "#E11D48",
+    "#BE123C", "#D14343", "#B91C1C", "#C2410C", "#EA580C",
+    "#D97706", "#B7791F", "#A16207", "#4D7C0F", "#65A30D",
+    "#0F9D58", "#15803D", "#059669", "#047857", "#0D9488",
+    "#0F766E", "#0891B2", "#0E7490", "#0284C7", "#0369A1",
+    "#475569", "#64748B", "#57534E", "#92400E", "#9F1239",
+    "#701A75", "#312E81", "#1E3A8A", "#334155",
 )
 
-IT_TEMPO_COLOR = "bg-green-50 text-green-700 ring-green-600/20"
+IT_TEMPO_COLOR = "#0F9D58"
 
 
 def normalize(value: str) -> str:
@@ -99,8 +100,11 @@ CANONICAL_ALIASES = {
 def color_for(organization: str) -> str:
     if organization == "АйТи \"ТЭМПО\"":
         return IT_TEMPO_COLOR
-    digest = hashlib.sha256(organization.encode("utf-8")).digest()
-    return COLORS[digest[0] % len(COLORS)]
+    hash_value = 0x811C9DC5
+    for byte in organization.strip().lower().encode("utf-8"):
+        hash_value ^= byte
+        hash_value = (hash_value * 0x01000193) & 0xFFFFFFFF
+    return COLORS[hash_value % len(COLORS)]
 
 
 def load_json_setting(db: Any, key: str) -> dict[str, Any]:
@@ -113,22 +117,35 @@ def load_json_setting(db: Any, key: str) -> dict[str, Any]:
     return parsed
 
 
-def build_seed(tree: dict[str, Any]) -> tuple[dict[str, dict[str, str]], list[str]]:
+def direct_organization_ous(tree: dict[str, Any]) -> set[str]:
     corporate_tree = tree.get(CORPORATE_ROOT)
     if not isinstance(corporate_tree, dict):
         raise ValueError(f"{CORPORATE_ROOT} is missing from KNOWN_OUS")
+    return set(corporate_tree) - EXCLUDED_FIRST_LEVEL_OUS
+
+
+def build_seed(tree: dict[str, Any]) -> tuple[dict[str, dict[str, str]], list[str]]:
+    organization_ous = direct_organization_ous(tree)
 
     seed: dict[str, dict[str, str]] = {}
     unknown: list[str] = []
-    for ou in sorted(corporate_tree):
-        if ou in EXCLUDED_FIRST_LEVEL_OUS:
-            continue
+    for ou in sorted(organization_ous):
         organization = CANONICAL_ALIASES.get(normalize(ou))
         if organization is None:
             unknown.append(ou)
             continue
         seed[ou] = {"org": organization, "color": color_for(organization)}
     return seed, unknown
+
+
+def merge_current_mapping(
+    seed: dict[str, dict[str, str]],
+    current: dict[str, Any],
+    valid_ous: set[str],
+) -> tuple[dict[str, Any], set[str]]:
+    stale = set(current) - valid_ous
+    current_valid = {ou: value for ou, value in current.items() if ou in valid_ous}
+    return {**seed, **current_valid}, stale
 
 
 def main() -> int:
@@ -141,12 +158,13 @@ def main() -> int:
         tree = load_json_setting(db, "KNOWN_OUS")
         current = load_json_setting(db, "OU_MAPPING")
         seed, unknown = build_seed(tree)
-        merged = {**seed, **current}
+        merged, stale = merge_current_mapping(seed, current, direct_organization_ous(tree))
 
         print(f"First-level organization OU candidates: {len(seed) + len(unknown)}")
         print(f"Mapped OU variants: {len(seed)}")
         print(f"Canonical organizations: {len({item['org'] for item in seed.values()})}")
-        print(f"Existing entries preserved: {len(current)}")
+        print(f"Existing current entries preserved: {len(current) - len(stale)}")
+        print(f"Stale entries to remove: {len(stale)}")
         if unknown:
             print("Unmapped first-level OU:")
             for ou in unknown:

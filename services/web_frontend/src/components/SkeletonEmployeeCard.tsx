@@ -1,34 +1,32 @@
-
 export const SkeletonEmployeeCard = () => {
   return (
-    <div className="relative group p-6 bg-white/70 border border-white/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-2xl flex flex-col h-[320px] overflow-hidden">
-      {/* TOP: Avatar and Primary Info Skeleton */}
-      <div className="flex items-start gap-4">
-        {/* Avatar skeleton */}
-        <div className="h-16 w-16 rounded-full bg-slate-200/50 animate-pulse flex-shrink-0" />
+    <div className="relative h-[328px] overflow-hidden rounded-[20px] border border-[#dfe8ef] bg-white shadow-[0_16px_36px_-28px_rgba(35,74,110,0.28)]">
+      <div className="h-[132px] bg-[linear-gradient(145deg,#f8fbff_0%,#f2f7fb_100%)] px-5 pb-3 pt-5">
+        <div className="flex h-full items-start gap-4">
+          <div className="h-16 w-16 shrink-0 animate-pulse rounded-full bg-slate-200/70" />
 
-        {/* Info skeleton */}
-        <div className="flex-1 pt-1 space-y-3 w-full">
-          {/* Name */}
-          <div className="h-5 bg-slate-200/50 rounded-md w-3/4 animate-pulse" />
-          {/* Job Title */}
-          <div className="h-4 bg-slate-200/50 rounded-md w-1/2 animate-pulse" />
-
-          {/* Badges */}
-          <div className="mt-2.5 flex items-center gap-2">
-            <div className="h-5 bg-slate-200/50 rounded-full w-16 animate-pulse" />
-            <div className="h-5 bg-slate-200/50 rounded-full w-20 animate-pulse" />
+          <div className="flex h-full min-w-0 flex-1 flex-col pt-0.5">
+            <div className="h-5 w-4/5 animate-pulse rounded-md bg-slate-200/65" />
+            <div className="mt-2 h-4 w-3/5 animate-pulse rounded-md bg-slate-200/55" />
+            <div className="mt-2 h-3.5 w-5/6 animate-pulse rounded-md bg-slate-200/50" />
+            <div className="mt-auto h-4 w-20 animate-pulse rounded bg-slate-200/45" />
           </div>
         </div>
       </div>
 
-      {/* BOTTOM: Contact Info Block Skeleton */}
-      <div className="mt-auto pt-6">
-        <div className="flex flex-col gap-3 bg-primary/[0.02] rounded-xl p-4 border border-primary/5">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3.5">
-              <div className="h-8 w-8 rounded-full bg-slate-200/50 animate-pulse flex-shrink-0" />
-              <div className="h-4 bg-slate-200/50 rounded-md w-full max-w-[200px] animate-pulse" />
+      <div className="absolute left-0 right-0 top-[131px] h-px bg-[#dce7ef]" />
+      <div className="absolute left-5 top-[130px] h-[3px] w-16 rounded-full bg-slate-300/80" />
+
+      <div className="h-[194px] px-5 pb-5 pt-4">
+        <div className="flex flex-col gap-2.5">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="flex h-8 items-center gap-3">
+              <div className="h-8 w-8 shrink-0 animate-pulse rounded-[9px] bg-slate-200/55" />
+              <div
+                className={`h-3.5 animate-pulse rounded-md bg-slate-200/50 ${
+                  index === 3 ? 'w-5/6' : index === 1 ? 'w-2/5' : 'w-3/5'
+                }`}
+              />
             </div>
           ))}
         </div>

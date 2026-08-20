@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, ChevronsUpDown, Loader2, Plus, Trash2 } from 'lucide-react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, ChevronRight, ChevronsUpDown, Loader2, Palette, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsApi, type ADOrganizationalUnitTree, type OUMappingValue } from '@/api/settings';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/components/ui/utils';
+import { DEFAULT_ORGANIZATION_COLOR, hashOrganizationColor, ORGANIZATION_COLORS } from '@/theme/organizationColors';
 
 interface OuMappingPanelProps {
   mapping: Record<string, OUMappingValue>;
@@ -14,16 +17,97 @@ interface MappingRow extends OUMappingValue {
   ou: string;
 }
 
-const COLORS = [
-  { label: 'Синий', value: 'bg-blue-50 text-blue-700 ring-blue-700/10' },
-  { label: 'Индиго', value: 'bg-indigo-50 text-indigo-700 ring-indigo-700/10' },
-  { label: 'Фиолетовый', value: 'bg-purple-50 text-purple-700 ring-purple-700/10' },
-  { label: 'Розовый', value: 'bg-pink-50 text-pink-700 ring-pink-700/10' },
-  { label: 'Красный', value: 'bg-red-50 text-red-700 ring-red-700/10' },
-  { label: 'Оранжевый', value: 'bg-orange-50 text-orange-700 ring-orange-700/10' },
-  { label: 'Зелёный', value: 'bg-green-50 text-green-700 ring-green-600/20' },
-  { label: 'Серый', value: 'bg-slate-50 text-slate-700 ring-slate-600/20' },
-] as const;
+const organizationKey = (organization: string) => organization.trim().toLocaleLowerCase('ru-RU');
+const COLOR_BY_VALUE = new Map(ORGANIZATION_COLORS.map((color) => [color.value, color]));
+
+interface ColorSelectProps {
+  value: string;
+  context: string;
+  onChange: (context: string, value: string) => void;
+  className?: string;
+}
+
+const ColorSelect = memo(function ColorSelect({ value, context, onChange, className = '' }: ColorSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOptionRef = useRef<HTMLButtonElement>(null);
+  const selectedColor = COLOR_BY_VALUE.get(value) ?? ORGANIZATION_COLORS[0];
+
+  return (
+    <Popover
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      modal={false}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-background px-3 text-sm transition-[color,box-shadow] outline-none hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+            className,
+          )}
+          aria-label="Цвет предприятия"
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="h-3 w-3 shrink-0 rounded-full ring-1 ring-black/10"
+              style={{ backgroundColor: selectedColor.value }}
+            />
+            <span className="truncate">{selectedColor.label}</span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      {isOpen && (
+        <PopoverContent
+          align="start"
+          className="w-[var(--radix-popover-trigger-width)] min-w-52 p-1"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            selectedOptionRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <div
+            className="max-h-[min(18rem,var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain"
+            role="listbox"
+            aria-label="Палитра предприятия"
+          >
+            {ORGANIZATION_COLORS.map((color) => {
+              const isSelected = color.value === value;
+              return (
+                <button
+                  key={color.value}
+                  ref={isSelected ? selectedOptionRef : undefined}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent focus-visible:bg-accent',
+                    isSelected && 'bg-accent/70 font-medium',
+                  )}
+                  onClick={() => {
+                    onChange(context, color.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-3 w-3 shrink-0 rounded-full ring-1 ring-black/10"
+                    style={{ backgroundColor: color.value }}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{color.label}</span>
+                  {isSelected && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      )}
+    </Popover>
+  );
+});
 
 interface OuTreeNodeProps {
   name: string;
@@ -105,7 +189,10 @@ export function OuMappingPanel({ mapping, onSave }: OuMappingPanelProps) {
   const [ouTree, setOuTree] = useState<ADOrganizationalUnitTree>({});
   const [newOu, setNewOu] = useState('');
   const [newOrg, setNewOrg] = useState('');
-  const [newColor, setNewColor] = useState<string>(COLORS[0].value);
+  const [newColor, setNewColor] = useState<string>(DEFAULT_ORGANIZATION_COLOR);
+  const [isNewColorManual, setIsNewColorManual] = useState(false);
+  const [selectedOrganizations, setSelectedOrganizations] = useState<Set<string>>(new Set());
+  const [bulkColor, setBulkColor] = useState<string>(DEFAULT_ORGANIZATION_COLOR);
   const [isLoading, setIsLoading] = useState(true);
   const [ouLoadError, setOuLoadError] = useState(false);
   const [isOuPickerOpen, setIsOuPickerOpen] = useState(false);
@@ -127,16 +214,64 @@ export function OuMappingPanel({ mapping, onSave }: OuMappingPanelProps) {
   const rootOus = useMemo(() => Object.keys(ouTree).sort((left, right) => left.localeCompare(right, 'ru')), [ouTree]);
   const usedOus = useMemo(() => new Set(rows.map((row) => row.ou)), [rows]);
   const hasOuTree = rootOus.length > 0;
+  const organizations = useMemo(() => {
+    const unique = new Map<string, string>();
+    rows.forEach((row) => {
+      const key = organizationKey(row.org);
+      if (key && !unique.has(key)) unique.set(key, row.org.trim());
+    });
+    return unique;
+  }, [rows]);
+  const allOrganizationsSelected = organizations.size > 0 && selectedOrganizations.size === organizations.size;
+  const someOrganizationsSelected = selectedOrganizations.size > 0 && !allOrganizationsSelected;
+
+  useEffect(() => {
+    setSelectedOrganizations((current) => {
+      const valid = new Set([...current].filter((key) => organizations.has(key)));
+      return valid.size === current.size ? current : valid;
+    });
+  }, [organizations]);
 
   const addRow = () => {
     const ou = newOu.split('/').at(-1)?.trim() || '';
     if (!ou || !newOrg.trim()) return toast.error('Заполните OU и название организации');
     if (rows.some((row) => row.ou === ou)) return toast.error('Такой OU уже добавлен');
-    setRows((current) => [...current, { ou, org: newOrg.trim(), color: newColor }]);
+    const existingOrganization = rows.find((row) => organizationKey(row.org) === organizationKey(newOrg));
+    setRows((current) => [...current, { ou, org: newOrg.trim(), color: existingOrganization?.color ?? newColor }]);
     setNewOu('');
     setNewOrg('');
-    setNewColor(COLORS[0].value);
+    setNewColor(DEFAULT_ORGANIZATION_COLOR);
+    setIsNewColorManual(false);
   };
+
+  const toggleOrganization = (organization: string) => {
+    const key = organizationKey(organization);
+    setSelectedOrganizations((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const applyBulkColor = () => {
+    if (selectedOrganizations.size === 0) return;
+    setRows((current) => current.map((row) => (
+      selectedOrganizations.has(organizationKey(row.org)) ? { ...row, color: bulkColor } : row
+    )));
+    toast.success(`Цвет назначен: ${selectedOrganizations.size} ${selectedOrganizations.size === 1 ? 'предприятие' : 'предприятий'}`);
+  };
+
+  const updateOrganizationColor = useCallback((organization: string, color: string) => {
+    const key = organizationKey(organization);
+    setRows((current) => current.map((row) => organizationKey(row.org) === key ? { ...row, color } : row));
+  }, []);
+
+  const updateBulkColor = useCallback((_context: string, color: string) => setBulkColor(color), []);
+  const updateNewColor = useCallback((_context: string, color: string) => {
+    setNewColor(color);
+    setIsNewColorManual(true);
+  }, []);
 
   const save = async () => {
     const next = Object.fromEntries(rows.map(({ ou, org, color }) => [ou, { org, color }]));
@@ -151,14 +286,45 @@ export function OuMappingPanel({ mapping, onSave }: OuMappingPanelProps) {
       </header>
 
       <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        {selectedOrganizations.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 border-b bg-primary/[0.04] px-4 py-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Palette className="h-4 w-4 text-primary" />
+              Выбрано предприятий: {selectedOrganizations.size}
+            </div>
+            <ColorSelect value={bulkColor} context="bulk" onChange={updateBulkColor} className="h-9 w-52" />
+            <button type="button" onClick={applyBulkColor} className="btn-secondary h-9 px-4 text-sm">
+              Назначить цвет
+            </button>
+            <button type="button" onClick={() => setSelectedOrganizations(new Set())} className="ml-auto text-sm text-muted-foreground hover:text-foreground">
+              Снять выделение
+            </button>
+          </div>
+        )}
         <table className="w-full text-left text-sm">
-          <thead className="border-b bg-muted/50 text-muted-foreground"><tr><th className="p-3">OU</th><th className="p-3">Организация</th><th className="p-3">Цвет</th><th /></tr></thead>
+          <thead className="border-b bg-muted/50 text-muted-foreground"><tr>
+            <th className="w-12 p-3">
+              <Checkbox
+                checked={someOrganizationsSelected ? 'indeterminate' : allOrganizationsSelected}
+                onCheckedChange={(checked) => setSelectedOrganizations(checked ? new Set(organizations.keys()) : new Set())}
+                aria-label="Выбрать все предприятия"
+              />
+            </th>
+            <th className="p-3">OU</th><th className="p-3">Организация</th><th className="w-56 p-3">Цвет</th><th />
+          </tr></thead>
           <tbody className="divide-y">
             {rows.map((row, index) => (
-              <tr key={row.ou}>
+              <tr key={row.ou} className={selectedOrganizations.has(organizationKey(row.org)) ? 'bg-primary/[0.035]' : ''}>
+                <td className="p-3">
+                  <Checkbox
+                    checked={selectedOrganizations.has(organizationKey(row.org))}
+                    onCheckedChange={() => toggleOrganization(row.org)}
+                    aria-label={`Выбрать предприятие ${row.org}`}
+                  />
+                </td>
                 <td className="p-3 font-mono">{row.ou}</td>
                 <td className="p-3"><input value={row.org} onChange={(event) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, org: event.target.value } : item))} className="h-9 w-full rounded-md border bg-background px-3" /></td>
-                <td className="p-3"><select value={row.color} onChange={(event) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, color: event.target.value } : item))} className="h-9 rounded-md border bg-background px-2">{COLORS.map((color) => <option key={color.value} value={color.value}>{color.label}</option>)}</select></td>
+                <td className="p-3"><ColorSelect value={row.color} context={row.org} onChange={updateOrganizationColor} className="h-9" /></td>
                 <td className="p-3"><button onClick={() => setRows((current) => current.filter((item) => item.ou !== row.ou))} className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={`Удалить ${row.ou}`}><Trash2 className="h-4 w-4" /></button></td>
               </tr>
             ))}
@@ -219,8 +385,12 @@ export function OuMappingPanel({ mapping, onSave }: OuMappingPanelProps) {
               {ouLoadError && <p className="text-xs text-amber-600">Дерево AD не загружено</p>}
             </div>
           )}
-          <input value={newOrg} onChange={(event) => setNewOrg(event.target.value)} placeholder="Название организации" className="h-10 rounded-md border bg-background px-3 text-sm" />
-          <select value={newColor} onChange={(event) => setNewColor(event.target.value)} className="h-10 rounded-md border bg-background px-2 text-sm">{COLORS.map((color) => <option key={color.value} value={color.value}>{color.label}</option>)}</select>
+          <input value={newOrg} onChange={(event) => {
+            const value = event.target.value;
+            setNewOrg(value);
+            if (!isNewColorManual) setNewColor(value.trim() ? hashOrganizationColor(value) : DEFAULT_ORGANIZATION_COLOR);
+          }} placeholder="Название организации" className="h-10 rounded-md border bg-background px-3 text-sm" />
+          <ColorSelect value={newColor} context="new" onChange={updateNewColor} className="h-10" />
           <button onClick={addRow} className="btn-secondary flex h-10 items-center gap-2 px-4"><Plus className="h-4 w-4" /> Добавить</button>
         </div>
       </div>

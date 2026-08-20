@@ -7,7 +7,7 @@ from shared.models.enums import UserStatus
 from shared.models.user import User
 from shared.models.change_request import ChangeRequest
 from .ldap import LDAPClient
-from .logic import determine_status, match_organization_by_ou, save_known_ous
+from .logic import direct_corporate_ous, determine_status, match_organization_by_ou, prune_ou_mapping, save_known_ous
 from shared.utils import ad_guid_to_uuid
 from .utils import with_retry, format_phone
 from .events import publish_admin_update, publish_profile_update
@@ -76,6 +76,7 @@ class SyncWorker:
         seen_guids: set = set()
 
         with LDAPClient() as ldap:
+            authoritative_ou_paths = ldap.search_ou_paths() if full else None
             # 2.4. Одна сессия на весь цикл Pull
             with SessionLocal() as session:
                 for entry in ldap.search_paged(filter_str, attributes):
@@ -151,10 +152,23 @@ class SyncWorker:
                 # Финальный коммит если остались изменения
                 session.commit()
                 
-                # Save collected OUs to DB for use in admin UI
-                if collected_ous:
-                    save_known_ous(session, collected_ous)
-                    logger.info(f"Saved {len(collected_ous)} unique OUs to DB.")
+                # A full sync stores an authoritative AD snapshot; incremental
+                # syncs only add paths until the next full reconciliation.
+                ou_paths = authoritative_ou_paths if authoritative_ou_paths is not None else collected_ous
+                if full or ou_paths:
+                    save_known_ous(session, ou_paths, replace=full)
+                    logger.info(
+                        f"Saved {len(ou_paths)} unique OU paths to DB "
+                        f"(replace={full}, authoritative={authoritative_ou_paths is not None})."
+                    )
+
+                # Prune mappings only when the OU query itself succeeded. This
+                # prevents accidental deletion during LDAP outages.
+                if full and authoritative_ou_paths is not None:
+                    valid_organization_ous = direct_corporate_ous(authoritative_ou_paths)
+                    removed = prune_ou_mapping(session, valid_organization_ous)
+                    if removed:
+                        logger.info(f"Removed {removed} stale OU_MAPPING entries.")
 
         if max_usn > self.last_usn:
             self._save_last_usn(max_usn + 1)
