@@ -158,7 +158,7 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
             setIsTabExtended(false);
           }
         }}
-        className={`group relative h-[328px] cursor-pointer overflow-visible rounded-[20px] border border-[#d9e5ee] bg-white shadow-[0_16px_36px_-28px_rgba(35,74,110,0.38)] transition-[transform,border-color,box-shadow,opacity,filter] duration-300 hover:z-20 focus-within:z-20 hover:-translate-y-0.5 hover:border-[#9fbcd2] hover:shadow-[0_24px_44px_-28px_rgba(35,74,110,0.52)] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
+        className={`group relative h-[282px] cursor-pointer overflow-visible rounded-[20px] border border-[#d9e5ee] bg-white shadow-[0_16px_36px_-28px_rgba(35,74,110,0.38)] transition-[transform,border-color,box-shadow,opacity,filter] duration-300 hover:z-20 focus-within:z-20 hover:-translate-y-0.5 hover:border-[#9fbcd2] hover:shadow-[0_24px_44px_-28px_rgba(35,74,110,0.52)] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
           user.is_hidden ? 'opacity-65 grayscale-[0.12]' : ''
         }`}
       >
@@ -201,7 +201,7 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
           <TooltipContent side="top" sideOffset={8}>{organization || 'Организация не указана'}</TooltipContent>
         </Tooltip>
 
-        <div className="relative z-10 h-[132px] overflow-hidden rounded-t-[19px] bg-[linear-gradient(145deg,#f8fbff_0%,#f2f7fb_100%)] px-5 pb-3 pt-5">
+        <div className="relative z-10 h-[118px] overflow-hidden rounded-t-[19px] bg-[linear-gradient(145deg,#f8fbff_0%,#f2f7fb_100%)] px-5 pb-2 pt-4">
           <div className="flex h-full items-start gap-4">
             <UserAvatar
               name={fullName}
@@ -268,16 +268,16 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
               event.stopPropagation();
               setIsReportModalOpen(true);
             }}
-            className="btn-secondary absolute right-5 top-[92px] z-30 h-7 border border-[#dbe6ef] px-2.5 py-1 text-xs opacity-0 shadow-sm transition-[opacity,transform] group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+            className="btn-secondary absolute right-5 top-[80px] z-30 h-7 border border-[#dbe6ef] px-2.5 py-1 text-xs opacity-0 shadow-sm transition-[opacity,transform] group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
           >
             <Edit className="h-[13px] w-[13px]" strokeWidth={2} />
             <span className="text-[12px] font-medium">Исправить</span>
           </button>
         )}
 
-        <div className="relative z-10 h-[194px] px-5 pb-5 pt-4">
+        <div className="relative z-10 h-[164px] px-5 pb-4 pt-3">
           {hasAnyContacts ? (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2">
               {contactItems.map(({ icon: Icon, label, value, isPhone }) => {
                 const hasValue = Boolean(value);
 
@@ -285,14 +285,14 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
                   <div
                     key={label}
                     aria-label={`${label}: ${hasValue ? value : 'Не указано'}`}
-                    className={`flex h-8 min-w-0 items-center gap-3 text-[14px] ${hasValue ? 'text-[#1d3b55]' : 'text-[#8094a5]'}`}
+                    className={`flex h-7 min-w-0 items-center gap-3 text-[14px] ${hasValue ? 'text-[#1d3b55]' : 'text-[#8094a5]'}`}
                   >
                     <div
-                      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[9px] ${
+                      className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[8px] ${
                         hasValue ? 'bg-[#edf5fa] text-[#2774aa]' : 'bg-[#f5f7f9] text-[#9aabb8]'
                       }`}
                     >
-                      <Icon aria-hidden="true" className="h-4 w-4" strokeWidth={hasValue ? 1.9 : 1.65} />
+                      <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={hasValue ? 1.9 : 1.65} />
                     </div>
                     <OverflowTooltip
                       value={value}
@@ -306,7 +306,7 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
               })}
             </div>
           ) : (
-            <div className="flex h-[158px] items-center justify-center rounded-[12px] border border-dashed border-[#dce6ed] bg-[#f8fafb] text-[13px] text-[#7d92a3]">
+            <div className="flex h-[134px] items-center justify-center rounded-[12px] border border-dashed border-[#dce6ed] bg-[#f8fafb] text-[13px] text-[#7d92a3]">
               Контакты не указаны
             </div>
           )}

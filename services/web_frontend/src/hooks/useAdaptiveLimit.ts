@@ -5,7 +5,7 @@ import { calculateGridCapacity } from './gridCapacity';
 
 const GRID_SELECTOR = '[data-adaptive-grid]';
 const CARD_SELECTOR = '[data-card]';
-const ESTIMATED_CARD_HEIGHT = 328;
+const ESTIMATED_CARD_HEIGHT = 282;
 
 const pixels = (value: string) => {
   const parsed = Number.parseFloat(value);

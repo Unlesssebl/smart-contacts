@@ -79,7 +79,7 @@ describe('EmployeeCard', () => {
     const card = container.querySelector('[data-card]');
 
     expect(card).toBeInstanceOf(HTMLElement);
-    expect(card).toHaveClass('h-[328px]');
+    expect(card).toHaveClass('h-[282px]');
     expect(card?.tagName).toBe('ARTICLE');
     expect(card?.querySelector('button button')).toBeNull();
     expect(screen.getByRole('button', { name: `Открыть профиль: ${baseUser.full_name}` })).toBeInTheDocument();
@@ -113,8 +113,8 @@ describe('EmployeeCard', () => {
       />,
     );
 
-    expect(screen.getByText('Контакты не указаны')).toHaveClass('h-[158px]');
-    expect(container.querySelector('[data-card]')).toHaveClass('h-[328px]');
+    expect(screen.getByText('Контакты не указаны')).toHaveClass('h-[134px]');
+    expect(container.querySelector('[data-card]')).toHaveClass('h-[282px]');
   });
 
   it('moves organization into the tab and keeps only the department in the header', () => {
