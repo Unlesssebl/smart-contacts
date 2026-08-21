@@ -77,8 +77,8 @@ describe('GatekeeperModal', () => {
     );
 
     expect(screen.getByText('Проверка контактных данных')).toBeInTheDocument();
-    expect(screen.getByText('Всё верно, подтвердить')).toBeInTheDocument();
-    expect(screen.getByText('Проверить и изменить')).toBeInTheDocument();
+    expect(screen.getByText('Перейти к проверке')).toBeInTheDocument();
+    expect(screen.getByText('Напомнить позже')).toBeInTheDocument();
   });
 
   it('does not render on profile page', () => {
@@ -91,20 +91,17 @@ describe('GatekeeperModal', () => {
     expect(screen.queryByText('Проверка контактных данных')).not.toBeInTheDocument();
   });
 
-  it('confirms gatekeeper and closes modal', async () => {
-    const acknowledgeGatekeeper = vi.fn().mockResolvedValue({ success: true });
-    useAppStore.setState({ acknowledgeGatekeeper });
-
+  it('dismisses gatekeeper and navigates on click', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <GatekeeperModal />
       </MemoryRouter>,
     );
 
-    const confirmBtn = screen.getByRole('button', { name: 'Всё верно, подтвердить' });
-    fireEvent.click(confirmBtn);
+    const checkBtn = screen.getByRole('button', { name: 'Перейти к проверке' });
+    fireEvent.click(checkBtn);
 
-    expect(acknowledgeGatekeeper).toHaveBeenCalledWith('confirm');
+    expect(window.sessionStorage.getItem('gatekeeper_dismissed_user-1')).toBe('true');
   });
 
   it('skips gatekeeper on remind later', async () => {
@@ -121,6 +118,6 @@ describe('GatekeeperModal', () => {
     fireEvent.click(remindBtn);
 
     expect(acknowledgeGatekeeper).toHaveBeenCalledWith('skip');
-    expect(sessionStorage.getItem('gatekeeper_dismissed_user-1')).toBe('true');
+    expect(window.sessionStorage.getItem('gatekeeper_dismissed_user-1')).toBe('true');
   });
 });

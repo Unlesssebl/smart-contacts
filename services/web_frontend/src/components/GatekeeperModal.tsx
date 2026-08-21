@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { ShieldCheck, CheckCircle2, Edit3, Clock, LogOut, Loader2 } from 'lucide-react';
+import { ShieldCheck, Edit3, Clock, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 import { toast } from 'sonner';
 
@@ -49,18 +49,6 @@ export const GatekeeperModal: React.FC = () => {
       setIsOpen(false);
     }
   }, [currentUser, isProfilePage, isSessionDismissed, isHardBlock]);
-
-  const handleConfirm = async () => {
-    setIsSubmitting(true);
-    const res = await acknowledgeGatekeeper('confirm');
-    setIsSubmitting(false);
-    if (res.success) {
-      toast.success('Контакты подтверждены');
-      setIsOpen(false);
-    } else {
-      toast.error(res.error || 'Не удалось подтвердить контакты');
-    }
-  };
 
   const handleGoToProfile = () => {
     if (currentUser?.id && typeof window !== 'undefined' && window.sessionStorage) {
@@ -113,30 +101,15 @@ export const GatekeeperModal: React.FC = () => {
           </p>
           
           <div className="flex flex-col w-full gap-2.5">
-            {/* Confirm button */}
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={handleConfirm}
-              className="btn-primary w-full py-2.5 px-4 text-sm font-semibold flex items-center justify-center gap-2 shadow-md shadow-primary/20"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4" />
-              )}
-              <span>Всё верно, подтвердить</span>
-            </button>
-
             {/* Go to profile button */}
             <button
               type="button"
               disabled={isSubmitting}
               onClick={handleGoToProfile}
-              className="btn-secondary w-full py-2.5 px-4 text-sm font-semibold flex items-center justify-center gap-2"
+              className="btn-primary w-full py-2.5 px-4 text-sm font-semibold flex items-center justify-center gap-2 shadow-md shadow-primary/20"
             >
               <Edit3 className="w-4 h-4" />
-              <span>Проверить и изменить</span>
+              <span>Перейти к проверке</span>
             </button>
             
             {/* Remind later or logout */}

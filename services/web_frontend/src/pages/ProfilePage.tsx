@@ -328,31 +328,14 @@ export function ProfilePage() {
                       </button>
                     </>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-3">
-                      {currentUser && !currentUser.is_verified && (
-                        <button
-                          type="button"
-                          disabled={isConfirmingGatekeeper}
-                          onClick={handleConfirmGatekeeper}
-                          className="btn-primary px-6 py-3 gap-2 flex items-center shadow-md shadow-primary/20"
-                        >
-                          {isConfirmingGatekeeper ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4" />
-                          )}
-                          <span>Всё верно, подтвердить</span>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        disabled={pendingFields === null}
-                        className={`btn-secondary px-6 py-3 gap-2 flex items-center ${pendingFields === null ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <Edit className="h-4 w-4" strokeWidth={1.5} />
-                        {pendingFields === null ? 'Загрузка...' : 'Редактировать профиль'}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      disabled={pendingFields === null}
+                      className={`btn-secondary px-6 py-3 gap-2 flex items-center ${pendingFields === null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Edit className="h-4 w-4" strokeWidth={1.5} />
+                      {pendingFields === null ? 'Загрузка...' : 'Редактировать профиль'}
+                    </button>
                   )}
                 </div>
               )}
