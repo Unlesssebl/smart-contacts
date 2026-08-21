@@ -5,6 +5,7 @@ import { AppLifecycle } from '@/app/AppLifecycle';
 import { AppRouter } from '@/app/AppRouter';
 import { ConnectionLostOverlay } from '@/components/ConnectionLostOverlay';
 import { GatekeeperModal } from '@/components/GatekeeperModal';
+import { OnboardingGuide } from '@/components/OnboardingGuide';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
       <ConnectionLostOverlay />
       <AppRouter />
       <GatekeeperModal />
+      <OnboardingGuide />
       <Toaster
         position="top-right"
         toastOptions={{
