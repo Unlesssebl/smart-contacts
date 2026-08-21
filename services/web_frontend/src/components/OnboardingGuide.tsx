@@ -13,16 +13,38 @@ export function OnboardingGuide() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Check if onboarding was already shown or completed
-    const hasCompleted = localStorage.getItem(ONBOARDING_STORAGE_KEY);
-    if (!hasCompleted) {
-      // Delay slightly to allow initial layout animation to settle
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 500);
-      return () => clearTimeout(timer);
+    try {
+      // Check if onboarding was already shown or completed
+      const hasCompleted = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+      if (!hasCompleted) {
+        // Delay slightly to allow initial layout animation to settle
+        const timer = setTimeout(() => {
+          setIsOpen(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // ignore
     }
   }, [currentUser]);
+
+  const handleClose = () => {
+    try {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+    } catch {
+      // ignore
+    }
+    setIsOpen(false);
+  };
+
+  const handleOpenSupport = () => {
+    try {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+    } catch {
+      // ignore
+    }
+    setIsSupportOpen(true);
+  };
 
   if (!currentUser) return null;
 
@@ -30,9 +52,9 @@ export function OnboardingGuide() {
     <>
       <UserGuidesModal
         isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
+        onClose={handleClose}
         initialMode="tour"
-        onOpenSupport={() => setIsSupportOpen(true)}
+        onOpenSupport={handleOpenSupport}
       />
       {isSupportOpen && <SupportModal onClose={() => setIsSupportOpen(false)} />}
     </>

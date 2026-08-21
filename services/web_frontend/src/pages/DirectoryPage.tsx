@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Users } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { SpotlightSearch } from '@/components/SpotlightSearch';
 import { EmployeeCard } from '@/components/EmployeeCard';
@@ -29,6 +30,15 @@ export function DirectoryPage() {
   );
   
   const totalPages = Math.ceil(totalUsers / limit);
+  const hasActiveFilterOrQuery = Boolean(
+    searchQuery.trim() ||
+    filters.organization ||
+    filters.department ||
+    filters.job_title ||
+    filters.has_phone ||
+    filters.has_email ||
+    filters.hidden_only
+  );
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
 
@@ -126,39 +136,43 @@ export function DirectoryPage() {
         className="relative ml-[17.25rem] flex h-screen flex-1 flex-col overflow-hidden bg-[#f4f6f8]"
       >
         {/* Header / Top Bar */}
-        <header className="relative z-10 w-full shrink-0 border-b border-[#dfe5eb]/80 bg-[#f4f6f8]/90 px-8 py-3 backdrop-blur-md lg:px-12">
+        <header className="relative z-10 w-full shrink-0 border-b border-[#dfe5eb]/80 bg-[#f4f6f8]/90 px-8 py-3.5 backdrop-blur-md lg:px-12">
           <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between gap-4 lg:gap-8">
-            {/* Left Column: Title */}
-            <div className="hidden min-w-0 flex-1 items-center lg:flex">
-              <div className="flex items-center gap-4">
-                <img
-                  src="/dit-logo.png"
-                  alt=""
-                  aria-hidden="true"
-                  className="h-14 w-auto shrink-0 object-contain"
-                />
-                <div className="flex flex-col text-[#245f9f]">
-                  <span className="text-[11px] font-bold uppercase leading-none tracking-[0.18em]">
-                    Департамент
-                  </span>
-                  <span className="mt-1.5 text-[18px] font-bold uppercase leading-none tracking-[0.14em]">
-                    ИТ
-                  </span>
+            {/* Left: Employee Count Badge */}
+            <div className="hidden min-w-[200px] items-center sm:flex shrink-0">
+              <div className="flex items-center gap-3 rounded-2xl border border-[#d6e3ee] bg-white/95 px-4 py-2 shadow-xs backdrop-blur-sm">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#edf5fa] text-primary">
+                  <Users className="h-4.5 w-4.5" strokeWidth={1.8} />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5 leading-tight">
+                    <span className="text-[14px] font-bold text-[#142e47] tabular-nums">
+                      {totalUsers.toLocaleString('ru-RU')}
+                    </span>
+                    <span className="text-[12px] font-medium text-[#5c7287]">
+                      {getEmployeeWord(totalUsers)}
+                    </span>
+                  </div>
+                  {hasActiveFilterOrQuery ? (
+                    <span className="text-[10px] font-semibold text-primary">
+                      найдено по фильтрам
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-medium text-slate-400">
+                      всего в справочнике
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Center Column: Search */}
-            <div className="w-full max-w-4xl flex-auto">
+            <div className="w-full max-w-4xl flex-1 min-w-0">
               <SpotlightSearch />
             </div>
 
-            {/* Right Column: Counter / Empty Spacer for perfect centering */}
-            <div className="hidden lg:flex flex-1 min-w-0 justify-end items-center">
-              <div className="pointer-events-none hidden whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.15em] text-[#637792] xl:block">
-                Найдено: {totalUsers} {getEmployeeWord(totalUsers)}
-              </div>
-            </div>
+            {/* Right Spacer for balanced centering */}
+            <div className="hidden min-w-[200px] shrink-0 sm:block pointer-events-none" aria-hidden="true" />
           </div>
         </header>
 

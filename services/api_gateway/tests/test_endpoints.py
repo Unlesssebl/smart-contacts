@@ -45,6 +45,32 @@ def test_get_user_not_found(client: TestClient, mock_kerberos, test_admin_user):
     response = client.get(f"/api/v1/users/{random_uuid}")
     assert response.status_code == 404
 
+def test_get_hidden_user_by_self_and_others(client: TestClient, mocker, db_session, test_normal_user, test_admin_user):
+    """
+    Test that a hidden user can view their own profile, but other non-admin users get 404.
+    """
+    test_normal_user.is_hidden = True
+    db_session.commit()
+
+    # 1. Logged in as the hidden user himself -> 200 OK
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_normal_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_self"})
+    response = client.get(f"/api/v1/users/{test_normal_user.object_guid}")
+    assert response.status_code == 200
+    assert response.json()["sam_account_name"] == test_normal_user.sam_account_name
+
+    # 2. Logged in as admin -> 200 OK
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_admin_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_admin"})
+    response = client.get(f"/api/v1/users/{test_normal_user.object_guid}")
+    assert response.status_code == 200
+
 def test_admin_endpoint_forbidden_for_normal_user(client: TestClient, mocker, test_normal_user):
     """
     Test RBAC: a normal user cannot access admin routes.

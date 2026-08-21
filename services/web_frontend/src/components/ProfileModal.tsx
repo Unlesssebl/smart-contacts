@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Copy, Mail, Phone, Smartphone, MapPin, X, Building2, User as UserIcon, Edit } from 'lucide-react';
+import { Copy, Check, Mail, Phone, Smartphone, MapPin, X, Building2, User as UserIcon, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { IMaskInput } from 'react-imask';
 import type { User } from '@/types';
@@ -11,44 +11,26 @@ import { adminApi } from '@/api/admin';
 import { ReportModal } from './ReportModal';
 import { cleanProfileValue as cleanValue, formatActiveDirectoryPath } from '@/features/profile/lib/profileValues';
 import { useProfileEdit } from '@/features/profile/hooks/useProfileEdit';
+import { copyToClipboard } from '@/utils/clipboard';
 
 interface ProfileModalProps {
   user: User;
   onClose: () => void;
 }
 
-const copyToClipboard = async (text: string) => {
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch (err) {
-    console.warn('Navigator clipboard failed, trying fallback...', err);
-  }
-
-  // Fallback for non-secure HTTP contexts
-  const textArea = document.createElement('textarea');
-  textArea.value = text;
-  textArea.style.position = 'fixed';
-  textArea.style.left = '-999999px';
-  textArea.style.top = '-999999px';
-  document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
-
-  try {
-    const successful = document.execCommand('copy');
-    document.body.removeChild(textArea);
-    return successful;
-  } catch (err) {
-    console.error('Fallback copy failed', err);
-    document.body.removeChild(textArea);
-    return false;
-  }
-};
-
 export function ProfileModal({ user, onClose }: ProfileModalProps) {
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = async (text: string | null | undefined, label: string) => {
+    const val = cleanValue(text);
+    if (!val) return;
+    const ok = await copyToClipboard(val, label);
+    if (ok) {
+      setCopiedField(label);
+      setTimeout(() => setCopiedField((current) => (current === label ? null : current)), 1800);
+    }
+  };
+
   const displayValue = (val: string | null | undefined) => {
     const cleaned = cleanValue(val);
     if (!cleaned.trim()) {
@@ -180,12 +162,26 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                   Контактная информация
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                    <Mail className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Email</p>
-                      <p className="text-sm text-foreground">{displayValue(user.email)}</p>
+                  <div className="group flex items-center justify-between gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Mail className="h-5 w-5 text-primary shrink-0" strokeWidth={1.5} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-muted-foreground">Email</p>
+                        <p className="text-sm text-foreground truncate">{displayValue(user.email)}</p>
+                      </div>
                     </div>
+                    {cleanValue(user.email) && (
+                      <button
+                        type="button"
+                        aria-label={`Скопировать email: ${user.email}`}
+                        onClick={() => handleCopy(user.email, 'Email')}
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-black/5 hover:text-foreground focus-visible:opacity-100 ${
+                          copiedField === 'Email' ? 'text-emerald-600 bg-emerald-50 opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        }`}
+                      >
+                        {copiedField === 'Email' ? <Check className="h-3.5 w-3.5" strokeWidth={2.2} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.8} />}
+                      </button>
+                    )}
                   </div>
 
                   {isEditing ? (
@@ -246,19 +242,47 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                     </>
                   ) : (
                     <>
-                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                        <Phone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Внутренний телефон</p>
-                          <p className="text-sm text-foreground">{displayValue(user.internal_phone)}</p>
+                      <div className="group flex items-center justify-between gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Phone className="h-5 w-5 text-primary shrink-0" strokeWidth={1.5} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-muted-foreground">Внутренний телефон</p>
+                            <p className="text-sm text-foreground truncate">{displayValue(user.internal_phone)}</p>
+                          </div>
                         </div>
+                        {cleanValue(user.internal_phone) && (
+                          <button
+                            type="button"
+                            aria-label={`Скопировать внутренний телефон: ${user.internal_phone}`}
+                            onClick={() => handleCopy(user.internal_phone, 'Внутренний телефон')}
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-black/5 hover:text-foreground focus-visible:opacity-100 ${
+                              copiedField === 'Внутренний телефон' ? 'text-emerald-600 bg-emerald-50 opacity-100' : 'opacity-0 group-hover:opacity-100'
+                            }`}
+                          >
+                            {copiedField === 'Внутренний телефон' ? <Check className="h-3.5 w-3.5" strokeWidth={2.2} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.8} />}
+                          </button>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                        <Smartphone className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Мобильный телефон</p>
-                          <p className="text-sm text-foreground">{displayValue(user.mobile_phone)}</p>
+                      <div className="group flex items-center justify-between gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Smartphone className="h-5 w-5 text-primary shrink-0" strokeWidth={1.5} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-muted-foreground">Мобильный телефон</p>
+                            <p className="text-sm text-foreground truncate">{displayValue(user.mobile_phone)}</p>
+                          </div>
                         </div>
+                        {cleanValue(user.mobile_phone) && (
+                          <button
+                            type="button"
+                            aria-label={`Скопировать мобильный телефон: ${user.mobile_phone}`}
+                            onClick={() => handleCopy(user.mobile_phone, 'Мобильный телефон')}
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-black/5 hover:text-foreground focus-visible:opacity-100 ${
+                              copiedField === 'Мобильный телефон' ? 'text-emerald-600 bg-emerald-50 opacity-100' : 'opacity-0 group-hover:opacity-100'
+                            }`}
+                          >
+                            {copiedField === 'Мобильный телефон' ? <Check className="h-3.5 w-3.5" strokeWidth={2.2} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.8} />}
+                          </button>
+                        )}
                       </div>
                     </>
                   )}
@@ -290,12 +314,26 @@ export function ProfileModal({ user, onClose }: ProfileModalProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
-                      <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Офис / Расположение</p>
-                        <p className="text-sm text-foreground">{displayValue(user.office_location)}</p>
+                    <div className="group flex items-center justify-between gap-3 rounded-xl bg-white/60 border border-white/60 p-4">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <MapPin className="h-5 w-5 text-primary shrink-0" strokeWidth={1.5} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-muted-foreground">Офис / Расположение</p>
+                          <p className="text-sm text-foreground truncate">{displayValue(user.office_location)}</p>
+                        </div>
                       </div>
+                      {cleanValue(user.office_location) && (
+                        <button
+                          type="button"
+                          aria-label={`Скопировать расположение: ${user.office_location}`}
+                          onClick={() => handleCopy(user.office_location, 'Расположение')}
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-black/5 hover:text-foreground focus-visible:opacity-100 ${
+                            copiedField === 'Расположение' ? 'text-emerald-600 bg-emerald-50 opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          }`}
+                        >
+                          {copiedField === 'Расположение' ? <Check className="h-3.5 w-3.5" strokeWidth={2.2} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.8} />}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -12,11 +12,14 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  Command,
   User,
   MousePointer,
   RotateCcw,
   Zap,
+  SlidersHorizontal,
+  Check,
+  Building,
+  Mail,
 } from 'lucide-react';
 
 interface UserGuidesModalProps {
@@ -40,7 +43,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'search',
     title: 'Быстрый поиск и фильтры',
-    shortDesc: 'Поиск по ФИО, внутреннему номеру, должности и быстрые клавиши',
+    shortDesc: 'Поиск по ФИО и телефонам, фильтрация по организации, отделу и должности',
     icon: Search,
     badge: 'Поиск',
   },
@@ -67,6 +70,251 @@ const GUIDE_SECTIONS: GuideSection[] = [
   },
 ];
 
+function SearchTourSimulation() {
+  return (
+    <div className="relative rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 p-4 sm:p-5 shadow-sm overflow-hidden">
+      {/* Mockup Search Bar */}
+      <div className="relative rounded-xl border border-slate-300 bg-white p-3 shadow-sm flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          <Search className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex items-center text-xs font-medium text-slate-800">
+            <motion.span
+              animate={{ opacity: [1, 1, 1, 1, 0.4, 1] }}
+              transition={{ duration: 3.2, repeat: Infinity }}
+            >
+              Иванов 20-40
+            </motion.span>
+            <motion.span
+              animate={{ opacity: [1, 0, 1] }}
+              transition={{ duration: 0.8, repeat: Infinity }}
+              className="inline-block w-0.5 h-3.5 bg-primary ml-0.5"
+            />
+          </div>
+        </div>
+
+        {/* Animated Filters Button with Cursor */}
+        <div className="relative shrink-0">
+          <div className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span>Фильтры</span>
+          </div>
+
+          {/* Animated Mouse Pointer */}
+          <motion.div
+            animate={{
+              x: [18, 0, 0, 18],
+              y: [18, 2, 2, 18],
+              scale: [1, 0.88, 1, 1],
+            }}
+            transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -bottom-3 -right-2 text-primary drop-shadow z-10"
+          >
+            <MousePointer className="h-4.5 w-4.5 fill-primary text-white" />
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Mockup Filter Dropdown Reveal */}
+      <motion.div
+        animate={{
+          opacity: [0.35, 1, 1, 0.35],
+          y: [3, 0, 0, 3],
+        }}
+        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+        className="mt-2.5 rounded-xl border border-slate-200 bg-white/90 backdrop-blur-sm p-2.5 shadow-sm grid grid-cols-3 gap-2 text-[11px]"
+      >
+        <div className="rounded-lg bg-slate-50 border border-slate-100 p-1.5 text-slate-600">
+          <div className="text-[10px] text-slate-400 font-medium">Организация</div>
+          <div className="font-semibold text-slate-800 truncate">АО НТЗ ТЭМ-ПО</div>
+        </div>
+        <div className="rounded-lg bg-slate-50 border border-slate-100 p-1.5 text-slate-600">
+          <div className="text-[10px] text-slate-400 font-medium">Отдел</div>
+          <div className="font-semibold text-slate-800 truncate">ИТ отдел</div>
+        </div>
+        <div className="rounded-lg bg-slate-50 border border-slate-100 p-1.5 text-slate-600">
+          <div className="text-[10px] text-slate-400 font-medium">Должность</div>
+          <div className="font-semibold text-slate-800 truncate">Инженер</div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function CardTourSimulation() {
+  return (
+    <div className="relative rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-emerald-50/20 to-blue-50/30 p-4 sm:p-5 shadow-sm overflow-hidden">
+      <div className="relative rounded-xl border border-slate-200 bg-white p-4 shadow-md max-w-md mx-auto">
+        {/* Top Org Badge & Presence */}
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-3">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+            АО НТЗ ТЭМ-ПО
+          </span>
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span>В сети</span>
+          </div>
+        </div>
+
+        {/* User Details */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 font-bold text-primary text-sm shadow-sm ring-1 ring-primary/20">
+            СА
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-bold text-slate-900 text-xs truncate">Смирнова Анна Сергеевна</div>
+            <div className="text-[11px] text-slate-500 truncate">Бухгалтерия • Ведущий бухгалтер</div>
+          </div>
+        </div>
+
+        {/* Interactive Phone Pill with Copy Animation */}
+        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+          <div className="relative">
+            <motion.div
+              animate={{
+                scale: [1, 1.04, 1, 1],
+              }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+              className="flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-semibold text-primary shadow-xs"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              <span>вн. 20-40</span>
+            </motion.div>
+
+            {/* Simulated Tooltip */}
+            <motion.div
+              animate={{
+                opacity: [0, 1, 1, 0],
+                y: [4, -2, -2, 4],
+              }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -top-7 left-0 rounded-md bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white shadow-md flex items-center gap-1 whitespace-nowrap"
+            >
+              <Check className="h-2.5 w-2.5 text-emerald-400" />
+              <span>Скопировано!</span>
+            </motion.div>
+
+            {/* Mouse pointer clicking phone */}
+            <motion.div
+              animate={{
+                x: [14, 4, 4, 14],
+                y: [14, 2, 2, 14],
+                scale: [1, 0.85, 1, 1],
+              }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -bottom-3 -right-2 text-primary drop-shadow z-10"
+            >
+              <MousePointer className="h-4.5 w-4.5 fill-primary text-white" />
+            </motion.div>
+          </div>
+
+          <div className="flex items-center gap-1 text-[11px] text-slate-500">
+            <Building className="h-3 w-3 text-slate-400" />
+            <span>Кабинет 304</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditTourSimulation() {
+  return (
+    <div className="relative rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/90 via-purple-50/50 to-blue-50/70 p-4 sm:p-5 shadow-sm overflow-hidden">
+      <div className="relative rounded-xl border border-slate-200 bg-white p-4 shadow-md max-w-md mx-auto">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 font-bold text-sm">
+              ИП
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">Иванов Петр Николаевич</div>
+              <div className="text-[11px] text-slate-500">Служба снабжения</div>
+            </div>
+          </div>
+
+          {/* Action button with pulse glow and pointer */}
+          <div className="relative">
+            <motion.div
+              animate={{
+                scale: [1, 1.05, 1],
+              }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary shadow-sm ring-4 ring-primary/20"
+            >
+              <Edit className="h-3 w-3" />
+              <span>Исправить</span>
+            </motion.div>
+
+            <motion.div
+              animate={{ y: [0, 4, 0], x: [0, -3, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -bottom-4 -right-1 text-primary drop-shadow z-10"
+            >
+              <MousePointer className="h-4.5 w-4.5 fill-primary text-white" />
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Modal Request Notification Preview */}
+        <motion.div
+          animate={{
+            opacity: [0.4, 1, 1, 0.4],
+            y: [3, 0, 0, 3],
+          }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          className="mt-3.5 rounded-lg border border-indigo-100 bg-indigo-50/70 p-2.5 flex items-center justify-between text-[11px]"
+        >
+          <div className="flex items-center gap-1.5 text-indigo-950 font-medium">
+            <Sparkles className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+            <span>Заявка на изменение номера / кабинета</span>
+          </div>
+          <span className="text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded shadow-2xs">
+            Модерация IT
+          </span>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+function SupportTourSimulation() {
+  return (
+    <div className="relative rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-teal-50/50 to-blue-50/70 p-4 sm:p-5 shadow-sm overflow-hidden">
+      <div className="relative rounded-xl border border-slate-200 bg-white p-4 shadow-md max-w-md mx-auto space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+              <HelpCircle className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">Служба поддержки</div>
+              <div className="text-[10px] text-slate-500">Кнопка «Помощь» в боковом меню</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-semibold text-slate-700">
+            <span>Техподдержка</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="rounded-lg border border-slate-100 bg-slate-50 p-2 text-slate-700 font-medium flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            <span>Проблема со входом</span>
+          </div>
+          <div className="rounded-lg border border-slate-100 bg-slate-50 p-2 text-slate-700 font-medium flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            <span>Ошибка в контактах</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const TOUR_STEPS = [
   {
     title: 'Мгновенный умный поиск',
@@ -75,22 +323,16 @@ const TOUR_STEPS = [
     badge: 'Шаг 1 из 4',
     content: (
       <div className="space-y-4">
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          В поисковую строку можно вводить любую известную информацию: <strong>ФИО</strong>, <strong>внутренний короткий номер</strong> (например, <em>20-40</em> или <em>2040</em>), <strong>должность</strong>, <strong>отдел</strong> или <strong>кабинет</strong>.
-        </p>
+        {/* GIF-like Interactive Simulation */}
+        <SearchTourSimulation />
 
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-blue-900 uppercase tracking-wider">
-            <Zap className="h-4 w-4 text-blue-600" />
-            <span>Горячая клавиша для профи</span>
-          </div>
-          <div className="flex items-center gap-3 text-xs text-slate-700">
-            <div className="flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 font-mono font-bold shadow-sm">
-              <Command className="h-3 w-3" />
-              <span>Ctrl + K</span>
-            </div>
-            <span>или просто начните печатать в любом месте экрана — фокус сразу перейдет в поиск!</span>
-          </div>
+        <div className="space-y-2 text-xs text-slate-600 leading-relaxed pt-1">
+          <p>
+            • <strong>Поисковая строка</strong>: вводите <strong>ФИО</strong> (с исправлением опечаток) или <strong>номер телефона</strong> (короткий внутренний <em>20-40</em> или мобильный).
+          </p>
+          <p>
+            • <strong>Кнопка «Фильтры»</strong>: позволяет отобрать сотрудников по <strong>организации</strong>, <strong>отделу</strong> или <strong>должности</strong>.
+          </p>
         </div>
       </div>
     ),
@@ -102,28 +344,16 @@ const TOUR_STEPS = [
     badge: 'Шаг 2 из 4',
     content: (
       <div className="space-y-4">
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Каждая карточка содержит актуальные телефоны, адрес подразделения и кабинет.
-        </p>
+        {/* GIF-like Interactive Simulation */}
+        <CardTourSimulation />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-1.5 shadow-sm">
-            <div className="font-bold text-slate-900 flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 text-primary" /> Звонок и копирование
-            </div>
-            <p className="text-slate-500">
-              Кликните на номер телефона, чтобы скопировать его или инициировать вызов.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-1.5 shadow-sm">
-            <div className="font-bold text-slate-900 flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block" /> Индикаторы онлайн
-            </div>
-            <p className="text-slate-500">
-              Цветной маркер на аватаре подскажет, на рабочем ли месте коллега прямо сейчас.
-            </p>
-          </div>
+        <div className="space-y-2 text-xs text-slate-600 leading-relaxed pt-1">
+          <p>
+            • <strong>Быстрые действия</strong>: нажмите на номер телефона, чтобы скопировать его в буфер обмена или начать вызов.
+          </p>
+          <p>
+            • <strong>Индикатор онлайн</strong>: цветной маркер на аватаре подскажет, на рабочем ли месте коллега прямо сейчас (в сети, отошёл или не в сети).
+          </p>
         </div>
       </div>
     ),
@@ -135,17 +365,15 @@ const TOUR_STEPS = [
     badge: 'Шаг 3 из 4',
     content: (
       <div className="space-y-4">
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Заметили ошибку в номере или кабинете коллеги? Вам не нужно писать длинные письма в IT.
-        </p>
+        {/* GIF-like Interactive Simulation */}
+        <EditTourSimulation />
 
-        <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-purple-50/80 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-indigo-950">
-            <Sparkles className="h-4 w-4 text-indigo-600" />
-            <span>Кнопка «Исправить» прямо на карточке</span>
-          </div>
-          <p className="text-xs text-indigo-900 leading-relaxed">
-            Наведите курсор на карточку сотрудника и нажмите кнопку <strong>«Исправить»</strong>. Укажите правильные данные — и заявка сразу поступит модераторам на согласование.
+        <div className="space-y-2 text-xs text-slate-600 leading-relaxed pt-1">
+          <p>
+            • Нажмите кнопку <strong>«Исправить»</strong> на карточке любого коллеги, укажите верный номер или кабинет — и заявка отправится на проверку в IT.
+          </p>
+          <p>
+            • Свой собственный профиль вы можете обновить на странице <strong>«Мой профиль»</strong>.
           </p>
         </div>
       </div>
@@ -158,18 +386,16 @@ const TOUR_STEPS = [
     badge: 'Шаг 4 из 4',
     content: (
       <div className="space-y-4">
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Если у вас возникли технические неполадки, проблемы со входом или предложения по развитию справочника — воспользуйтесь формой поддержки.
-        </p>
+        {/* GIF-like Interactive Simulation */}
+        <SupportTourSimulation />
 
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 flex items-start gap-3">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-emerald-950 space-y-1">
-            <div className="font-bold">Быстрая подача обращения</div>
-            <p className="text-emerald-900 leading-relaxed">
-              Кнопка «Написать в поддержку» доступна в левом меню, а также на странице входа, если у вас возникли сложности с доступом.
-            </p>
-          </div>
+        <div className="space-y-2 text-xs text-slate-600 leading-relaxed pt-1">
+          <p>
+            • Если у вас возникли сложности с доступом, технический сбой или идея по развитию — нажмите кнопку <strong>«Помощь»</strong> в меню слева (или на экране входа).
+          </p>
+          <p>
+            • Обращение напрямую поступает специалистам службы технической поддержки.
+          </p>
         </div>
       </div>
     ),
@@ -203,10 +429,19 @@ export function UserGuidesModal({
     };
   }, [isOpen]);
 
+  const handleDismiss = () => {
+    try {
+      localStorage.setItem('smart_contacts_onboarding_completed', 'true');
+    } catch {
+      // ignore
+    }
+    onClose();
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleDismiss();
       if (mode === 'tour') {
         if (e.key === 'ArrowRight' && currentStep < TOUR_STEPS.length - 1) {
           setCurrentStep((s) => s + 1);
@@ -222,8 +457,7 @@ export function UserGuidesModal({
   if (!isOpen) return null;
 
   const handleFinishTour = () => {
-    localStorage.setItem('smart_contacts_onboarding_completed', 'true');
-    onClose();
+    handleDismiss();
   };
 
   const handleStartTour = () => {
@@ -241,7 +475,7 @@ export function UserGuidesModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose}
+        onClick={handleDismiss}
         className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-sm"
       />
 
@@ -296,7 +530,7 @@ export function UserGuidesModal({
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleDismiss}
                 className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 aria-label="Закрыть"
               >
@@ -407,7 +641,7 @@ export function UserGuidesModal({
                               1
                             </span>
                             <span>
-                              <strong>По короткому номеру</strong>: введите <code>20-40</code> или <code>2040</code>, чтобы мгновенно найти владельца внутреннего телефона.
+                              <strong>По короткому или мобильному номеру</strong>: введите <code>20-40</code>, <code>2040</code> или мобильный номер, чтобы быстро найти сотрудника.
                             </span>
                           </li>
                           <li className="flex items-start gap-2">
@@ -415,7 +649,7 @@ export function UserGuidesModal({
                               2
                             </span>
                             <span>
-                              <strong>По части ФИО или опечатке</strong>: умный алгоритм нечеткого поиска (fuzzy search) найдет сотрудника, даже если вы допустили ошибку в одной букве.
+                              <strong>По ФИО или части имени</strong>: умный алгоритм нечеткого поиска найдет сотрудника, даже если допущена опечатка.
                             </span>
                           </li>
                           <li className="flex items-start gap-2">
@@ -423,7 +657,7 @@ export function UserGuidesModal({
                               3
                             </span>
                             <span>
-                              <strong>Фильтры по организациям</strong>: используйте панель подразделений слева для просмотра сотрудников конкретного завода или дирекции.
+                              <strong>Панель фильтров</strong>: нажмите «Фильтры», чтобы отсортировать по организации, отделу, должности или отобрать только контакты с телефоном/email.
                             </span>
                           </li>
                         </ul>
@@ -499,7 +733,7 @@ export function UserGuidesModal({
                           <button
                             type="button"
                             onClick={() => {
-                              onClose();
+                              handleDismiss();
                               onOpenSupport();
                             }}
                             className="btn-primary px-4 py-2 text-xs font-semibold shadow-sm"
@@ -582,7 +816,7 @@ export function UserGuidesModal({
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleDismiss}
                 className="btn-primary px-6 py-2 text-xs font-semibold"
               >
                 Понятно

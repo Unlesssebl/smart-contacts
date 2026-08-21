@@ -28,22 +28,32 @@ export function ProfilePage() {
     })),
   );
   
+  const isCurrentUserProfile = Boolean(currentUser && (currentUser.id === id || currentUser.object_guid === id));
   const storeUser = id ? getUserById(id) : null;
-  const [user, setUser] = useState<User | null>(storeUser || null);
-  const [isLoading, setIsLoading] = useState(!storeUser);
+  const initialUser = storeUser || (isCurrentUserProfile ? (currentUser as unknown as User) : null);
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [isLoading, setIsLoading] = useState(!initialUser);
 
   useEffect(() => {
     if (storeUser) {
       setUser(storeUser);
       setIsLoading(false);
     } else if (id) {
-      setIsLoading(true);
+      if (!initialUser) {
+        setIsLoading(true);
+      }
       usersApi.getUserByGuid(id)
         .then(data => setUser(data))
-        .catch(() => setUser(null))
+        .catch(() => {
+          if (isCurrentUserProfile && currentUser) {
+            setUser(currentUser as unknown as User);
+          } else {
+            setUser(null);
+          }
+        })
         .finally(() => setIsLoading(false));
     }
-  }, [id, storeUser]);
+  }, [id, storeUser, isCurrentUserProfile, currentUser, initialUser]);
 
   const pendingFields = currentUser?.id === user?.id ? (globalPendingFields || null) : {};
   const {

@@ -70,13 +70,7 @@ export function SpotlightSearch() {
       const isInputActive =
         activeElement instanceof HTMLInputElement ||
         activeElement instanceof HTMLTextAreaElement ||
-        (activeElement as HTMLElement).isContentEditable;
-
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        inputRef.current?.focus();
-        return;
-      }
+        (activeElement as HTMLElement)?.isContentEditable;
 
       if (isInputActive) return;
 
@@ -196,33 +190,39 @@ export function SpotlightSearch() {
             }`}
           >
                 <div className="flex flex-col gap-4 px-6 py-4">
-                  <div className="flex flex-wrap items-center gap-4">
-                    <FilterCombobox
-                      options={organizations}
-                      value={filters.organization}
-                      onChange={(v) => setFilters({ organization: v })}
-                      placeholder="Организация"
-                    />
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <FilterCombobox
+                        options={organizations}
+                        value={filters.organization}
+                        onChange={(v) => setFilters({ organization: v })}
+                        placeholder="Организация"
+                      />
+                    </div>
 
-                    <FilterCombobox
-                      options={departments}
-                      value={filters.department}
-                      onChange={(v) => setFilters({ department: v })}
-                      placeholder="Отдел"
-                    />
+                    <div className="flex-1 min-w-0">
+                      <FilterCombobox
+                        options={departments}
+                        value={filters.department}
+                        onChange={(v) => setFilters({ department: v })}
+                        placeholder="Отдел"
+                      />
+                    </div>
 
-                    <FilterCombobox
-                      options={jobTitles}
-                      value={filters.job_title}
-                      onChange={(v) => setFilters({ job_title: v })}
-                      placeholder="Должность"
-                    />
+                    <div className="flex-1 min-w-0">
+                      <FilterCombobox
+                        options={jobTitles}
+                        value={filters.job_title}
+                        onChange={(v) => setFilters({ job_title: v })}
+                        placeholder="Должность"
+                      />
+                    </div>
 
                     <button
                       type="button"
                       disabled={!hasActiveFilters}
                       onClick={clearFilters}
-                      className="ml-auto flex shrink-0 items-center rounded-md border border-rose-200 bg-rose-50/70 px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-rose-300 hover:bg-rose-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-white disabled:text-slate-400 disabled:shadow-none disabled:hover:border-slate-200 disabled:hover:bg-white"
+                      className="flex shrink-0 items-center justify-center rounded-md border border-rose-200 bg-rose-50/70 px-3.5 py-2 text-sm font-medium text-rose-700 shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-rose-300 hover:bg-rose-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-white disabled:text-slate-400 disabled:shadow-none disabled:hover:border-slate-200 disabled:hover:bg-white"
                     >
                       Очистить всё
                     </button>

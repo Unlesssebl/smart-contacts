@@ -167,4 +167,22 @@ describe('EmployeeCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }));
     expect(editButton).toHaveFocus();
   });
+
+  it('allows copying contact information when clicking copy button', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText,
+      },
+    });
+
+    const openProfile = vi.fn();
+    render(<EmployeeCard user={baseUser} onClick={openProfile} />);
+
+    const copyPhoneBtn = screen.getByRole('button', { name: `Скопировать внутренний телефон: ${baseUser.internal_phone}` });
+    fireEvent.click(copyPhoneBtn);
+
+    expect(writeText).toHaveBeenCalledWith(baseUser.internal_phone);
+    expect(openProfile).not.toHaveBeenCalled();
+  });
 });

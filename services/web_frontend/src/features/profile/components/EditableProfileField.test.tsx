@@ -97,4 +97,27 @@ describe('EditableProfileField', () => {
     fireEvent.change(input, { target: { value: 'Кабинет 202' } });
     expect(onChange).toHaveBeenCalledWith('Кабинет 202');
   });
+
+  it('renders copy button in view mode when value is present', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText,
+      },
+    });
+
+    render(
+      <EditableProfileField
+        icon={Phone}
+        label="Внутренний телефон"
+        value="12-34"
+      />,
+    );
+
+    const copyBtn = screen.getByRole('button', { name: 'Скопировать внутренний телефон: 12-34' });
+    expect(copyBtn).toBeInTheDocument();
+
+    fireEvent.click(copyBtn);
+    expect(writeText).toHaveBeenCalledWith('12-34');
+  });
 });

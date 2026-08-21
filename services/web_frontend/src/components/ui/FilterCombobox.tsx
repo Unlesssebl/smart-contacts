@@ -36,7 +36,7 @@ export function FilterCombobox({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <div className="relative w-[200px]">
+      <div className="relative w-full">
         <PopoverTrigger asChild>
           <Button
             variant="secondary"
@@ -84,7 +84,7 @@ export function FilterCombobox({
         aria-hidden={!open}
         inert={!open}
         className={cn(
-          "max-h-[var(--radix-popover-content-available-height)] w-[200px] p-0 transition-[opacity,transform] duration-150 ease-out will-change-[opacity,transform] data-[state=open]:animate-none data-[state=closed]:animate-none",
+          "max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] min-w-[220px] p-0 transition-[opacity,transform] duration-150 ease-out will-change-[opacity,transform] data-[state=open]:animate-none data-[state=closed]:animate-none",
           open
             ? "translate-y-0 opacity-100"
             : "pointer-events-none -translate-y-1 opacity-0",

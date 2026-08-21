@@ -100,12 +100,8 @@ export function Sidebar() {
                 <div>
                   <h4 className="text-sm font-bold text-white tracking-tight">Помощь</h4>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-                    </span>
-                    <span className="text-[10px] font-semibold text-emerald-300/90 uppercase tracking-wider">
-                      IT онлайн
+                    <span className="text-[10px] font-semibold text-white/70 uppercase tracking-wider">
+                      IT-служба
                     </span>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { User } from '@/types';
-import { Mail, Phone, Smartphone, MapPin, Edit } from 'lucide-react';
+import { Mail, Phone, Smartphone, MapPin, Edit, Copy, Check } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { useAppStore } from '@/store/useAppStore';
 import { ReportModal } from './ReportModal';
@@ -8,6 +8,7 @@ import { UserAvatar } from './UserAvatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cleanProfileValue as cleanValue } from '@/features/profile/lib/profileValues';
 import { getAvatarColor } from '@/utils/avatar';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
   if (!highlight.trim()) {
@@ -110,6 +111,7 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
     const editButtonRef = useRef<HTMLButtonElement>(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [isTabExtended, setIsTabExtended] = useState(false);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
     const isOwnProfile = currentUser?.id === user.id;
 
     const fullName = normalizeCardValue(user.full_name) || 'Имя не указано';
@@ -138,6 +140,18 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
     const closeReportModal = () => {
       setIsReportModalOpen(false);
       requestAnimationFrame(() => editButtonRef.current?.focus());
+    };
+
+    const handleCopyContact = async (event: React.MouseEvent, value: string, label: string) => {
+      event.stopPropagation();
+      event.preventDefault();
+      const ok = await copyToClipboard(value, label);
+      if (ok) {
+        setCopiedField(label);
+        setTimeout(() => {
+          setCopiedField((current) => (current === label ? null : current));
+        }, 1800);
+      }
     };
 
     const handleArticleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -280,27 +294,63 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
             <div className="flex flex-col gap-2">
               {contactItems.map(({ icon: Icon, label, value, isPhone }) => {
                 const hasValue = Boolean(value);
+                const isCopied = copiedField === label;
 
                 return (
                   <div
                     key={label}
+                    data-card-action={hasValue ? 'true' : undefined}
                     aria-label={`${label}: ${hasValue ? value : 'Не указано'}`}
-                    className={`flex h-7 min-w-0 items-center gap-3 text-[14px] ${hasValue ? 'text-[#1d3b55]' : 'text-[#8094a5]'}`}
+                    onClick={hasValue ? (event) => handleCopyContact(event, value, label) : undefined}
+                    title={hasValue ? `Нажмите, чтобы скопировать ${label.toLowerCase()}` : undefined}
+                    className={`group/contact relative flex h-7 min-w-0 items-center justify-between gap-2 rounded-[8px] px-1 -mx-1 text-[14px] transition-colors ${
+                      hasValue
+                        ? 'cursor-pointer hover:bg-[#edf5fa]/80 text-[#1d3b55]'
+                        : 'text-[#8094a5]'
+                    }`}
                   >
-                    <div
-                      className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[8px] ${
-                        hasValue ? 'bg-[#edf5fa] text-[#2774aa]' : 'bg-[#f5f7f9] text-[#9aabb8]'
-                      }`}
-                    >
-                      <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={hasValue ? 1.9 : 1.65} />
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <div
+                        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[8px] transition-colors ${
+                          isCopied
+                            ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300'
+                            : hasValue
+                            ? 'bg-[#edf5fa] text-[#2774aa] group-hover/contact:bg-[#dbeaf5]'
+                            : 'bg-[#f5f7f9] text-[#9aabb8]'
+                        }`}
+                      >
+                        {isCopied ? (
+                          <Check aria-hidden="true" className="h-3.5 w-3.5 text-emerald-600 animate-in zoom-in-50 duration-200" strokeWidth={2.4} />
+                        ) : (
+                          <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={hasValue ? 1.9 : 1.65} />
+                        )}
+                      </div>
+                      <OverflowTooltip
+                        value={value}
+                        className={`block min-w-0 flex-1 truncate ${hasValue ? 'font-medium' : 'text-[13px] font-normal'} ${isPhone ? 'tabular-nums' : ''}`}
+                        tooltipContent={<HighlightedText text={value} highlight={searchQuery} />}
+                      >
+                        {hasValue ? <HighlightedText text={value} highlight={searchQuery} /> : 'Не указано'}
+                      </OverflowTooltip>
                     </div>
-                    <OverflowTooltip
-                      value={value}
-                      className={`block min-w-0 flex-1 truncate ${hasValue ? 'font-medium' : 'text-[13px] font-normal'} ${isPhone ? 'tabular-nums' : ''}`}
-                      tooltipContent={<HighlightedText text={value} highlight={searchQuery} />}
-                    >
-                      {hasValue ? <HighlightedText text={value} highlight={searchQuery} /> : 'Не указано'}
-                    </OverflowTooltip>
+
+                    {hasValue && (
+                      <button
+                        type="button"
+                        data-card-action
+                        aria-label={`Скопировать ${label.toLowerCase()}: ${value}`}
+                        onClick={(event) => handleCopyContact(event, value, label)}
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-all hover:bg-white hover:text-slate-800 hover:shadow-xs focus-visible:opacity-100 ${
+                          isCopied ? 'opacity-100 text-emerald-600 bg-emerald-50' : 'opacity-0 group-hover/contact:opacity-100'
+                        }`}
+                      >
+                        {isCopied ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-600" strokeWidth={2.4} />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" strokeWidth={1.8} />
+                        )}
+                      </button>
+                    )}
                   </div>
                 );
               })}

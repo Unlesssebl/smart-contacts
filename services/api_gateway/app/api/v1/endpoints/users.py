@@ -149,12 +149,13 @@ async def get_user(
         raise HTTPException(status_code=404, detail="User not found")
     
     is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    is_self = current_user.object_guid == user.object_guid
     
-    if user.is_hidden and not is_admin:
+    if user.is_hidden and not (is_admin or is_self):
         raise HTTPException(status_code=404, detail="User not found")
     
     # Скрытие internal_phone для защищенных профилей
-    if user.is_protected and current_user.role != UserRole.IT_OPERATOR.value:
+    if user.is_protected and not (current_user.role == UserRole.IT_OPERATOR.value or is_self):
         if user in db:
             db.expunge(user)
         user.internal_phone = None

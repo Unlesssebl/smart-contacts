@@ -42,35 +42,35 @@ const CATEGORY_OPTIONS: CategoryOption[] = [
   {
     value: 'access',
     label: 'Проблема с доступом',
-    description: 'Не удается войти в систему или нет прав',
+    description: 'Не удается войти в систему или отсутствуют необходимые права',
     icon: KeyRound,
     color: 'from-blue-500/20 to-indigo-500/20 text-blue-600',
   },
   {
     value: 'data_error',
     label: 'Ошибка в контактах',
-    description: 'Неверные данные сотрудника или подразделения',
+    description: 'Неточность в номере телефона, кабинете или подразделении коллеги',
     icon: FileEdit,
     color: 'from-indigo-500/20 to-purple-500/20 text-indigo-600',
   },
   {
     value: 'bug',
     label: 'Технический сбой',
-    description: 'Что-то не работает или отображается с ошибкой',
+    description: 'Некорректная работа страницы, кнопок или поиска',
     icon: AlertCircle,
     color: 'from-amber-500/20 to-rose-500/20 text-amber-600',
   },
   {
     value: 'suggestion',
     label: 'Идея / улучшение',
-    description: 'Предложение по развитию телефонного справочника',
+    description: 'Предложение по развитию функций телефонного справочника',
     icon: Lightbulb,
     color: 'from-emerald-500/20 to-teal-500/20 text-emerald-600',
   },
   {
     value: 'other',
     label: 'Другой вопрос',
-    description: 'Общий вопрос к технической поддержке',
+    description: 'Общий вопрос специалистам службы технической поддержки',
     icon: HelpCircle,
     color: 'from-slate-500/20 to-slate-700/20 text-slate-600',
   },
@@ -228,24 +228,13 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
               <form key="form" onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
                 {/* Header */}
                 <div className="relative border-b border-black/5 px-8 py-6 shrink-0 bg-gradient-to-b from-slate-50/80 to-slate-50/40">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <h2 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2.5">
-                        <span>Помощь</span>
-                      </h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Опишите проблему или задайте вопрос специалистам IT-службы
-                      </p>
-                    </div>
-
-                    {/* Live Online Badge */}
-                    <div className="self-start sm:self-center flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/90 px-3 py-1 text-xs font-semibold text-emerald-800 shadow-sm">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                      </span>
-                      <span>IT-служба онлайн</span>
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                      Обращение в техническую поддержку
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Опишите возникшую проблему, задайте вопрос или отправьте предложение
+                    </p>
                   </div>
                 </div>
 
@@ -290,29 +279,37 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
                       </div>
                     </motion.div>
                   ) : (
-                    <div className="flex items-center justify-between rounded-2xl border border-black/5 bg-slate-50/80 px-5 py-4 text-xs text-muted-foreground shadow-sm">
-                      <div className="flex items-center gap-3.5">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold text-base shadow-sm ring-1 ring-primary/20">
-                          {currentUser?.full_name?.charAt(0) || 'U'}
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-foreground">{currentUser?.full_name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {currentUser?.department || 'Сотрудник'}
+                    <div className="rounded-2xl border border-black/5 bg-slate-50/80 p-4 text-xs shadow-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3.5">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold text-base shadow-xs ring-1 ring-primary/20">
+                            {currentUser?.full_name?.charAt(0) || 'U'}
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                              Отправитель (учётная запись)
+                            </div>
+                            <div className="text-sm font-bold text-foreground">
+                              {currentUser?.full_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {[currentUser?.organization, currentUser?.department, currentUser?.job_title].filter(Boolean).join(' • ') || 'Сотрудник'}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right text-xs space-y-0.5">
-                        {currentUser?.internal_phone && (
-                          <div className="flex items-center gap-1.5 text-slate-700 justify-end font-medium">
-                            <Phone className="h-3.5 w-3.5 text-slate-400" /> вн. {currentUser.internal_phone}
-                          </div>
-                        )}
-                        {currentUser?.email && (
-                          <div className="flex items-center gap-1.5 text-slate-700 justify-end font-medium">
-                            <Mail className="h-3.5 w-3.5 text-slate-400" /> {currentUser.email}
-                          </div>
-                        )}
+
+                        <div className="text-left sm:text-right text-xs space-y-0.5 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60">
+                          {currentUser?.internal_phone && (
+                            <div className="flex items-center gap-1.5 text-slate-700 sm:justify-end font-medium">
+                              <Phone className="h-3.5 w-3.5 text-slate-400" /> вн. {currentUser.internal_phone}
+                            </div>
+                          )}
+                          {currentUser?.email && (
+                            <div className="flex items-center gap-1.5 text-slate-700 sm:justify-end font-medium">
+                              <Mail className="h-3.5 w-3.5 text-slate-400" /> {currentUser.email}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -498,7 +495,7 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        Описание проблемы <span className="text-rose-500">*</span>
+                        Суть обращения <span className="text-rose-500">*</span>
                       </label>
                       <span className="text-xs text-muted-foreground">{message.length} / 5000</span>
                     </div>
@@ -507,7 +504,11 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
                         rows={5}
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Опишите, что произошло, укажите детали (ФИО, подразделение, ошибку), чтобы специалисты могли быстро вам помочь..."
+                        placeholder={
+                          effectiveIsGuest
+                            ? 'Опишите проблему со входом, ошибку или ваш вопрос к IT-службе...'
+                            : 'Опишите ваш вопрос, возникшую сложность или предложение по улучшению справочника...'
+                        }
                         className="w-full resize-none rounded-2xl border border-black/10 bg-white p-4 text-sm text-foreground leading-relaxed outline-none transition-all focus:border-primary placeholder:text-muted-foreground/50 min-h-[130px]"
                       />
                     </div>
