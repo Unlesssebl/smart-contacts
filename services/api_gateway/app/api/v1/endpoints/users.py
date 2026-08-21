@@ -16,23 +16,6 @@ from app.core import settings_manager
 
 router = APIRouter()
 
-@router.get("/org-colors", response_model=Dict[str, str])
-def get_org_colors(db: Session = Depends(get_db)):
-    mapping_str = settings_manager.get_setting(db, "OU_MAPPING")
-    colors = {}
-    if mapping_str:
-        try:
-            mapping = json.loads(mapping_str)
-            for key, val in mapping.items():
-                if isinstance(val, dict):
-                    org = val.get("org")
-                    color = val.get("color")
-                    if org and color:
-                        colors[org] = color
-        except json.JSONDecodeError:
-            pass
-    return colors
-
 @router.get("", response_model=PaginatedUsers)
 async def list_users(
     q: Optional[str] = Query(None, description="Fuzzy search by name, department, office"),

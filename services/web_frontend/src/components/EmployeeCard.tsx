@@ -7,8 +7,6 @@ import { ReportModal } from './ReportModal';
 import { UserAvatar } from './UserAvatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cleanProfileValue as cleanValue } from '@/features/profile/lib/profileValues';
-import { FALLBACK_ORG_COLOR, getOrgColor } from '@/theme/departmentColors';
-import { getOrganizationTextColor } from '@/theme/organizationColors';
 import { getAvatarColor } from '@/utils/avatar';
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
@@ -108,7 +106,6 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
   ({ user, onClick }, ref) => {
     const searchQuery = useAppStore((state) => state.searchQuery);
     const currentUser = useAppStore((state) => state.currentUser);
-    const orgColors = useAppStore((state) => state.orgColors);
     const reduceMotion = useReducedMotion();
     const editButtonRef = useRef<HTMLButtonElement>(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -127,10 +124,8 @@ export const EmployeeCard = React.forwardRef<HTMLElement, EmployeeCardProps>(
       ? ''
       : department;
     const avatarColor = getAvatarColor(fullName, user.avatar_color);
-    const organizationColor = organization
-      ? getOrgColor(organization, orgColors)
-      : FALLBACK_ORG_COLOR;
-    const organizationTextColor = getOrganizationTextColor(organizationColor);
+    const organizationColor = avatarColor;
+    const organizationTextColor = '#FFFFFF';
     const organizationTabLabel = organization || 'Без организации';
     const contactItems = [
       { icon: Mail, label: 'Email', value: email, isPhone: false },

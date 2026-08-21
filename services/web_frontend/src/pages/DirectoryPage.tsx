@@ -52,9 +52,8 @@ export function DirectoryPage() {
 
   useEffect(() => {
     fetchUsers();
-    // Предзагружаем опции фильтров и цвета организаций
+    // Предзагружаем опции фильтров
     useAppStore.getState().fetchFilterOptions();
-    useAppStore.getState().fetchOrgColors();
   }, [fetchUsers]);
 
   // Wheel event listener — registered ONCE (empty deps).

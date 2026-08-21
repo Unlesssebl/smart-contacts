@@ -22,13 +22,11 @@ export interface UsersSlice {
   departments: string[];
   organizations: string[];
   jobTitles: string[];
-  orgColors: Record<string, string>;
   setSearchQuery: (query: string) => void;
   setFilters: (newFilters: Partial<UserFilters>) => void;
   setPage: (page: number) => void;
   fetchFilterOptions: () => Promise<void>;
   fetchUsers: (query?: string, pageOverride?: number) => Promise<void>;
-  fetchOrgColors: () => Promise<void>;
   getUserById: (id: string) => User | undefined;
   setLimit: (limit: number) => void;
   globalPresence: Record<string, 'online' | 'away' | 'offline'>;

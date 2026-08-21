@@ -64,8 +64,10 @@ redisdata/
 *.db
 
 # Certificates
-certs/
-*.pem
-*.key
-*.crt
+# Директория certs/ отслеживается Git (через .gitkeep), но файлы сертификатов — нет
+certs/*.pem
+certs/*.key
+certs/*.crt
+certs/*.csr
+certs/csr.conf
 sing-box-config.json

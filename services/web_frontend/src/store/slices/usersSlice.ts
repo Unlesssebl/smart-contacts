@@ -18,16 +18,6 @@ export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set
   organizations: [],
   jobTitles: [],
   globalPresence: {},
-  orgColors: {},
-
-  fetchOrgColors: async () => {
-    try {
-      const colors = await usersApi.getOrgColors();
-      set({ orgColors: colors });
-    } catch (error) {
-      console.error('Failed to fetch org colors', error);
-    }
-  },
 
   setSearchQuery: (query) => {
     set({ searchQuery: query, page: 1 });

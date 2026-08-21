@@ -68,7 +68,6 @@ beforeEach(() => {
   useAppStore.setState({
     searchQuery: '',
     currentUser: null,
-    orgColors: { 'Альфа': '#0F9D58' },
   });
 });
 
@@ -121,13 +120,13 @@ describe('EmployeeCard', () => {
   it('moves organization into the tab and keeps only the department in the header', () => {
     const { rerender } = render(
       <EmployeeCard
-        user={{ ...baseUser, organization: '  Альфа ', department: 'альфа' }}
+        user={{ ...baseUser, organization: '  Альфа ', department: 'альфа', avatar_color: '#356F9F' }}
         onClick={vi.fn()}
       />,
     );
 
     expect(screen.getAllByText('Альфа')).toHaveLength(1);
-    expect(document.querySelector('[data-organization-tab]')).toHaveStyle({ backgroundColor: '#0F9D58' });
+    expect(document.querySelector('[data-organization-tab]')).toHaveStyle({ backgroundColor: '#356F9F', color: '#FFFFFF' });
 
     rerender(
       <EmployeeCard
@@ -140,18 +139,17 @@ describe('EmployeeCard', () => {
     expect(screen.getByText('Без организации')).toBeInTheDocument();
   });
 
-  it('shows the organization mapping value unchanged in the organization-colored tab', () => {
-    useAppStore.setState({ orgColors: { 'АО НТЗ ТЭМ-ПО': '#D97706' } });
+  it('uses avatar_color for the organization tab background with white text', () => {
     const { container } = render(
       <EmployeeCard
-        user={{ ...baseUser, organization: 'АО НТЗ ТЭМ-ПО', department: 'Технический отдел' }}
+        user={{ ...baseUser, organization: 'АО НТЗ ТЭМ-ПО', avatar_color: '#3B7FB2' }}
         onClick={vi.fn()}
       />,
     );
 
     const tab = container.querySelector('[data-organization-tab]');
     expect(tab).toHaveTextContent('АО НТЗ ТЭМ-ПО');
-    expect(tab).toHaveStyle({ backgroundColor: '#D97706', color: '#102F4A' });
+    expect(tab).toHaveStyle({ backgroundColor: '#3B7FB2', color: '#FFFFFF' });
   });
 
   it('opens profile once and keeps the edit action independent', () => {

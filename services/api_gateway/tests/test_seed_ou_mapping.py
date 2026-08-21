@@ -1,14 +1,7 @@
-from scripts.seed_ou_mapping import COLORS, build_seed, color_for, merge_current_mapping
+from scripts.seed_ou_mapping import build_seed, merge_current_mapping
 
 
-def test_color_palette_is_expanded_and_deterministic():
-    assert len(COLORS) >= 32
-    assert len(set(COLORS)) == len(COLORS)
-    assert color_for("АО НТЗ ТЭМ-ПО") == color_for("АО НТЗ ТЭМ-ПО")
-    assert color_for("АО НТЗ ТЭМ-ПО") in COLORS
-
-
-def test_build_seed_reuses_one_hashed_color_for_ou_aliases():
+def test_build_seed_maps_ou_aliases():
     seed, unknown = build_seed({
         "CORPORATE_USERS": {
             "АО НТЗ ТЭМ-ПО": {},
@@ -18,17 +11,18 @@ def test_build_seed_reuses_one_hashed_color_for_ou_aliases():
 
     assert unknown == []
     assert seed["АО НТЗ ТЭМ-ПО"]["org"] == "АО НТЗ ТЭМ-ПО"
-    assert seed["АО НТЗ ТЭМ-ПО"]["color"] == seed["АО НТЗ ТЭМПО"]["color"]
+    assert seed["АО НТЗ ТЭМПО"]["org"] == "АО НТЗ ТЭМ-ПО"
 
 
 def test_merge_removes_mapping_entries_absent_from_current_tree():
-    seed = {"Current OU": {"org": "Generated", "color": "#ffffff"}}
+    seed = {"Current OU": {"org": "Generated"}}
     current = {
-        "Current OU": {"org": "Manual", "color": "#000000"},
-        "Old OU": {"org": "Old", "color": "#123456"},
+        "Current OU": {"org": "Manual"},
+        "Old OU": {"org": "Old"},
     }
 
     merged, stale = merge_current_mapping(seed, current, {"Current OU"})
 
-    assert merged == {"Current OU": {"org": "Manual", "color": "#000000"}}
+    assert merged == {"Current OU": {"org": "Manual"}}
     assert stale == {"Old OU"}
+

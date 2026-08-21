@@ -37,19 +37,6 @@ EXCLUDED_FIRST_LEVEL_OUS = {
     "\u0424\u0438\u043b\u0438\u0430\u043b\u044b \u043e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u0439",
 }
 
-COLORS = (
-    "#2B5FE0", "#1D4ED8", "#4F46E5", "#4338CA", "#7C3AED",
-    "#9333EA", "#A21CAF", "#C026D3", "#DB2777", "#E11D48",
-    "#BE123C", "#D14343", "#B91C1C", "#C2410C", "#EA580C",
-    "#D97706", "#B7791F", "#A16207", "#4D7C0F", "#65A30D",
-    "#0F9D58", "#15803D", "#059669", "#047857", "#0D9488",
-    "#0F766E", "#0891B2", "#0E7490", "#0284C7", "#0369A1",
-    "#475569", "#64748B", "#57534E", "#92400E", "#9F1239",
-    "#701A75", "#312E81", "#1E3A8A", "#334155",
-)
-
-IT_TEMPO_COLOR = "#0F9D58"
-
 
 def normalize(value: str) -> str:
     """Normalize punctuation variants used by old and new AD branches."""
@@ -97,16 +84,6 @@ CANONICAL_ALIASES = {
 }
 
 
-def color_for(organization: str) -> str:
-    if organization == "АйТи \"ТЭМПО\"":
-        return IT_TEMPO_COLOR
-    hash_value = 0x811C9DC5
-    for byte in organization.strip().lower().encode("utf-8"):
-        hash_value ^= byte
-        hash_value = (hash_value * 0x01000193) & 0xFFFFFFFF
-    return COLORS[hash_value % len(COLORS)]
-
-
 def load_json_setting(db: Any, key: str) -> dict[str, Any]:
     raw = settings_manager.get_setting(db, key)
     if not raw:
@@ -134,7 +111,7 @@ def build_seed(tree: dict[str, Any]) -> tuple[dict[str, dict[str, str]], list[st
         if organization is None:
             unknown.append(ou)
             continue
-        seed[ou] = {"org": organization, "color": color_for(organization)}
+        seed[ou] = {"org": organization}
     return seed, unknown
 
 

@@ -1,9 +1,7 @@
 import apiClient from './client';
-import { hashOrganizationColor, normalizeOrganizationColor } from '@/theme/organizationColors';
 
 export interface OUMappingValue {
   org: string;
-  color: string;
 }
 
 export interface ADOrganizationalUnitTree {
@@ -15,7 +13,7 @@ function normalizeOUMapping(raw: Record<string, unknown>): Record<string, OUMapp
 
   for (const [ou, value] of Object.entries(raw)) {
     if (typeof value === 'string') {
-      normalized[ou] = { org: value, color: hashOrganizationColor(value) };
+      normalized[ou] = { org: value };
       continue;
     }
 
@@ -23,9 +21,6 @@ function normalizeOUMapping(raw: Record<string, unknown>): Record<string, OUMapp
       const candidate = value as Partial<OUMappingValue>;
       normalized[ou] = {
         org: typeof candidate.org === 'string' ? candidate.org : '',
-        color: typeof candidate.color === 'string'
-          ? normalizeOrganizationColor(candidate.color)
-          : hashOrganizationColor(typeof candidate.org === 'string' ? candidate.org : ''),
       };
     }
   }
