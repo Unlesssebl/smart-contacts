@@ -19,7 +19,7 @@ interface ReportFieldOption {
 }
 
 const FIELD_OPTIONS: readonly ReportFieldOption[] = [
-  { value: 'mobile_phone', label: 'Мобильный телефон', mask: '+7 000 000 00 00', placeholder: '+7 999 800 70 70' },
+  { value: 'mobile_phone', label: 'Мобильный телефон', mask: '+{7} (000) 000-00-00', placeholder: '+7 (999) 000-00-00' },
   { value: 'internal_phone', label: 'Внутренний телефон', mask: '00-00', placeholder: '20-20' },
   { value: 'job_title', label: 'Должность' },
   { value: 'department', label: 'Отдел' },

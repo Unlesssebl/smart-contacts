@@ -3,7 +3,7 @@ import type { User } from '@/types';
 import { cleanProfileValue } from '../lib/profileValues';
 
 interface ChangeRequestInput {
-  attribute_name: 'mobile_phone' | 'office_location';
+  attribute_name: 'internal_phone' | 'mobile_phone' | 'office_location';
   new_value: string;
 }
 
@@ -16,25 +16,29 @@ interface UseProfileEditOptions {
 export function useProfileEdit({ user, pendingFields, addChangeRequest }: UseProfileEditOptions) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [internalPhone, setInternalPhone] = useState('');
   const [mobilePhone, setMobilePhone] = useState('');
   const [officeLocation, setOfficeLocation] = useState('');
 
   const reset = () => {
+    setInternalPhone(cleanProfileValue(user?.internal_phone));
     setMobilePhone(cleanProfileValue(user?.mobile_phone));
     setOfficeLocation(cleanProfileValue(user?.office_location));
   };
 
   useEffect(() => {
+    setInternalPhone(cleanProfileValue(user?.internal_phone));
     setMobilePhone(cleanProfileValue(user?.mobile_phone));
     setOfficeLocation(cleanProfileValue(user?.office_location));
   }, [user]);
 
   const hasChanges = useMemo(
     () => Boolean(user) && (
-      mobilePhone !== cleanProfileValue(user?.mobile_phone)
+      internalPhone !== cleanProfileValue(user?.internal_phone)
+      || mobilePhone !== cleanProfileValue(user?.mobile_phone)
       || officeLocation !== cleanProfileValue(user?.office_location)
     ),
-    [mobilePhone, officeLocation, user],
+    [internalPhone, mobilePhone, officeLocation, user],
   );
 
   const submit = async () => {
@@ -44,6 +48,9 @@ export function useProfileEdit({ user, pendingFields, addChangeRequest }: UsePro
     let succeeded = true;
 
     const changes: ChangeRequestInput[] = [];
+    if (internalPhone !== cleanProfileValue(user.internal_phone) && !('internal_phone' in pendingFields)) {
+      changes.push({ attribute_name: 'internal_phone', new_value: internalPhone });
+    }
     if (mobilePhone !== cleanProfileValue(user.mobile_phone) && !('mobile_phone' in pendingFields)) {
       changes.push({ attribute_name: 'mobile_phone', new_value: mobilePhone });
     }
@@ -71,6 +78,8 @@ export function useProfileEdit({ user, pendingFields, addChangeRequest }: UsePro
     isEditing,
     setIsEditing,
     isSubmitting,
+    internalPhone,
+    setInternalPhone,
     mobilePhone,
     setMobilePhone,
     officeLocation,

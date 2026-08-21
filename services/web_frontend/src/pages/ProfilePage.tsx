@@ -50,6 +50,8 @@ export function ProfilePage() {
     isEditing,
     setIsEditing,
     isSubmitting,
+    internalPhone,
+    setInternalPhone,
     mobilePhone,
     setMobilePhone,
     officeLocation,
@@ -173,7 +175,13 @@ export function ProfilePage() {
                     <EditableField 
                       icon={Phone} 
                       label="Внутренний телефон" 
-                      value={cleanValue(user.internal_phone)} 
+                      value={isEditing ? internalPhone : cleanValue(user.internal_phone)} 
+                      pendingValue={pendingFields?.['internal_phone']}
+                      isEditing={isEditing}
+                      onChange={setInternalPhone}
+                      mask="00-00"
+                      placeholder="20-20"
+                      hint="Формат: 00-00 (например: 24-12)"
                     />
 
                     <EditableField 
@@ -183,6 +191,9 @@ export function ProfilePage() {
                       pendingValue={pendingFields?.['mobile_phone']}
                       isEditing={isEditing}
                       onChange={setMobilePhone}
+                      mask="+{7} (000) 000-00-00"
+                      placeholder="+7 (999) 000-00-00"
+                      hint="Формат: +7 (999) 000-00-00"
                     />
 
                     <EditableField 
@@ -192,6 +203,8 @@ export function ProfilePage() {
                       pendingValue={pendingFields?.['office_location']}
                       isEditing={isEditing}
                       onChange={setOfficeLocation}
+                      placeholder="Например: Кабинет 402"
+                      hint="Укажите номер кабинета или здания"
                     />
                   </div>
                 </div>
