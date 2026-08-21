@@ -20,3 +20,15 @@ class ChangeRequestStatus(str, Enum):
 class ReportStatus(str, Enum):
     PENDING = "pending"
     PROCESSED = "processed"
+
+class SupportTicketStatus(str, Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+
+class SupportTicketCategory(str, Enum):
+    ACCESS = "access"
+    DATA_ERROR = "data_error"
+    BUG = "bug"
+    SUGGESTION = "suggestion"
+    OTHER = "other"
+

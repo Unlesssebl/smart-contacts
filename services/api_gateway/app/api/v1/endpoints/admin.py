@@ -5,15 +5,17 @@ from app.api import deps
 from shared.models.user import User
 from app.db.repository import change_request as cr_repo
 from app.db.repository import report as report_repo
+from app.db.repository import support_ticket as support_repo
 from app.schemas.change_request import ChangeRequestRead
 from app.schemas.report import ReportRead
+from app.schemas.support_ticket import SupportTicketRead
 from app.schemas.setting import LDAPSettingsRead, LDAPSettingsUpdate, OuMappingUpdate
 from app.core import settings_manager
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from uuid import UUID
 import json
 from app.services.ou_service import apply_ou_mapping_to_users_bg
-from app.services.event_service import publish_moderation_update
+from app.services.event_service import publish_moderation_update, publish_admin_update
 from app.schemas.user import UserVisibilityUpdate
 
 router = APIRouter()
@@ -133,8 +135,6 @@ def get_ou_mapping(
             mapping = {}
     return OuMappingUpdate(mapping=mapping)
 
-
-
 @router.post("/settings/ou-mapping", response_model=OuMappingUpdate)
 def update_ou_mapping(
     data: OuMappingUpdate,
@@ -188,3 +188,36 @@ def update_user_visibility(
     db.commit()
     
     return {"status": "ok", "is_hidden": user.is_hidden}
+
+@router.get("/support-tickets", response_model=List[SupportTicketRead])
+def list_support_tickets(
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    tickets = support_repo.get_tickets(db, status=status)
+    return [support_repo.ticket_to_read_schema(t) for t in tickets]
+
+@router.patch("/support-tickets/{ticket_id}/close", response_model=SupportTicketRead)
+def close_support_ticket(
+    ticket_id: UUID,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    ticket = support_repo.close_ticket(db, ticket_id, admin.object_guid)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Support ticket not found")
+    publish_admin_update()
+    return support_repo.ticket_to_read_schema(ticket)
+
+@router.patch("/support-tickets/{ticket_id}/reopen", response_model=SupportTicketRead)
+def reopen_support_ticket(
+    ticket_id: UUID,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    ticket = support_repo.reopen_ticket(db, ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Support ticket not found")
+    publish_admin_update()
+    return support_repo.ticket_to_read_schema(ticket)

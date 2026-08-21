@@ -1,4 +1,4 @@
-import type { User, UserProfile, ChangeRequest, Report } from '@/types';
+import type { User, UserProfile, ChangeRequest, Report, SupportTicket, SupportTicketCreateInput } from '@/types';
 import type { UserFilters } from '@/api/users';
 import type { LDAPSettings } from '@/api/settings';
 
@@ -51,6 +51,15 @@ export interface ReportsSlice {
   rejectReport: (id: string) => Promise<void>;
 }
 
+export interface SupportSlice {
+  supportTickets: SupportTicket[];
+  isLoadingSupportTickets: boolean;
+  fetchSupportTickets: (status?: string) => Promise<void>;
+  sendSupportTicket: (data: SupportTicketCreateInput) => Promise<{ success: boolean; error?: string }>;
+  closeSupportTicket: (id: string) => Promise<void>;
+  reopenSupportTicket: (id: string) => Promise<void>;
+}
+
 export interface AdminSlice {
   fetchAdminData: () => Promise<void>;
   forceSync: () => Promise<void>;
@@ -76,6 +85,7 @@ export type AppState = AuthSlice &
   UsersSlice &
   ChangeRequestsSlice &
   ReportsSlice &
+  SupportSlice &
   AdminSlice &
   InfraSlice &
   SettingsSlice;

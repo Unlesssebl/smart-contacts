@@ -5,6 +5,7 @@ import { createAuthSlice } from './slices/authSlice';
 import { createUsersSlice } from './slices/usersSlice';
 import { createChangeRequestsSlice } from './slices/changeRequestsSlice';
 import { createReportsSlice } from './slices/reportsSlice';
+import { createSupportSlice } from './slices/supportSlice';
 import { createAdminSlice } from './slices/adminSlice';
 import { createInfraSlice } from './slices/infraSlice';
 import { createSettingsSlice } from './slices/settingsSlice';
@@ -16,6 +17,7 @@ export const useAppStore = create<AppState>()(
       ...createUsersSlice(...a),
       ...createChangeRequestsSlice(...a),
       ...createReportsSlice(...a),
+      ...createSupportSlice(...a),
       ...createAdminSlice(...a),
       ...createInfraSlice(...a),
       ...createSettingsSlice(...a),

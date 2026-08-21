@@ -63,3 +63,30 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
             detail="The user does not have enough privileges",
         )
     return current_user
+
+
+def get_optional_current_user(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> User | None:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_guid = payload.get("sub")
+        if not user_guid:
+            return None
+        user = get_user_by_guid(db, user_guid)
+        if user and user.status == UserStatus.ACTIVE.value:
+            return user
+        return None
+    except Exception:
+        return None
+

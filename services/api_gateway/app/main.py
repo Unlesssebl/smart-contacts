@@ -6,9 +6,17 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.ldap import init_ldap_pool
+from app.db.session import engine
+import shared.models  # noqa: F401
+from shared.database import Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Could not run Base.metadata.create_all: %s", e)
     # Startup: Initialize LDAP pool
     init_ldap_pool()
     yield

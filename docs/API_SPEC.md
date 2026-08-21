@@ -559,14 +559,121 @@
 416:   "data": {
 417:     "f85c09e8-8249-40cc-9b9a-ece54ffdc93b": "online",
 418:     "d41f021e-1289-4acc-8bf8-dcb41235123d": "away"
-419:   }
-420: }
-421: ```
-422: - Уведомление об изменении статуса конкретного пользователя:
-423: ```json
-424: {
-425:   "type": "presence_update",
-426:   "user_id": "f85c09e8-8249-40cc-9b9a-ece54ffdc93b",
-427:   "status": "online" // "online" / "away" / "offline"
-428: }
-429: ```
+
+---
+
+## 8. WebSockets и статусы присутствия (`/ws`)
+
+### `GET /auth/ws-token`
+Получить одноразовый короткоживущий токен для WebSocket-соединения.
+**Ответ 200:**
+```json
+{
+  "ws_token": "eyJhbGciOiJIUzI1NiIsInR5..."
+}
+```
+
+---
+
+### WebSocket `/ws/presence`
+Канал обмена статусами присутствия в реальном времени. Требует токен в параметре запроса: `?token=<ws_token>`.
+
+**Входящие сообщения от клиента:**
+- Установка статуса «отошел» или «в сети»:
+```json
+{
+  "action": "set_presence",
+  "status": "away" // или "online"
+}
+```
+
+**Исходящие сообщения от сервера:**
+- Первичное состояние всех активных пользователей при подключении:
+```json
+{
+  "type": "full_state",
+  "data": {
+    "f85c09e8-8249-40cc-9b9a-ece54ffdc93b": "online",
+    "d41f021e-1289-4acc-8bf8-dcb41235123d": "away"
+  }
+}
+```
+- Уведомление об изменении статуса конкретного пользователя:
+```json
+{
+  "type": "presence_update",
+  "user_id": "f85c09e8-8249-40cc-9b9a-ece54ffdc93b",
+  "status": "online" // "online" / "away" / "offline"
+}
+```
+
+---
+
+## Обращения пользователей (Support Tickets)
+
+### `POST /support/tickets`
+Отправить обращение в службу технической поддержки (доступно как авторизованным сотрудникам, так и гостям со страницы входа).
+
+**Тело запроса:**
+```json
+{
+  "category": "access", // "access" | "data_error" | "bug" | "suggestion" | "other"
+  "message": "Не могу войти под своей учетной записью Windows",
+  "sender_name": "Иванов Иван", // Обязательно для неавторизованных пользователей
+  "sender_contact": "+79991234567" // Обязательно для неавторизованных пользователей
+}
+```
+
+**Ответ 201:**
+```json
+{
+  "status": "ok",
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "message": "Обращение успешно отправлено"
+}
+```
+
+---
+
+### `GET /admin/support-tickets`
+Получить список обращений в поддержку. **Доступ**: IT-Operator.
+- Параметр запроса: `status` (опционально: `open`, `closed`).
+
+**Ответ 200:**
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "user_guid": "123e4567-e89b-12d3-a456-426614174001",
+    "sender_name": "Иванов Иван",
+    "sender_contact": "ivan@example.com",
+    "display_sender_name": "Иванов Иван",
+    "display_sender_contact": "ivan@example.com",
+    "department": "IT Отдел",
+    "job_title": "Системный администратор",
+    "is_guest": false,
+    "category": "access",
+    "message": "Не могу войти под своей учетной записью",
+    "status": "open",
+    "closed_by": null,
+    "closer_name": null,
+    "closed_at": null,
+    "created_at": "2026-08-21T11:30:00Z",
+    "updated_at": "2026-08-21T11:30:00Z"
+  }
+]
+```
+
+---
+
+### `PATCH /admin/support-tickets/{ticket_id}/close`
+Закрыть обращение в 1 клик. **Доступ**: IT-Operator.
+
+**Ответ 200:** Обновленный объект обращения со статусом `"closed"`.
+
+---
+
+### `PATCH /admin/support-tickets/{ticket_id}/reopen`
+Повторно открыть обращение. **Доступ**: IT-Operator.
+
+**Ответ 200:** Обновленный объект обращения со статусом `"open"`.

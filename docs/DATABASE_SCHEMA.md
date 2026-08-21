@@ -159,6 +159,24 @@ CREATE INDEX idx_reports_status   ON reports (status);
 
 ---
 
+## Таблица `support_tickets` (Обращения пользователей)
+
+| Поле | Тип | Ограничения | Описание |
+|------|-----|-------------|----------|
+| `id` | UUID | PK, DEFAULT uuid_generate_v4() | Уникальный ID обращения |
+| `user_guid` | UUID | FK → users.object_guid ON DELETE SET NULL, NULLABLE | ID автора обращения (если авторизован) |
+| `sender_name` | VARCHAR(256) | NULLABLE | ФИО автора (для гостей) |
+| `sender_contact` | VARCHAR(256) | NULLABLE | Телефон, email или логин (для гостей) |
+| `category` | VARCHAR(64) | NOT NULL | Категория: `access`, `data_error`, `bug`, `suggestion`, `other` |
+| `message` | TEXT | NOT NULL | Текст сообщения / суть проблемы |
+| `status` | VARCHAR(20) | NOT NULL, DEFAULT 'open' | Статус: `open`, `closed` |
+| `closed_by` | UUID | FK → users.object_guid ON DELETE SET NULL, NULLABLE | ID оператора, закрывшего обращение |
+| `closed_at` | TIMESTAMPTZ | NULLABLE | Время закрытия обращения |
+| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Дата и время создания |
+| `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Время последнего обновления |
+
+---
+
 ## Политики ON DELETE (сводка)
 
 | Таблица | FK | Политика |
@@ -169,3 +187,5 @@ CREATE INDEX idx_reports_status   ON reports (status);
 | `reports.reporter_user_guid` | → `users.object_guid` | SET NULL |
 | `reports.resolved_by` | → `users.object_guid` | SET NULL |
 | `refresh_tokens.user_guid` | → `users.object_guid` | CASCADE |
+| `support_tickets.user_guid` | → `users.object_guid` | SET NULL |
+| `support_tickets.closed_by` | → `users.object_guid` | SET NULL |

@@ -119,3 +119,26 @@ CREATE TABLE system_settings (
     value TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- 8. Таблица support_tickets (Обращения в поддержку)
+CREATE TABLE support_tickets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_guid UUID REFERENCES users(object_guid) ON DELETE SET NULL,
+    sender_name VARCHAR(256),
+    sender_contact VARCHAR(256),
+    category VARCHAR(64) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    closed_by UUID REFERENCES users(object_guid) ON DELETE SET NULL,
+    closed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    
+    CONSTRAINT st_status_check CHECK (status IN ('open', 'closed')),
+    CONSTRAINT st_category_check CHECK (category IN ('access', 'data_error', 'bug', 'suggestion', 'other'))
+);
+
+CREATE INDEX idx_support_tickets_status ON support_tickets (status);
+CREATE INDEX idx_support_tickets_created_at ON support_tickets (created_at DESC);
+CREATE INDEX idx_support_tickets_user_guid ON support_tickets (user_guid);
+

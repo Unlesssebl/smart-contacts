@@ -62,3 +62,33 @@ export interface Report {
   status: ReportStatus;
   created_at: string;
 }
+
+export type SupportCategory = 'access' | 'data_error' | 'bug' | 'suggestion' | 'other';
+export type SupportStatus = 'open' | 'closed';
+
+export interface SupportTicket {
+  id: string;
+  user_guid?: string | null;
+  sender_name?: string | null;
+  sender_contact?: string | null;
+  display_sender_name: string;
+  display_sender_contact: string;
+  department?: string | null;
+  job_title?: string | null;
+  is_guest: boolean;
+  category: SupportCategory;
+  message: string;
+  status: SupportStatus;
+  closed_by?: string | null;
+  closer_name?: string | null;
+  closed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupportTicketCreateInput {
+  category: SupportCategory;
+  message: string;
+  sender_name?: string;
+  sender_contact?: string;
+}

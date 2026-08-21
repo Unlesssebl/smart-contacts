@@ -7,6 +7,7 @@ import { AdminReviewPanel } from '@/features/administration/components/AdminRevi
 import { AdminTabs, type AdminTab } from '@/features/administration/components/AdminTabs';
 import { LdapSettingsPanel } from '@/features/administration/components/LdapSettingsPanel';
 import { OuMappingPanel } from '@/features/administration/components/OuMappingPanel';
+import { SupportTicketsPanel } from '@/features/administration/components/SupportTicketsPanel';
 import { buildAdminReviewItems, groupAdminReviewItems } from '@/features/administration/model/reviewItems';
 
 export function AdminPage() {
@@ -14,7 +15,9 @@ export function AdminPage() {
   const {
     changeRequests,
     reports,
+    supportTickets,
     fetchAdminData,
+    fetchSupportTickets,
     ldapSettings,
     fetchLDAPSettings,
     updateLDAPSettings,
@@ -26,7 +29,9 @@ export function AdminPage() {
     useShallow((state) => ({
       changeRequests: state.changeRequests,
       reports: state.reports,
+      supportTickets: state.supportTickets,
       fetchAdminData: state.fetchAdminData,
+      fetchSupportTickets: state.fetchSupportTickets,
       ldapSettings: state.ldapSettings,
       fetchLDAPSettings: state.fetchLDAPSettings,
       updateLDAPSettings: state.updateLDAPSettings,
@@ -43,22 +48,33 @@ export function AdminPage() {
 
   useEffect(() => {
     if (activeTab === 'settings') void fetchLDAPSettings(true);
-  }, [activeTab, fetchLDAPSettings]);
+    if (activeTab === 'tickets') void fetchSupportTickets();
+  }, [activeTab, fetchLDAPSettings, fetchSupportTickets]);
 
   const reviewGroups = useMemo(
     () => groupAdminReviewItems(buildAdminReviewItems(changeRequests, reports)),
     [changeRequests, reports],
   );
   const requestCount = Object.keys(reviewGroups).length;
+  const openTicketsCount = useMemo(
+    () => supportTickets.filter((t) => t.status === 'open').length,
+    [supportTickets]
+  );
 
   return (
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
       <main className="relative ml-[17.25rem] flex-1">
         <div className="mx-auto max-w-7xl px-8 pb-12 pt-12">
-          <AdminTabs activeTab={activeTab} requestCount={requestCount} onChange={setActiveTab} />
+          <AdminTabs
+            activeTab={activeTab}
+            requestCount={requestCount}
+            ticketsCount={openTicketsCount}
+            onChange={setActiveTab}
+          />
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden glass-card p-0">
             {activeTab === 'requests' && <AdminReviewPanel groups={reviewGroups} />}
+            {activeTab === 'tickets' && <SupportTicketsPanel />}
             {activeTab === 'settings' && (
               <LdapSettingsPanel settings={ldapSettings} onSave={updateLDAPSettings} onForceSync={forceSync} />
             )}
