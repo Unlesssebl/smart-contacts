@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit } from 'lucide-react';
+import { Mail, Phone, MapPin, Building2, User as UserIcon, Edit, ShieldCheck, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Sidebar } from '@/components/Sidebar';
 import { useAppStore } from '@/store/useAppStore';
@@ -19,14 +19,16 @@ import type { User, UserProfile } from '@/types';
 
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
-  const { getUserById, currentUser, addChangeRequest, globalPendingFields } = useAppStore(
+  const { getUserById, currentUser, addChangeRequest, globalPendingFields, acknowledgeGatekeeper } = useAppStore(
     useShallow((state) => ({
       getUserById: state.getUserById,
       currentUser: state.currentUser,
       addChangeRequest: state.addChangeRequest,
       globalPendingFields: state.pendingFields,
+      acknowledgeGatekeeper: state.acknowledgeGatekeeper,
     })),
   );
+  const [isConfirmingGatekeeper, setIsConfirmingGatekeeper] = useState(false);
   
   const isCurrentUserProfile = Boolean(currentUser && (currentUser.id === id || currentUser.object_guid === id));
   const storeUser = id ? getUserById(id) : null;
@@ -126,6 +128,17 @@ export function ProfilePage() {
     }
   };
 
+  const handleConfirmGatekeeper = async () => {
+    setIsConfirmingGatekeeper(true);
+    const res = await acknowledgeGatekeeper('confirm');
+    setIsConfirmingGatekeeper(false);
+    if (res.success) {
+      toast.success('Данные профиля подтверждены');
+    } else {
+      toast.error(res.error || 'Не удалось подтвердить данные профиля');
+    }
+  };
+
   const currentAvatarColor = user ? getAvatarColor(user.department, user.avatar_color) : '';
 
   return (
@@ -167,6 +180,41 @@ export function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            {/* Verification Banner if user hasn't verified yet */}
+            {isCurrentUser && currentUser && !currentUser.is_verified && (
+              <div className="border-b border-amber-200/80 bg-amber-50/90 px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-amber-950">
+                      Подтверждение актуальности контактов
+                    </h4>
+                    <p className="text-xs text-amber-900/80 mt-0.5">
+                      Если все ваши контакты указаны верно, нажмите кнопку «Всё верно, подтвердить».
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                  <button
+                    type="button"
+                    disabled={isConfirmingGatekeeper}
+                    onClick={handleConfirmGatekeeper}
+                    className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                  >
+                    {isConfirmingGatekeeper ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    )}
+                    <span>Всё верно, подтвердить</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Content */}
             <div className="p-8">
@@ -280,14 +328,31 @@ export function ProfilePage() {
                       </button>
                     </>
                   ) : (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      disabled={pendingFields === null}
-                      className={`btn-secondary px-6 py-3 gap-2 ${pendingFields === null ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <Edit className="h-4 w-4" strokeWidth={1.5} />
-                      {pendingFields === null ? 'Загрузка...' : 'Редактировать профиль'}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {currentUser && !currentUser.is_verified && (
+                        <button
+                          type="button"
+                          disabled={isConfirmingGatekeeper}
+                          onClick={handleConfirmGatekeeper}
+                          className="btn-primary px-6 py-3 gap-2 flex items-center shadow-md shadow-primary/20"
+                        >
+                          {isConfirmingGatekeeper ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4" />
+                          )}
+                          <span>Всё верно, подтвердить</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        disabled={pendingFields === null}
+                        className={`btn-secondary px-6 py-3 gap-2 flex items-center ${pendingFields === null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Edit className="h-4 w-4" strokeWidth={1.5} />
+                        {pendingFields === null ? 'Загрузка...' : 'Редактировать профиль'}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

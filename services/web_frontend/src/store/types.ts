@@ -8,6 +8,7 @@ export interface AuthSlice {
   login: (samAccount: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   fetchMe: () => Promise<void>;
+  acknowledgeGatekeeper: (action: 'confirm' | 'skip') => Promise<{ success: boolean; error?: string }>;
 }
 
 export interface UsersSlice {

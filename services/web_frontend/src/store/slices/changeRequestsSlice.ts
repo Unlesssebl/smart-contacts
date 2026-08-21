@@ -31,6 +31,7 @@ export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeReq
     try {
       const newRequest = await changeRequestsApi.createChangeRequest(request);
       set((state) => ({
+        currentUser: state.currentUser ? { ...state.currentUser, is_verified: true } : state.currentUser,
         changeRequests: [newRequest, ...state.changeRequests],
         pendingFields: state.pendingFields
           ? { ...state.pendingFields, [request.attribute_name]: request.new_value }

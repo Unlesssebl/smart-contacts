@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
 import { login, getMe } from '@/api/auth';
+import { acknowledgeGatekeeper } from '@/api/profile';
 import apiClient from '@/api/client';
 import type { AppState, AuthSlice } from '../types';
 import { getErrorStatus } from '@/api/errors';
@@ -47,4 +48,25 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
       }
     }
   },
+
+  acknowledgeGatekeeper: async (action: 'confirm' | 'skip') => {
+    try {
+      const data = await acknowledgeGatekeeper(action);
+      const currentUser = get().currentUser;
+      if (currentUser) {
+        set({
+          currentUser: {
+            ...currentUser,
+            is_verified: data.is_verified,
+            grace_period_left: data.grace_period_left,
+          },
+        });
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to acknowledge gatekeeper', error);
+      return { success: false, error: 'Не удалось обновить статус проверки' };
+    }
+  },
 });
+
