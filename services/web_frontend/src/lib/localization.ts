@@ -16,7 +16,8 @@ export const getChangeWord = (count: number) => {
   return 'изменений';
 };
 
-export const getAttributeLabel = (name: string) => {
+export const getAttributeLabel = (name?: string | null): string => {
+  if (!name || typeof name !== 'string') return 'атрибут';
   const labels: Record<string, string> = {
     job_title: 'должность',
     department: 'отдел',
@@ -24,11 +25,14 @@ export const getAttributeLabel = (name: string) => {
     internal_phone: 'внутренний телефон',
     mobile_phone: 'мобильный телефон',
     office_location: 'офис / расположение',
+    organization: 'организация',
+    full_name: 'ФИО',
   };
-  return labels[name] || name.replace('_', ' ');
+  return labels[name] || name.replace(/_/g, ' ');
 };
 
-export const getStatusLabel = (status: string) => {
+export const getStatusLabel = (status?: string | null): string => {
+  if (!status || typeof status !== 'string') return '—';
   const statuses: Record<string, string> = {
     resolved: 'Решено',
     in_progress: 'В работе',
@@ -38,8 +42,9 @@ export const getStatusLabel = (status: string) => {
     rejected: 'Отклонено',
     applied: 'Применено в AD',
     conflict: 'Ошибка применения',
+    closed: 'Закрыто',
   };
-  return statuses[status] || status.replace('_', ' ');
+  return statuses[status] || status.replace(/_/g, ' ');
 };
 
 export const getLdapErrorTranslation = (errorMsg: string | null | undefined): string => {

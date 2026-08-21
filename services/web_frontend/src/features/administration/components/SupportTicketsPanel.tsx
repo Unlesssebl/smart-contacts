@@ -76,10 +76,10 @@ export function SupportTicketsPanel() {
 
       const q = searchQuery.toLowerCase();
       return (
-        ticket.display_sender_name.toLowerCase().includes(q) ||
-        ticket.display_sender_contact.toLowerCase().includes(q) ||
-        ticket.message.toLowerCase().includes(q) ||
-        (ticket.department && ticket.department.toLowerCase().includes(q))
+        (ticket.display_sender_name || '').toLowerCase().includes(q) ||
+        (ticket.display_sender_contact || '').toLowerCase().includes(q) ||
+        (ticket.message || '').toLowerCase().includes(q) ||
+        (ticket.department ? ticket.department.toLowerCase().includes(q) : false)
       );
     });
   }, [supportTickets, activeFilter, searchQuery]);
