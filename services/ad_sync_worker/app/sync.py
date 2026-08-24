@@ -1,5 +1,7 @@
+import re
 import logging
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 from sqlalchemy import select, update
 from .db import SessionLocal
 from shared.models.enums import UserStatus
@@ -15,6 +17,15 @@ from .utils import with_retry, format_phone
 from .events import publish_admin_update, publish_profile_update, publish_report_moderated
 
 logger = logging.getLogger(__name__)
+
+SYNC_ERROR_LOG_MAX_LINES = 50
+
+def _append_sync_error(existing: Optional[str], message: str, max_lines: int = SYNC_ERROR_LOG_MAX_LINES) -> str:
+    lines = (existing or "").splitlines()
+    for sub in message.splitlines():
+        if sub.strip():
+            lines.append(sub.strip())
+    return "\n".join(lines[-max_lines:])
 
 AD_ATTRIBUTE_MAP = {
     "internal_phone": "telephoneNumber",
@@ -116,7 +127,6 @@ class SyncWorker:
                         # Collect OUs from distinguishedName
                         dn = str(entry.get("distinguishedName", ""))
                         if dn:
-                            import re
                             ous = re.findall(r"OU=([^,]+)", dn)
                             if ous:
                                 path = tuple(reversed(ous))
@@ -309,7 +319,9 @@ class SyncWorker:
             user.email = str(entry.get("mail", "")) if entry.get("mail") else None
 
         if warnings:
-            user.sync_error_log = (user.sync_error_log or "") + "\n" + "\n".join(warnings)
+            user.sync_error_log = _append_sync_error(user.sync_error_log, "\n".join(warnings))
+        else:
+            user.sync_error_log = None
         
         user.last_sync_timestamp = datetime.now(timezone.utc)
 
@@ -357,7 +369,7 @@ class SyncWorker:
                     
                     if user.is_protected:
                         item.status = "conflict"
-                        user.sync_error_log = (user.sync_error_log or "") + f"\nVIP profile, skipping push for {task['id']}"
+                        user.sync_error_log = _append_sync_error(user.sync_error_log, f"VIP profile, skipping push for {task['id']}")
                         logger.warning(f"Skipping push for protected user {user.sam_account_name}")
                         continue
                     
@@ -428,14 +440,14 @@ class SyncWorker:
                         
                         if existing or conflict_key in processed_conflicts:
                             item.status = "rejected"
-                            user.sync_error_log = (user.sync_error_log or "") + f"\nMarked {task['id']} as rejected to avoid duplicate pending/conflict."
+                            user.sync_error_log = _append_sync_error(user.sync_error_log, f"Marked {task['id']} as rejected to avoid duplicate pending/conflict.")
                             logger.warning(f"Duplicate active request found. Marking {task['id']} as rejected.")
                         else:
                             item.status = "conflict"
                             processed_conflicts.add(conflict_key)
 
                         item.rejection_reason = error_msg
-                        user.sync_error_log = (user.sync_error_log or "") + f"\nAD Push failed for {task['id']}: {error_msg}"
+                        user.sync_error_log = _append_sync_error(user.sync_error_log, f"AD Push failed for {task['id']}: {error_msg}")
                         logger.error(f"AD Push failed for {task['id']}: {error_msg}")
                         
                         events_to_publish.append({"type": "admin_update"})

@@ -22,6 +22,11 @@ class Settings(BaseSettings):
         password = urllib.parse.quote_plus(self.POSTGRES_PASSWORD)
         return f"postgresql://{self.POSTGRES_USER}:{password}@{self.DB_HOST}:{self.DB_PORT}/{self.POSTGRES_DB}"
 
+    # Database Connection Pool
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_RECYCLE: int = 300
+
     # Redis
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379

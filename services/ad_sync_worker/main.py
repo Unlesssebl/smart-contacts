@@ -2,6 +2,8 @@ import time
 import logging
 import sys
 from app.config import settings
+from app.db import SessionLocal
+from shared.models.system_setting import SystemSetting
 from app.sync import SyncWorker
 from app.ldap import InvalidLDAPCredentialsError
 from app.events import publish_ldap_status_update
@@ -23,8 +25,6 @@ logging.basicConfig(
 logger = logging.getLogger("ad_sync_worker")
 
 def set_ldap_status(status: str, last_error: str = ""):
-    from app.db import SessionLocal
-    from shared.models.system_setting import SystemSetting
     try:
         with SessionLocal() as session:
             changed = False
@@ -46,8 +46,6 @@ def set_ldap_status(status: str, last_error: str = ""):
 
 
 def get_credentials_version() -> str:
-    from app.db import SessionLocal
-    from shared.models.system_setting import SystemSetting
     try:
         with SessionLocal() as session:
             setting = session.get(SystemSetting, "LDAP_CREDENTIALS_VERSION")
@@ -83,8 +81,6 @@ def main():
         
         force_sync_requested = False
         try:
-            from app.db import SessionLocal
-            from shared.models.system_setting import SystemSetting
             with SessionLocal() as session:
                 setting = session.get(SystemSetting, "FORCE_SYNC")
                 if setting and setting.value == "1":
