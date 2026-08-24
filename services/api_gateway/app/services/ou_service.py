@@ -22,8 +22,7 @@ def apply_ou_mapping_to_users_bg(mapping: dict):
         for user in users:
             org_name, raw_dept, _ = parse_ou_structure(
                 user.ad_dn,
-                mapping,
-                fallback_dept=user.department_raw or user.department
+                mapping
             )
             canonical_dept = apply_canonical_mapping(raw_dept, dept_mapping)
             

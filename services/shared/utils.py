@@ -48,17 +48,15 @@ def parse_ou_structure(
     and optional OU_MAPPING dictionary.
 
     - Organization: strictly matched via OU_MAPPING (unmapped OUs remain None).
-    - Department: built from nested OUs under the mapped Organization OU in top-down order.
+    - Department: built strictly from nested OUs under the mapped Organization OU in top-down order.
     - Warnings: notes if multiple OUs matched mapping.
     """
     if not dn:
-        clean_fallback = fallback_dept.strip() if fallback_dept and fallback_dept.strip() not in ("", "[]") else None
-        return None, clean_fallback, []
+        return None, None, []
 
     user_ous = re.findall(r"OU=([^,]+)", dn)
     if not user_ous:
-        clean_fallback = fallback_dept.strip() if fallback_dept and fallback_dept.strip() not in ("", "[]") else None
-        return None, clean_fallback, []
+        return None, None, []
 
     mapping = mapping or {}
     
@@ -97,7 +95,7 @@ def parse_ou_structure(
         org_name = None
         dept_ous = []
 
-    # Build department string from dept_ous (which is leaf-to-root)
+    # Build department string strictly from dept_ous (which is leaf-to-root)
     clean_dept_ous = [
         ou.strip() for ou in reversed(dept_ous)
         if ou.strip()
@@ -106,16 +104,6 @@ def parse_ou_structure(
         and ou.strip().lower() not in mapping_lower
     ]
     dept_name = " / ".join(clean_dept_ous) if clean_dept_ous else None
-
-    if not dept_name and fallback_dept and org_name:
-        fb = fallback_dept.strip()
-        if (
-            fb
-            and fb != "[]"
-            and fb.lower() != org_name.lower()
-            and fb.lower() not in mapping_lower
-        ):
-            dept_name = fb
 
     if not org_name:
         dept_name = None

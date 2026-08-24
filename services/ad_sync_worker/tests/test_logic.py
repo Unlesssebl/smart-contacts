@@ -126,29 +126,20 @@ class OrganizationMappingTests(unittest.TestCase):
         self.assertEqual(dept, "Департамент ИТ / Отдел разработки / Сектор веб")
         self.assertEqual(warnings, [])
 
-    def test_extract_ou_structure_fallback(self):
+    def test_extract_ou_structure_without_department_ou(self):
         session = Mock()
         session.get.return_value = Mock(
             value=json.dumps({"АО КЗМК ТЭМПО": {"org": "АО КЗМК ТЭМПО"}})
         )
 
-        # No department OU, but fallback provided
+        # User is directly in organization OU without department sub-OU -> department is None
         org, dept, warnings = logic.extract_ou_structure(
             "CN=Сидоров,OU=АО КЗМК ТЭМПО,OU=CORPORATE_USERS,DC=tempo,DC=local",
             session,
-            fallback_dept="Склад",
-        )
-        self.assertEqual(org, "АО КЗМК ТЭМПО")
-        self.assertEqual(dept, "Склад")
-
-        # Fallback repeats org name -> should not use it
-        org, dept, warnings = logic.extract_ou_structure(
-            "CN=Сидоров,OU=АО КЗМК ТЭМПО,OU=CORPORATE_USERS,DC=tempo,DC=local",
-            session,
-            fallback_dept="АО КЗМК ТЭМПО",
         )
         self.assertEqual(org, "АО КЗМК ТЭМПО")
         self.assertIsNone(dept)
+        self.assertEqual(warnings, [])
 
     def test_apply_canonical_mapping_whole_and_parts(self):
         dept_mapping = {

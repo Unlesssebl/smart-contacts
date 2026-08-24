@@ -204,8 +204,7 @@ class SyncWorker:
         
         status = determine_status(uac, sam)
         dn = str(entry.get("distinguishedName", ""))
-        ad_dept = str(entry.get("department", "")) if entry.get("department") else None
-        org, dept, warnings = extract_ou_structure(dn, session, fallback_dept=ad_dept)
+        org, dept, warnings = extract_ou_structure(dn, session)
         
         raw_dept = dept
         raw_job = str(entry.get("title", "")) if entry.get("title") else None
