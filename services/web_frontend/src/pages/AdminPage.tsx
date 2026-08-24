@@ -74,7 +74,7 @@ export function AdminPage() {
   return (
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
-      <main className="relative ml-[17.25rem] flex-1">
+      <main className="relative ml-[19.5rem] flex-1">
         <div className="mx-auto max-w-7xl px-8 pb-12 pt-12">
           <AdminTabs
             activeTab={activeTab}

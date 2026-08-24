@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Home, User, LogOut, Shield, BookOpen, Sparkles, ArrowRight, Headphones } from 'lucide-react';
+import { Home, User, LogOut, Shield } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { motion } from 'motion/react';
@@ -32,7 +32,7 @@ export function Sidebar() {
   return (
     <>
       <aside
-        className="fixed left-0 top-0 z-20 flex h-screen w-[17.25rem] flex-col shadow-[18px_0_48px_rgba(16,45,79,0.12)] transform-gpu"
+        className="fixed left-0 top-0 z-20 flex h-screen w-[19.5rem] flex-col shadow-[18px_0_48px_rgba(16,45,79,0.12)] transform-gpu"
         style={{
           backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.11) 0.8px, transparent 0.8px), linear-gradient(155deg, rgba(48, 96, 146, 0.8), rgba(20, 58, 104, 0.92)), url("/login_background.png")',
           backgroundSize: '4px 4px, cover, auto 100%',
@@ -84,93 +84,92 @@ export function Sidebar() {
           </div>
 
           {/* Help & Support Card */}
-          <div className="relative mb-6 mt-auto overflow-hidden rounded-2xl border border-sky-300/30 bg-gradient-to-br from-white/[0.16] via-white/[0.08] to-sky-400/[0.14] p-4 shadow-[0_8px_28px_rgba(7,31,60,0.18),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-xl transition-all duration-300 hover:border-sky-300/50 hover:shadow-[0_10px_32px_rgba(7,31,60,0.25)] group">
+          <div className="relative mb-6 mt-auto overflow-hidden rounded-2xl border border-sky-300/35 bg-gradient-to-br from-white/[0.18] via-white/[0.09] to-sky-400/[0.16] p-4 shadow-[0_8px_28px_rgba(7,31,60,0.18),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-xl transition-all duration-300 hover:border-sky-300/50 hover:shadow-[0_10px_32px_rgba(7,31,60,0.25)] group">
             {/* Ambient Background Glow */}
             <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-sky-400/20 blur-2xl transition-opacity group-hover:opacity-100 opacity-60" />
 
             <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <motion.div
-                  animate={{ y: [0, -3, 0], rotate: [0, 4, -4, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400/30 to-blue-600/30 border border-sky-200/40 text-sky-200 shadow-sm"
-                >
-                  <Sparkles className="h-4 w-4 text-sky-200" />
-                </motion.div>
-                <div>
-                  <h4 className="text-sm font-bold text-white tracking-tight">Помощь</h4>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] font-semibold text-white/70 uppercase tracking-wider">
-                      IT-служба
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <h4 className="text-sm font-bold text-white tracking-tight">Помощь</h4>
+              <span className="rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-200 backdrop-blur-sm">
+                IT-служба
+              </span>
             </div>
 
-            <p className="relative z-10 mt-2.5 text-xs text-white/75 leading-relaxed">
+            <p className="relative z-10 mt-2 text-xs leading-relaxed text-white/80">
               Руководство по справочнику или обращение в службу поддержки.
             </p>
 
-            <div className="relative z-10 mt-3.5 flex flex-col gap-2 border-t border-white/15 pt-3">
-              {/* Guides Button */}
+            {/* Divider */}
+            <div className="relative z-10 my-3.5 h-px w-full bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+
+            <div className="relative z-10 flex flex-col gap-2">
+              {/* Guides Button (Secondary) */}
               <button
                 type="button"
                 onClick={() => setIsGuidesModalOpen(true)}
-                className="flex items-center justify-between rounded-xl bg-white/15 hover:bg-white/25 px-3 py-2 text-xs font-semibold text-white transition-all shadow-sm hover:translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] px-3 py-2 text-xs font-medium text-white/85 transition-all duration-200 hover:border-white/25 hover:bg-white/[0.14] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
-                <span className="flex items-center gap-1.5">
-                  <BookOpen className="h-3.5 w-3.5 text-sky-200" />
-                  <span>Руководство</span>
-                </span>
-                <ArrowRight className="h-3 w-3 text-white/60" />
+                Руководство
               </button>
 
-              {/* Support Ticket Button */}
+              {/* Support Ticket Button (Primary Matte Blue Action) */}
               <button
                 type="button"
                 onClick={() => setIsSupportModalOpen(true)}
-                className="flex items-center justify-between rounded-xl bg-sky-500/20 hover:bg-sky-500/35 border border-sky-300/25 px-3 py-2 text-xs font-bold text-sky-100 transition-all hover:text-white hover:border-sky-300/40 shadow-sm group/btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="flex w-full items-center justify-center rounded-xl border border-sky-300/30 bg-sky-500/25 px-3 py-2 text-xs font-medium text-white transition-all duration-200 hover:border-sky-300/45 hover:bg-sky-500/35 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
-                <span className="flex items-center gap-1.5">
-                  <Headphones className="h-3.5 w-3.5 text-sky-300" />
-                  <span>Написать в поддержку</span>
-                </span>
-                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/btn:translate-x-1" />
+                Написать в поддержку
               </button>
             </div>
           </div>
 
           {/* User Profile */}
-          {currentUser && (
-            <div className="border-t border-white/10 pt-6 mt-4">
-              <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
-                <UserAvatar
-                  name={currentUser.full_name}
-                  avatarColor={currentUser.avatar_color}
-                  presence={currentUser.presence}
-                  className="h-10 w-10 text-sm"
-                  statusClassName="h-3 w-3 border-[2px]"
-                />
-                <div className="flex-1 overflow-hidden">
-                  <p className="truncate text-sm font-medium text-white">
-                    {currentUser.full_name}
-                  </p>
-                  <p className="truncate text-xs text-white/60">
-                    {(!currentUser.job_title || currentUser.job_title === '[]') ? 'Не указано' : currentUser.job_title}
-                  </p>
-                </div>
-              </div>
+          {currentUser && (() => {
+            const clean = (val?: string | null) => {
+              if (!val || val === '[]' || val.trim() === '') return null;
+              return val.trim();
+            };
 
-              <button
-                onClick={logout}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-300 transition-[background-color,color,transform] duration-200 hover:bg-rose-300/10 hover:text-rose-200 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-              >
-                <LogOut className="h-4 w-4" strokeWidth={1.5} />
-                Выйти
-              </button>
-            </div>
-          )}
+            const userSubtitle =
+              clean(currentUser.job_title) ||
+              clean(currentUser.department) ||
+              clean(currentUser.organization) ||
+              clean(currentUser.email) ||
+              clean(currentUser.internal_phone) ||
+              clean(currentUser.mobile_phone) ||
+              clean(currentUser.office_location) ||
+              '(контактные данные не указаны)';
+
+            return (
+              <div className="border-t border-white/10 pt-6 mt-4">
+                <div className="mb-3 flex items-center gap-3 rounded-lg px-3 py-2">
+                  <UserAvatar
+                    name={currentUser.full_name}
+                    avatarColor={currentUser.avatar_color}
+                    presence={currentUser.presence}
+                    className="h-10 w-10 text-sm"
+                    statusClassName="h-3 w-3 border-[2px]"
+                  />
+                  <div className="flex-1 overflow-hidden">
+                    <p className="truncate text-sm font-medium text-white" title={currentUser.full_name}>
+                      {currentUser.full_name}
+                    </p>
+                    <p className="truncate text-xs text-white/60" title={userSubtitle}>
+                      {userSubtitle}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={logout}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-300 transition-[background-color,color,transform] duration-200 hover:bg-rose-300/10 hover:text-rose-200 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                >
+                  <LogOut className="h-4 w-4" strokeWidth={1.5} />
+                  Выйти
+                </button>
+              </div>
+            );
+          })()}
         </div>
       </aside>
 

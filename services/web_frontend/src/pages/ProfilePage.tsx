@@ -95,7 +95,7 @@ export function ProfilePage() {
     return (
       <div className="flex min-h-screen bg-transparent">
         <Sidebar />
-        <main className="ml-[17.25rem] flex flex-1 items-center justify-center">
+        <main className="ml-[19.5rem] flex flex-1 items-center justify-center">
           <div className="text-muted-foreground">Загрузка профиля...</div>
         </main>
       </div>
@@ -145,7 +145,7 @@ export function ProfilePage() {
     <div className="flex min-h-screen bg-transparent">
       <Sidebar />
 
-      <main className="relative ml-[17.25rem] flex-1">
+      <main className="relative ml-[19.5rem] flex-1">
         <div className="mx-auto max-w-4xl px-8 pt-12 pb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

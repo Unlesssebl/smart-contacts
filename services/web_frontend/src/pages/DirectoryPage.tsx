@@ -133,7 +133,7 @@ export function DirectoryPage() {
 
       <main
         ref={mainContainerRef}
-        className="relative ml-[17.25rem] flex h-screen flex-1 flex-col overflow-hidden bg-[#f4f6f8]"
+        className="relative ml-[19.5rem] flex h-screen flex-1 flex-col overflow-hidden bg-[#f4f6f8]"
       >
         {/* Header / Top Bar */}
         <header className="relative z-10 w-full shrink-0 border-b border-[#dfe5eb]/80 bg-[#f4f6f8]/90 px-8 py-3.5 backdrop-blur-md lg:px-12">
