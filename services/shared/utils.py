@@ -179,6 +179,69 @@ def apply_canonical_mapping(
 
     return raw_clean
 
+def format_phone(phone: Optional[str]) -> Optional[str]:
+    """
+    Cleans up the phone string from AD/User input. 
+    Applies mobile mask if it matches a Russian mobile pattern (10 or 11 digits).
+    Leaves other strings as they are to avoid data loss.
+    """
+    if not phone or phone == "[]":
+        return None
+        
+    cleaned = str(phone).strip()
+    if not cleaned or cleaned == "[]":
+        return None
+        
+    digits_only = re.sub(r'\D', '', cleaned)
+    
+    if len(digits_only) == 4:
+        return f"{digits_only[:2]}-{digits_only[2:]}"
+    
+    if len(digits_only) == 11 and (digits_only.startswith('7') or digits_only.startswith('8')):
+        code = digits_only[1:4]
+        p1 = digits_only[4:7]
+        p2 = digits_only[7:9]
+        p3 = digits_only[9:11]
+        return f"+7 ({code}) {p1}-{p2}-{p3}"
+        
+    if len(digits_only) == 10:
+        code = digits_only[0:3]
+        p1 = digits_only[3:6]
+        p2 = digits_only[6:8]
+        p3 = digits_only[8:10]
+        return f"+7 ({code}) {p1}-{p2}-{p3}"
+        
+    return cleaned
 
 
+def ttl_cache(ttl_seconds: float = 60.0):
+    """
+    Memory cache decorator with time-to-live (TTL).
+    Caches function result based on arguments for ttl_seconds.
+    """
+    import functools
+    import time
+    from typing import Callable
 
+    def decorator(func: Callable):
+        cache: dict[Any, tuple[float, Any]] = {}
+        
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Session objects or complex objects are represented by id/identity if needed
+            key = tuple(id(a) if hasattr(a, "__dict__") and not isinstance(a, (str, int, float, bool, tuple, list, dict)) else str(a) for a in args)
+            now = time.time()
+            if key in cache:
+                cached_time, result = cache[key]
+                if now - cached_time < ttl_seconds:
+                    return result
+            result = func(*args, **kwargs)
+            cache[key] = (now, result)
+            return result
+        
+        def cache_clear():
+            cache.clear()
+
+        wrapper.cache_clear = cache_clear
+        return wrapper
+    return decorator

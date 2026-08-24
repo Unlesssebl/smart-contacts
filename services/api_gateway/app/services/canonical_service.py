@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from shared.models.user import User
 from shared.models.system_setting import SystemSetting
-from shared.utils import apply_canonical_mapping
+from shared.utils import apply_canonical_mapping, HOMOGLYPHS
 
 logger = logging.getLogger(__name__)
 
@@ -106,10 +106,6 @@ def _words_are_similar(w1: str, w2: str) -> bool:
     return False
 
 
-HOMOGLYPHS = str.maketrans({
-    'A': 'А', 'B': 'В', 'C': 'С', 'E': 'Е', 'H': 'Н', 'K': 'К', 'M': 'М', 'O': 'О', 'P': 'Р', 'T': 'Т', 'X': 'Х',
-    'a': 'а', 'c': 'с', 'e': 'е', 'o': 'о', 'p': 'р', 'x': 'х', 'y': 'у'
-})
 
 ROMAN_NUMS = {
     'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5', 'vi': '6',

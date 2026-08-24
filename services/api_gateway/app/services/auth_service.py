@@ -1,3 +1,5 @@
+import json
+import logging
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.core.ldap import (
@@ -12,10 +14,12 @@ from app.core.security import create_access_token
 from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_by_guid, update_user_guid
 from app.db.repository.token import create_refresh_token, verify_refresh_token, revoke_refresh_token
 from app.core.config import settings
+from app.core import settings_manager
 from app.core.redis import check_brute_force_block, record_failed_login, reset_brute_force, decrement_brute_force
 from app.schemas.auth import Token, UserAuthResponse, AuthResult
-from shared.models.enums import UserRole
-import logging
+from shared.models.enums import UserRole, ChangeRequestStatus
+from shared.models.change_request import ChangeRequest
+from shared.utils import parse_ou_structure, apply_canonical_mapping, format_phone
 
 logger = logging.getLogger(__name__)
 
@@ -235,35 +239,53 @@ class AuthService:
         if user.sam_account_name != username:
             user.sam_account_name = username
             user_updated = True
-        fields_to_sync = {
-            "full_name": "full_name",
-            "job_title": "job_title",
-            "mobile_phone": "mobile_phone",
-            "internal_phone": "internal_phone",
-            "office_location": "office_location"
-        }
-        
+
+        # Load mappings
+        dept_map_str = settings_manager.get_setting(db, "DEPT_MAPPING")
+        job_map_str = settings_manager.get_setting(db, "JOB_TITLE_MAPPING")
+        dept_mapping = {}
+        job_title_mapping = {}
+        if dept_map_str:
+            try:
+                dept_mapping = json.loads(dept_map_str)
+            except Exception:
+                pass
+        if job_map_str:
+            try:
+                job_title_mapping = json.loads(job_map_str)
+            except Exception:
+                pass
+
         # Load pending CRs to protect fields (EC-6)
-        from shared.models.change_request import ChangeRequest
-        from shared.models.enums import ChangeRequestStatus
-        from shared.utils import parse_ou_structure
-        from app.core import settings_manager
-        import json
-        
         pending_crs = db.query(ChangeRequest).filter(
             ChangeRequest.user_guid == user.object_guid,
             ChangeRequest.status.in_([ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value, ChangeRequestStatus.APPROVED.value])
         ).all()
         pending_fields = {cr.attribute_name for cr in pending_crs}
 
-        for ldap_key, db_key in fields_to_sync.items():
-            if db_key in pending_fields:
-                continue
-            ldap_val = getattr(ldap_user, ldap_key, None)
-            if ldap_val and not getattr(user, db_key):
-                setattr(user, db_key, ldap_val)
+        # Sync job title
+        raw_job = getattr(ldap_user, "job_title", None)
+        if raw_job:
+            if user.job_title_raw != raw_job:
+                user.job_title_raw = raw_job
                 user_updated = True
-                
+            canonical_job = apply_canonical_mapping(raw_job, job_title_mapping)
+            if "job_title" not in pending_fields and canonical_job and user.job_title != canonical_job:
+                user.job_title = canonical_job
+                user_updated = True
+
+        # Sync scalar contact fields
+        scalar_fields = {
+            "full_name": getattr(ldap_user, "full_name", None),
+            "mobile_phone": format_phone(getattr(ldap_user, "mobile_phone", None)),
+            "internal_phone": format_phone(getattr(ldap_user, "internal_phone", None)),
+            "office_location": getattr(ldap_user, "office_location", None),
+        }
+        for field_name, field_val in scalar_fields.items():
+            if field_name not in pending_fields and field_val and getattr(user, field_name) != field_val:
+                setattr(user, field_name, field_val)
+                user_updated = True
+
         # Always sync ad_dn if it changed
         ldap_ad_dn = getattr(ldap_user, "ad_dn", None)
         if ldap_ad_dn and user.ad_dn != ldap_ad_dn:
@@ -271,25 +293,30 @@ class AuthService:
             user_updated = True
 
         if user.ad_dn:
-            mapping_str = settings_manager.get_setting(db, "OU_MAPPING")
+            ou_map_str = settings_manager.get_setting(db, "OU_MAPPING")
             ou_map = {}
-            if mapping_str:
+            if ou_map_str:
                 try:
-                    ou_map = json.loads(mapping_str)
+                    ou_map = json.loads(ou_map_str)
                 except Exception:
                     pass
-            org, dept, _ = parse_ou_structure(user.ad_dn, ou_map, fallback_dept=getattr(ldap_user, "department", None))
+            org, raw_dept, _ = parse_ou_structure(user.ad_dn, ou_map, fallback_dept=getattr(ldap_user, "department", None))
             if "organization" not in pending_fields and org and user.organization != org:
                 user.organization = org
                 user_updated = True
-            if "department" not in pending_fields and dept and user.department != dept:
-                user.department = dept
-                user_updated = True
-                
+            if raw_dept:
+                if user.department_raw != raw_dept:
+                    user.department_raw = raw_dept
+                    user_updated = True
+                canonical_dept = apply_canonical_mapping(raw_dept, dept_mapping)
+                if "department" not in pending_fields and canonical_dept and user.department != canonical_dept:
+                    user.department = canonical_dept
+                    user_updated = True
+
         if user_updated:
             db.commit()
             db.refresh(user)
-            
+
         return user
 
     @staticmethod

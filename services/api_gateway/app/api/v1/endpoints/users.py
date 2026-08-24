@@ -32,7 +32,12 @@ async def list_users(
 ):
     is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
     
-    query = db.query(User).filter(User.status != UserStatus.RESIGNED.value)
+    query = db.query(User).filter(
+        User.status != UserStatus.RESIGNED.value,
+        User.organization.isnot(None),
+        User.organization != '',
+        User.organization != '[]'
+    )
     if not is_admin:
         query = query.filter(User.is_hidden.is_(False))
     elif hidden_only:
@@ -216,6 +221,9 @@ async def list_job_titles(
     is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
     query = db.query(User.job_title).filter(
         User.status != UserStatus.RESIGNED.value,
+        User.organization.isnot(None),
+        User.organization != '',
+        User.organization != '[]',
         User.job_title.isnot(None),
         User.job_title != '',
         User.job_title != '[]'
@@ -254,8 +262,14 @@ async def get_user(
     is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
     is_self = current_user.object_guid == user.object_guid
     
-    if user.is_hidden and not (is_admin or is_self):
-        raise HTTPException(status_code=404, detail="User not found")
+    if not (is_admin or is_self):
+        if (
+            user.is_hidden
+            or not user.organization
+            or user.organization in ('', '[]')
+            or user.status == UserStatus.RESIGNED.value
+        ):
+            raise HTTPException(status_code=404, detail="User not found")
     
     # Скрытие internal_phone для защищенных профилей
     if user.is_protected and not (current_user.role == UserRole.IT_OPERATOR.value or is_self):

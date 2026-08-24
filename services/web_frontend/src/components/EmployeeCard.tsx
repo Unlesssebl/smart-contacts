@@ -6,7 +6,10 @@ import { useAppStore } from '@/store/useAppStore';
 import { ReportModal } from './ReportModal';
 import { UserAvatar } from './UserAvatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cleanProfileValue as cleanValue } from '@/features/profile/lib/profileValues';
+import {
+  cleanProfileValue as normalizeCardValue,
+  normalizeKey as normalizedKey,
+} from '@/features/profile/lib/profileValues';
 import { getAvatarColor } from '@/utils/avatar';
 import { copyToClipboard } from '@/utils/clipboard';
 
@@ -91,12 +94,6 @@ const OverflowTooltip = ({ value, children, className, tooltipContent }: Overflo
   );
 };
 
-const normalizeCardValue = (value: string | null | undefined) => {
-  const normalized = cleanValue(value).trim();
-  return normalized === '[]' ? '' : normalized;
-};
-
-const normalizedKey = (value: string) => value.toLocaleLowerCase('ru-RU');
 
 interface EmployeeCardProps {
   user: User;

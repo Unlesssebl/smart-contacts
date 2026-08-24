@@ -6,7 +6,13 @@ export interface ActiveDirectoryPath {
 }
 
 export function cleanProfileValue(value: string | null | undefined): string {
-  return !value || value === '[]' ? '' : value;
+  if (!value) return '';
+  const trimmed = value.trim();
+  return trimmed === '[]' ? '' : trimmed;
+}
+
+export function normalizeKey(value: string): string {
+  return value.toLocaleLowerCase('ru-RU');
 }
 
 export function formatActiveDirectoryPath(dn: string | null | undefined): ActiveDirectoryPath {

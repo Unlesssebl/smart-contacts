@@ -249,4 +249,117 @@ def test_canonical_mapping_and_suggestions(client: TestClient, mocker, db_sessio
     assert resp_get_job.json()["mapping"]["зам начальника отдела"] == "Заместитель начальника отдела"
 
 
+def test_admin_decomposed_endpoints_smoke(client: TestClient, mocker, test_admin_user, test_normal_user):
+    """
+    Smoke test covering each domain module of the decomposed admin router.
+    """
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_admin_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_admin"})
+    csrf_token = client.cookies.get("csrf_token") or "mock_csrf_token"
+    auth_headers = {"X-CSRF-Token": csrf_token}
 
+    # 1. Reviews domain: change-requests
+    resp_cr = client.get("/api/v1/admin/change-requests")
+    assert resp_cr.status_code == 200
+    assert isinstance(resp_cr.json(), list)
+
+    # 2. Settings domain: LDAP settings
+    resp_ldap = client.get("/api/v1/admin/settings/ldap")
+    assert resp_ldap.status_code == 200
+    assert "ad_user" in resp_ldap.json()
+
+    # 3. Settings domain: OU mapping
+    resp_ou = client.get("/api/v1/admin/settings/ou-mapping")
+    assert resp_ou.status_code == 200
+    assert "mapping" in resp_ou.json()
+
+    # 4. Security domain: incidents
+    resp_sec = client.get("/api/v1/admin/security/incidents")
+    assert resp_sec.status_code == 200
+    assert isinstance(resp_sec.json(), list)
+
+    # 5. Users domain: force sync
+    resp_sync = client.post("/api/v1/admin/sync/force", headers=auth_headers)
+    assert resp_sync.status_code == 200
+    assert resp_sync.json()["status"] == "ok"
+
+    # 6. Users domain: user visibility
+    resp_vis = client.patch(
+        f"/api/v1/admin/users/{test_normal_user.object_guid}/visibility",
+        json={"is_hidden": True},
+        headers=auth_headers
+    )
+    assert resp_vis.status_code == 200
+    assert resp_vis.json()["is_hidden"] is True
+
+
+def test_unmapped_user_excluded_from_directory(client: TestClient, mocker, db_session, test_admin_user, test_normal_user):
+    """
+    Test that users without configured mapping (organization is None or empty)
+    are excluded from directory search (/api/v1/users), job-titles filter,
+    and return 404 on direct /api/v1/users/{id} for regular employees.
+    """
+    from shared.models.user import User
+    import uuid
+    from datetime import datetime, timezone
+
+    unmapped_user = User(
+        object_guid=uuid.uuid4(),
+        sam_account_name="unmapped_user",
+        full_name="Unmapped User",
+        role="employee",
+        organization=None, # No mapping configured
+        department=None,
+        job_title="Unmapped Specialist",
+        is_verified=True,
+        is_protected=False,
+        status="ACTIVE",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    db_session.add(unmapped_user)
+    db_session.commit()
+
+    # 1. Login as regular employee
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_normal_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_normal"})
+
+    # 1a. Directory listing should only contain mapped users (2 seeded: admin and normal), not unmapped_user
+    resp_list = client.get("/api/v1/users")
+    assert resp_list.status_code == 200
+    data = resp_list.json()
+    assert data["total"] == 2
+    guids = [u["object_guid"] for u in data["items"]]
+    assert str(unmapped_user.object_guid) not in guids
+    assert str(test_normal_user.object_guid) in guids
+    assert str(test_admin_user.object_guid) in guids
+
+    # 1b. Search query for unmapped user returns 0 results
+    resp_search = client.get("/api/v1/users", params={"q": "Unmapped"})
+    assert resp_search.status_code == 200
+    assert resp_search.json()["total"] == 0
+
+    # 1c. Job titles list should not include job title of unmapped user
+    resp_jobs = client.get("/api/v1/users/job-titles")
+    assert resp_jobs.status_code == 200
+    assert "Unmapped Specialist" not in resp_jobs.json()
+
+    # 1d. Direct GET by ID for unmapped user by regular employee returns 404
+    resp_get = client.get(f"/api/v1/users/{unmapped_user.object_guid}")
+    assert resp_get.status_code == 404
+
+    # 2. Login as admin - should still be able to access direct unmapped user profile
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_admin_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_admin"})
+    resp_admin_get = client.get(f"/api/v1/users/{unmapped_user.object_guid}")
+    assert resp_admin_get.status_code == 200
+    assert resp_admin_get.json()["sam_account_name"] == "unmapped_user"

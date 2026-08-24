@@ -80,7 +80,10 @@ class OrganizationMappingTests(unittest.TestCase):
         }))
         session = Mock()
         session.get.return_value = setting
-        logic._ou_mapping_cache = {"cached": "value"}
+
+        # Seed cache
+        cached = logic.get_ou_mapping(session)
+        self.assertIn("Old OU", cached)
 
         removed = logic.prune_ou_mapping(session, {"Current OU"})
 
@@ -89,7 +92,9 @@ class OrganizationMappingTests(unittest.TestCase):
             json.loads(setting.value),
             {"Current OU": {"org": "Current", "color": "#ffffff"}},
         )
-        self.assertIsNone(logic._ou_mapping_cache)
+        # Cache cleared and fresh mapping returned
+        fresh = logic.get_ou_mapping(session)
+        self.assertNotIn("Old OU", fresh)
 
     def test_direct_corporate_ous_excludes_service_and_nested_paths(self):
         paths = {

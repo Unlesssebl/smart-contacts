@@ -11,9 +11,11 @@ import pytest
 from typing import Generator
 from fastapi.testclient import TestClient
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+import difflib
+import re
 
 # Create our test engine
 test_engine = create_engine(
@@ -21,6 +23,23 @@ test_engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool
 )
+
+@event.listens_for(test_engine, "connect")
+def register_sqlite_functions(dbapi_connection, connection_record):
+    def sqlite_similarity(str1, str2):
+        if str1 is None or str2 is None:
+            return 0.0
+        return difflib.SequenceMatcher(None, str(str1).lower(), str(str2).lower()).ratio()
+
+    def sqlite_regexp_replace(target, pattern, replacement, flags=""):
+        if target is None:
+            return ""
+        return re.sub(pattern, replacement, str(target))
+
+    dbapi_connection.create_function("similarity", 2, sqlite_similarity)
+    dbapi_connection.create_function("regexp_replace", 4, sqlite_regexp_replace)
+    dbapi_connection.create_function("regexp_replace", 3, lambda t, p, r: re.sub(p, r, str(t) if t else ""))
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 # Inject them into app.db.session BEFORE app is imported!
@@ -116,6 +135,7 @@ def test_admin_user(db_session, mock_service_upn):
         sam_account_name=mock_service_upn,
         full_name="Service Account",
         role="it_operator",
+        organization="Главный Офис",
         is_verified=True,
         is_protected=True,
         status="ACTIVE",
@@ -136,6 +156,7 @@ def test_normal_user(db_session):
         sam_account_name="normal_user",
         full_name="Normal User",
         role="employee",
+        organization="Главный Офис",
         is_verified=True,
         is_protected=False,
         status="ACTIVE",
@@ -158,6 +179,7 @@ def mock_redis(mocker):
     
     mocker.patch("app.core.redis.redis_client", mock_redis_client)
     mocker.patch("app.core.ldap.pool.redis_client", mock_redis_client)
+    mocker.patch("app.services.event_service.redis_client", mock_redis_client)
     
     # Also patch async if it exists
     try:

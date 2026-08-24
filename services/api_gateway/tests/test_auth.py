@@ -73,3 +73,88 @@ def test_logout(client: TestClient, mock_kerberos, test_admin_user):
     # or set to an empty string with max-age=0
     access_cookie = response.cookies.get("access_token")
     assert not access_cookie
+
+
+def test_ensure_user_from_ldap_applies_canonical_mappings(db_session, test_normal_user):
+    """
+    Tests that _ensure_user_from_ldap correctly applies DEPT_MAPPING and JOB_TITLE_MAPPING,
+    stores _raw fields, and formats contact numbers.
+    """
+    import json
+    from app.services.auth_service import AuthService
+    from app.core.ldap.schemas import LdapUser
+    from shared.models.system_setting import SystemSetting
+
+    # Set up system settings for mappings
+    db_session.merge(SystemSetting(
+        key="DEPT_MAPPING",
+        value=json.dumps({"ИТ отдел": "Департамент IT"})
+    ))
+    db_session.merge(SystemSetting(
+        key="JOB_TITLE_MAPPING",
+        value=json.dumps({"вед инж": "Ведущий инженер"})
+    ))
+    db_session.merge(SystemSetting(
+        key="OU_MAPPING",
+        value=json.dumps({"HQ": "Главный офис"})
+    ))
+    db_session.commit()
+
+    ldap_user = LdapUser(
+        object_guid=str(test_normal_user.object_guid),
+        full_name="Тестовый Пользователь",
+        department="ИТ отдел",
+        job_title="вед инж",
+        mobile_phone="89991112233",
+        internal_phone="1234",
+        ad_dn="CN=Test,OU=ИТ отдел,OU=HQ,DC=corp,DC=loc"
+    )
+
+    user = AuthService._ensure_user_from_ldap(db_session, test_normal_user.sam_account_name, ldap_user)
+
+    assert user.job_title_raw == "вед инж"
+    assert user.job_title == "Ведущий инженер"
+    assert user.department_raw == "ИТ отдел"
+    assert user.department == "Департамент IT"
+    assert user.organization == "Главный офис"
+    assert user.mobile_phone == "+7 (999) 111-22-33"
+    assert user.internal_phone == "12-34"
+
+
+def test_ensure_user_from_ldap_protects_pending_change_requests(db_session, test_normal_user):
+    """
+    Tests that fields with pending ChangeRequests are not overwritten by LDAP sync on login.
+    """
+    from uuid import uuid4
+    from app.services.auth_service import AuthService
+    from app.core.ldap.schemas import LdapUser
+    from shared.models.change_request import ChangeRequest
+    from shared.models.enums import ChangeRequestStatus
+
+    test_normal_user.department = "Мой Кастомный Отдел"
+    db_session.commit()
+
+    # Add a pending ChangeRequest for department
+    cr = ChangeRequest(
+        id=uuid4(),
+        user_guid=test_normal_user.object_guid,
+        attribute_name="department",
+        new_value="Мой Кастомный Отдел",
+        source="user",
+        status=ChangeRequestStatus.PENDING.value
+    )
+    db_session.add(cr)
+    db_session.commit()
+
+    ldap_user = LdapUser(
+        object_guid=str(test_normal_user.object_guid),
+        full_name="Тестовый Пользователь",
+        department="AD Отдел",
+        job_title="Инженер",
+        ad_dn="CN=Test,OU=AD Отдел,OU=HQ,DC=corp,DC=loc"
+    )
+
+    user = AuthService._ensure_user_from_ldap(db_session, test_normal_user.sam_account_name, ldap_user)
+
+    # Department must remain protected
+    assert user.department == "Мой Кастомный Отдел"

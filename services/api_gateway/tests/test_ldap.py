@@ -33,7 +33,7 @@ def test_apply_ou_mapping_to_users_bg(db_session, test_normal_user, mocker):
     """
     Test the background task logic for OU mapping to Organization and Department fields.
     """
-    from app.api.v1.endpoints.admin import apply_ou_mapping_to_users_bg
+    from app.services.ou_service import apply_ou_mapping_to_users_bg
     
     # Give the user an AD DN with nested department OU
     test_normal_user.ad_dn = "CN=Normal User,OU=Engineering,OU=Moscow_HQ,OU=Users,DC=domain,DC=local"
@@ -56,7 +56,7 @@ def test_apply_ou_mapping_case_insensitive(db_session, test_normal_user, mocker)
     """
     Test that OU mapping is case-insensitive.
     """
-    from app.api.v1.endpoints.admin import apply_ou_mapping_to_users_bg
+    from app.services.ou_service import apply_ou_mapping_to_users_bg
     
     test_normal_user.ad_dn = "CN=Normal User,OU=remote_workers,OU=Users,DC=domain,DC=local"
     db_session.commit()

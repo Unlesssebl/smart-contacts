@@ -38,15 +38,6 @@ def determine_status(uac: int, sam_account_name: str) -> str:
     return "ACTIVE"
 
 
-_ou_mapping_cache: Optional[dict[str, Any]] = None
-_ou_mapping_cache_time: float = 0
-_dept_mapping_cache: Optional[dict[str, str]] = None
-_dept_mapping_cache_time: float = 0
-_job_title_mapping_cache: Optional[dict[str, str]] = None
-_job_title_mapping_cache_time: float = 0
-
-
-
 def build_known_ou_tree(paths: set[tuple[str, ...]]) -> dict[str, Any]:
     tree: dict[str, Any] = {}
     for path in paths:
@@ -101,9 +92,11 @@ def save_known_ous(session, paths: set[tuple[str, ...]], *, replace: bool = Fals
     session.commit()
 
 
+from shared.utils import parse_ou_structure, apply_canonical_mapping, ttl_cache
+
+
 def prune_ou_mapping(session, valid_ous: set[str]) -> int:
     """Removes mappings for OUs absent from the authoritative AD snapshot."""
-    global _ou_mapping_cache, _ou_mapping_cache_time
     setting = session.get(SystemSetting, "OU_MAPPING")
     if not setting or not setting.value:
         return 0
@@ -121,8 +114,7 @@ def prune_ou_mapping(session, valid_ous: set[str]) -> int:
     if removed:
         setting.value = json.dumps(pruned, ensure_ascii=False)
         session.commit()
-        _ou_mapping_cache = None
-        _ou_mapping_cache_time = 0
+        get_ou_mapping.cache_clear()
     return removed
 
 
@@ -136,13 +128,10 @@ def get_known_ous(session) -> list[str]:
             return []
     return []
 
+
+@ttl_cache(ttl_seconds=60.0)
 def get_ou_mapping(session) -> dict[str, Any]:
     """Returns OU mapping from DB, cached for 60 seconds."""
-    global _ou_mapping_cache, _ou_mapping_cache_time
-    current_time = time.time()
-    if _ou_mapping_cache is not None and current_time - _ou_mapping_cache_time < 60:
-        return _ou_mapping_cache
-        
     setting = session.get(SystemSetting, "OU_MAPPING")
     mapping = {}
     if setting and setting.value:
@@ -151,21 +140,12 @@ def get_ou_mapping(session) -> dict[str, Any]:
         except json.JSONDecodeError:
             logger.error("Failed to parse OU_MAPPING JSON from DB")
             mapping = {}
-            
-    _ou_mapping_cache = mapping
-    _ou_mapping_cache_time = current_time
-    return _ou_mapping_cache
-
-from shared.utils import parse_ou_structure, apply_canonical_mapping
+    return mapping if isinstance(mapping, dict) else {}
 
 
+@ttl_cache(ttl_seconds=60.0)
 def get_dept_mapping(session) -> dict[str, str]:
     """Returns DEPT_MAPPING from DB, cached for 60 seconds."""
-    global _dept_mapping_cache, _dept_mapping_cache_time
-    current_time = time.time()
-    if _dept_mapping_cache is not None and current_time - _dept_mapping_cache_time < 60:
-        return _dept_mapping_cache
-        
     setting = session.get(SystemSetting, "DEPT_MAPPING")
     mapping = {}
     if setting and setting.value:
@@ -174,19 +154,12 @@ def get_dept_mapping(session) -> dict[str, str]:
         except json.JSONDecodeError:
             logger.error("Failed to parse DEPT_MAPPING JSON from DB")
             mapping = {}
-            
-    _dept_mapping_cache = mapping
-    _dept_mapping_cache_time = current_time
-    return _dept_mapping_cache
+    return mapping if isinstance(mapping, dict) else {}
 
 
+@ttl_cache(ttl_seconds=60.0)
 def get_job_title_mapping(session) -> dict[str, str]:
     """Returns JOB_TITLE_MAPPING from DB, cached for 60 seconds."""
-    global _job_title_mapping_cache, _job_title_mapping_cache_time
-    current_time = time.time()
-    if _job_title_mapping_cache is not None and current_time - _job_title_mapping_cache_time < 60:
-        return _job_title_mapping_cache
-        
     setting = session.get(SystemSetting, "JOB_TITLE_MAPPING")
     mapping = {}
     if setting and setting.value:
@@ -195,10 +168,7 @@ def get_job_title_mapping(session) -> dict[str, str]:
         except json.JSONDecodeError:
             logger.error("Failed to parse JOB_TITLE_MAPPING JSON from DB")
             mapping = {}
-            
-    _job_title_mapping_cache = mapping
-    _job_title_mapping_cache_time = current_time
-    return _job_title_mapping_cache
+    return mapping if isinstance(mapping, dict) else {}
 
 
 def extract_ou_structure(

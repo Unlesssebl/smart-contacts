@@ -60,6 +60,7 @@ redisdata/
 # Misc
 *.log
 .cgr-hash-cache.json
+.codegraph/
 .qdrant_code_embeddings/
 *.db
 
