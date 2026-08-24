@@ -8,6 +8,7 @@ import { AdminTabs, type AdminTab } from '@/features/administration/components/A
 import { LdapSettingsPanel } from '@/features/administration/components/LdapSettingsPanel';
 import { OuMappingPanel } from '@/features/administration/components/OuMappingPanel';
 import { SupportTicketsPanel } from '@/features/administration/components/SupportTicketsPanel';
+import { SecurityPanel } from '@/features/administration/components/SecurityPanel';
 import { buildAdminReviewItems, groupAdminReviewItems } from '@/features/administration/model/reviewItems';
 
 export function AdminPage() {
@@ -16,8 +17,10 @@ export function AdminPage() {
     changeRequests,
     reports,
     supportTickets,
+    securityIncidents,
     fetchAdminData,
     fetchSupportTickets,
+    fetchSecurityIncidents,
     ldapSettings,
     fetchLDAPSettings,
     updateLDAPSettings,
@@ -30,8 +33,10 @@ export function AdminPage() {
       changeRequests: state.changeRequests,
       reports: state.reports,
       supportTickets: state.supportTickets,
+      securityIncidents: state.securityIncidents,
       fetchAdminData: state.fetchAdminData,
       fetchSupportTickets: state.fetchSupportTickets,
+      fetchSecurityIncidents: state.fetchSecurityIncidents,
       ldapSettings: state.ldapSettings,
       fetchLDAPSettings: state.fetchLDAPSettings,
       updateLDAPSettings: state.updateLDAPSettings,
@@ -49,7 +54,8 @@ export function AdminPage() {
   useEffect(() => {
     if (activeTab === 'settings') void fetchLDAPSettings(true);
     if (activeTab === 'tickets') void fetchSupportTickets();
-  }, [activeTab, fetchLDAPSettings, fetchSupportTickets]);
+    if (activeTab === 'security') void fetchSecurityIncidents();
+  }, [activeTab, fetchLDAPSettings, fetchSupportTickets, fetchSecurityIncidents]);
 
   const reviewGroups = useMemo(
     () => groupAdminReviewItems(buildAdminReviewItems(changeRequests, reports)),
@@ -59,6 +65,10 @@ export function AdminPage() {
   const openTicketsCount = useMemo(
     () => supportTickets.filter((t) => t.status === 'open').length,
     [supportTickets]
+  );
+  const securityIncidentCount = useMemo(
+    () => securityIncidents.filter((i) => i.is_blocked || i.attempts >= 3).length,
+    [securityIncidents]
   );
 
   return (
@@ -70,11 +80,13 @@ export function AdminPage() {
             activeTab={activeTab}
             requestCount={requestCount}
             ticketsCount={openTicketsCount}
+            securityCount={securityIncidentCount}
             onChange={setActiveTab}
           />
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="overflow-hidden glass-card p-0">
             {activeTab === 'requests' && <AdminReviewPanel groups={reviewGroups} />}
             {activeTab === 'tickets' && <SupportTicketsPanel />}
+            {activeTab === 'security' && <SecurityPanel />}
             {activeTab === 'settings' && (
               <LdapSettingsPanel settings={ldapSettings} onSave={updateLDAPSettings} onForceSync={forceSync} />
             )}

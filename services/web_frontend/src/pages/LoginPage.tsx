@@ -57,7 +57,8 @@ export function LoginPage() {
       setIsSuccess(true);
       setTimeout(() => navigate('/'), 800);
     } else {
-      toast.error(result.error || 'Ошибка авторизации');
+      const errMsg = result.error || 'Ошибка авторизации';
+      toast.error(errMsg);
       setIsSubmitting(false);
     }
   };

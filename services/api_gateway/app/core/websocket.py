@@ -20,8 +20,7 @@ class ConnectionManager:
         self.active_connections[user_id] = websocket
         
         # Start listening to Redis if not already started
-        if self.listener_task is None:
-            await self.pubsub.subscribe(self.redis_channel)
+        if self.listener_task is None or self.listener_task.done():
             self.listener_task = asyncio.create_task(self._listen_to_redis())
             
         logger.info(f"User {user_id} connected to local WS.")
@@ -61,6 +60,8 @@ class ConnectionManager:
         """Background task that listens to Redis and broadcasts to local connections."""
         while True:
             try:
+                self.pubsub = async_redis_client.pubsub()
+                await self.pubsub.subscribe(self.redis_channel)
                 async for message in self.pubsub.listen():
                     if message["type"] == "message":
                         data = json.loads(message["data"])
@@ -72,16 +73,12 @@ class ConnectionManager:
                                 except Exception as e:
                                     logger.error(f"Error sending WS message: {e}")
                             
-                            tasks = [safe_send(ws, data) for ws in self.active_connections.values()]
-                            await asyncio.gather(*tasks)
+                            tasks = [safe_send(ws, data) for ws in list(self.active_connections.values())]
+                            await asyncio.gather(*tasks, return_exceptions=True)
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"Redis PubSub listener error: {e}. Reconnecting in 5 seconds...")
                 await asyncio.sleep(5)
-                try:
-                    await self.pubsub.subscribe(self.redis_channel)
-                except Exception as sub_e:
-                    logger.error(f"Failed to resubscribe: {sub_e}")
 
 manager = ConnectionManager()

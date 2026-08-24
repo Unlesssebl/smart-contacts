@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import axios from 'axios';
 import { login, getMe } from '@/api/auth';
 import { acknowledgeGatekeeper } from '@/api/profile';
 import apiClient from '@/api/client';
@@ -21,7 +22,13 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
       if (getErrorStatus(error) === 401) {
         errorMessage = 'Неверный логин или пароль';
       } else if (getErrorStatus(error) === 429) {
-        errorMessage = 'Вход временно ограничен. Превышено количество попыток.';
+        if (axios.isAxiosError(error) && error.response?.data?.detail) {
+          errorMessage = typeof error.response.data.detail === 'string'
+            ? error.response.data.detail
+            : 'Вход временно ограничен. Превышено количество попыток.';
+        } else {
+          errorMessage = 'Вход временно ограничен. Превышено количество попыток.';
+        }
       }
       return { success: false, error: errorMessage };
     }

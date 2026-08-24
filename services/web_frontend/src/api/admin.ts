@@ -40,5 +40,21 @@ export const adminApi = {
   updateUserVisibility: async (id: string, is_hidden: boolean): Promise<{status: string; is_hidden: boolean}> => {
     const response = await apiClient.patch(`/admin/users/${id}/visibility`, { is_hidden });
     return response.data;
+  },
+
+  getSecurityIncidents: async (): Promise<import('@/types').SecurityIncident[]> => {
+    const response = await apiClient.get('/admin/security/incidents');
+    return response.data;
+  },
+
+  unblockIp: async (ip: string): Promise<{status: string; message: string}> => {
+    const response = await apiClient.post('/admin/security/unblock', { ip });
+    return response.data;
+  },
+
+  blockIp: async (ip: string, permanent: boolean = true, durationSeconds: number = 3600): Promise<{status: string; message: string}> => {
+    const response = await apiClient.post('/admin/security/block', { ip, permanent, duration_seconds: durationSeconds });
+    return response.data;
   }
 };
+

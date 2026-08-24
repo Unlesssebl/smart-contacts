@@ -154,6 +154,7 @@ def mock_redis(mocker):
     mock_redis_client = mocker.MagicMock()
     mock_redis_client.get.return_value = None
     mock_redis_client.set.return_value = None
+    mock_redis_client.eval.return_value = [0, 0]
     
     mocker.patch("app.core.redis.redis_client", mock_redis_client)
     mocker.patch("app.core.ldap.pool.redis_client", mock_redis_client)

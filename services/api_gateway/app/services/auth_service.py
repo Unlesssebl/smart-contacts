@@ -1,16 +1,44 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from app.core.ldap import authenticate_via_ldap
+from app.core.ldap import (
+    authenticate_via_ldap,
+    LdapAuthError,
+    LdapWorkstationRestrictionError,
+    LdapPasswordExpiredError,
+    LdapAccountDisabledError,
+    LdapAccountLockedError
+)
 from app.core.security import create_access_token
 from app.db.repository.user import get_user_by_sam, create_user_stub, get_user_by_guid, update_user_guid
 from app.db.repository.token import create_refresh_token, verify_refresh_token, revoke_refresh_token
 from app.core.config import settings
-from app.core.redis import is_brute_force_blocked, reset_brute_force, decrement_brute_force
+from app.core.redis import check_brute_force_block, record_failed_login, reset_brute_force, decrement_brute_force
 from app.schemas.auth import Token, UserAuthResponse, AuthResult
 from shared.models.enums import UserRole
 import logging
 
 logger = logging.getLogger(__name__)
+
+def _format_ban_detail_and_headers(retry_after: int, is_permanent: bool) -> tuple[str, dict]:
+    if is_permanent:
+        detail = (
+            f"Доступ заблокирован из-за множественных неудачных попыток входа. "
+            f"Пожалуйста, позвоните по номеру {settings.BRUTE_FORCE_HELPDESK_PHONE} "
+            f"или оставьте заявку в HelpDesk."
+        )
+        return detail, {"Retry-After": "86400", "X-Permanent-Ban": "true"}
+    else:
+        if retry_after >= 3600:
+            hours = max(1, round(retry_after / 3600))
+            time_str = f"{hours} ч."
+        elif retry_after >= 60:
+            mins = max(1, (retry_after + 59) // 60)
+            time_str = f"{mins} мин."
+        else:
+            time_str = f"{max(1, retry_after)} сек."
+
+        detail = f"Слишком много попыток входа. Попробуйте через {time_str}."
+        return detail, {"Retry-After": str(retry_after)}
 
 class AuthService:
     @staticmethod
@@ -24,11 +52,14 @@ class AuthService:
         else:
             username = username_lower
 
-        # 1. Brute-force protection
-        if is_brute_force_blocked(client_ip):
+        # 1. Brute-force protection: check if IP is currently blocked
+        is_blocked, retry_after, is_permanent = check_brute_force_block(client_ip)
+        if is_blocked:
+            detail, headers = _format_ban_detail_and_headers(retry_after, is_permanent)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many attempts. IP blocked for 15 minutes."
+                detail=detail,
+                headers=headers
             )
 
         # 2. Development Account Bypass
@@ -55,23 +86,36 @@ class AuthService:
         if not ldap_user:
             try:
                 ldap_user = authenticate_via_ldap(username, password)
+            except LdapAuthError as lae:
+                logger.warning(f"LDAP policy error for {username}: {lae}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=lae.message
+                )
             except ConnectionError as e:
-                # Откатываем попытку входа, так как это проблема сервиса, а не пароля
-                decrement_brute_force(client_ip)
                 logger.error(f"LDAP is unavailable: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Auth service is temporarily unavailable"
+                    detail="Служба авторизации временно недоступна"
                 )
             
         if ldap_user is None:
-            # Счетчик уже атомарно увеличен в is_brute_force_blocked
+            # Record failed login attempt in Redis only when authentication fails
+            is_blocked, retry_after, is_permanent = record_failed_login(client_ip, sam_account=username)
+            if is_blocked:
+                detail, headers = _format_ban_detail_and_headers(retry_after, is_permanent)
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=detail,
+                    headers=headers
+                )
+
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                detail="Неверный логин или пароль"
             )
 
-        # 4. Success - reset counter
+        # 4. Success - reset counter completely
         reset_brute_force(client_ip)
 
         # 5. User lookup/creation (Extracted)
@@ -117,13 +161,13 @@ class AuthService:
                 elif not user:
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail=f"User {username} not found in Active Directory"
+                        detail=f"Пользователь {username} не найден в Active Directory"
                     )
             except Exception as e:
                 if not user:
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail=f"SSO authentication failed: {str(e)}"
+                        detail=f"Ошибка SSO авторизации: {str(e)}"
                     )
 
         # 3. Generate tokens and return result
@@ -236,14 +280,14 @@ class AuthService:
         if not db_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired refresh token"
+                detail="Недействительный или истекший refresh-токен"
             )
 
         user = get_user_by_guid(db, db_token.user_guid)
         if not user:
              raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found"
+                detail="Пользователь не найден"
             )
 
         # Validate against AD
@@ -253,7 +297,7 @@ class AuthService:
             revoke_refresh_token(db, token)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User account is disabled or not found in Active Directory"
+                detail="Учетная запись отключена или не найдена в Active Directory"
             )
 
         # Token rotation: revoke old, create new

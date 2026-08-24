@@ -12,6 +12,22 @@ from .schemas import LdapUser
 
 logger = logging.getLogger(__name__)
 
+import re
+from .exceptions import (
+    LdapAuthError,
+    LdapWorkstationRestrictionError,
+    LdapPasswordExpiredError,
+    LdapAccountDisabledError,
+    LdapAccountLockedError,
+)
+
+def _parse_ad_error_code(result_dict: dict) -> Optional[str]:
+    message = str(result_dict.get("message") or "")
+    match = re.search(r"data\s+([0-9a-fA-F]+)", message)
+    if match:
+        return match.group(1).lower()
+    return None
+
 def authenticate_via_ldap(username: str, password: str) -> Optional[LdapUser]:
     if not password:
         return None
@@ -32,16 +48,19 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[LdapUser]:
             finally:
                 db.close()
                 
-            search_pool_conn.search(
-                search_base=settings.AD_BASE_DN,
-                search_filter=search_filter,
-                attributes=["objectGUID", "displayName", "department", "title", "distinguishedName", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
-            )
-            entries = list(search_pool_conn.entries)
-            if entries:
-                entry = entries[0]
-                user_dn = entry.distinguishedName.value
-                user_data = LdapUser.from_entry(entry, username)
+            try:
+                search_pool_conn.search(
+                    search_base=settings.AD_BASE_DN,
+                    search_filter=search_filter,
+                    attributes=["objectGUID", "displayName", "department", "title", "distinguishedName", "mobile", "telephoneNumber", "physicalDeliveryOfficeName"]
+                )
+                entries = list(search_pool_conn.entries)
+                if entries:
+                    entry = entries[0]
+                    user_dn = entry.distinguishedName.value
+                    user_data = LdapUser.from_entry(entry, username)
+            except Exception as se:
+                logger.warning(f"Initial LDAP search failed, falling back to direct UPN bind: {se}")
 
         # Bind: fallback — UPN
         ad_domain = ad_user_for_domain.split("@")[-1] if ad_user_for_domain and "@" in ad_user_for_domain else "corporate.loc"
@@ -79,11 +98,40 @@ def authenticate_via_ldap(username: str, password: str) -> Optional[LdapUser]:
             try:
                 logger.info(f"Attempting LDAP bind for: {user_bind_value} (attempt {attempt + 1})")
                 if not auth_conn.bind():
-                    logger.warning(f"Failed LDAP bind for {user_bind_value}: {auth_conn.result}")
+                    res = auth_conn.result or {}
+                    logger.warning(f"Failed LDAP bind for {user_bind_value}: {res}")
                     try:
                         auth_pool.put_nowait(auth_conn)
                     except queue.Full:
                         auth_conn.unbind()
+
+                    ad_code = _parse_ad_error_code(res)
+                    if ad_code == "531":
+                        raise LdapWorkstationRestrictionError(
+                            "Вход ограничен политикой рабочих станций в Active Directory (параметр «Вход в систему...»). "
+                            "Обратитесь к системному администратору."
+                        )
+                    elif ad_code in ("532", "773"):
+                        raise LdapPasswordExpiredError(
+                            "Срок действия пароля в Active Directory истек. Пожалуйста, смените пароль на рабочей станции."
+                        )
+                    elif ad_code == "533":
+                        raise LdapAccountDisabledError(
+                            "Учетная запись отключена в Active Directory. Обратитесь к системному администратору."
+                        )
+                    elif ad_code == "775":
+                        raise LdapAccountLockedError(
+                            "Учетная запись заблокирована в Active Directory из-за превышения числа ошибок. Обратитесь в техподдержку."
+                        )
+                    elif ad_code == "530":
+                        raise LdapAuthError(
+                            "Вход в данное время запрещен политикой учетной записи в Active Directory."
+                        )
+                    elif ad_code == "701":
+                        raise LdapAuthError(
+                            "Срок действия учетной записи в Active Directory истек."
+                        )
+
                     return None
 
                 logger.info(f"Successfully authenticated user: {username}")

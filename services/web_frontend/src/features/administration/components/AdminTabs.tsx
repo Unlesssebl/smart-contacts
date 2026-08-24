@@ -1,22 +1,24 @@
 import { motion } from 'motion/react';
 
-export type AdminTab = 'requests' | 'tickets' | 'settings' | 'ou-mapping';
+export type AdminTab = 'requests' | 'tickets' | 'security' | 'settings' | 'ou-mapping';
 
 interface AdminTabsProps {
   activeTab: AdminTab;
   requestCount: number;
   ticketsCount?: number;
+  securityCount?: number;
   onChange: (tab: AdminTab) => void;
 }
 
 const TABS: Array<{ id: AdminTab; label: string }> = [
   { id: 'requests', label: 'Запросы на изменения' },
   { id: 'tickets', label: 'Обращения' },
+  { id: 'security', label: 'Безопасность' },
   { id: 'settings', label: 'Настройки LDAP' },
   { id: 'ou-mapping', label: 'Организации (OU)' },
 ];
 
-export function AdminTabs({ activeTab, requestCount, ticketsCount = 0, onChange }: AdminTabsProps) {
+export function AdminTabs({ activeTab, requestCount, ticketsCount = 0, securityCount = 0, onChange }: AdminTabsProps) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 flex justify-center">
       <div className="inline-flex rounded-xl p-1 glass-card">
@@ -26,6 +28,8 @@ export function AdminTabs({ activeTab, requestCount, ticketsCount = 0, onChange 
             countBadge = ` (${requestCount})`;
           } else if (tab.id === 'tickets' && ticketsCount > 0) {
             countBadge = ` (${ticketsCount})`;
+          } else if (tab.id === 'security' && securityCount > 0) {
+            countBadge = ` (${securityCount})`;
           }
 
           return (

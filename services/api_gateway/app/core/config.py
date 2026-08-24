@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
 
+    # Brute-force Protection (Progressive ban + Permanent Lockout)
+    BRUTE_FORCE_MAX_ATTEMPTS: int = 5
+    BRUTE_FORCE_BASE_BAN_SECONDS: int = 180  # 3 minutes
+    BRUTE_FORCE_MAX_BAN_SECONDS: int = 3600  # 1 hour
+    BRUTE_FORCE_WINDOW_SECONDS: int = 7200  # 2 hours window
+    BRUTE_FORCE_PERMANENT_ATTEMPTS: int = 15  # >= 15 failed attempts triggers permanent ban
+    BRUTE_FORCE_HELPDESK_PHONE: str = "49-87"
+
     # JWT
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

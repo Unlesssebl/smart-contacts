@@ -51,6 +51,7 @@ services:
     volumes:
       - ./services/api_gateway:/app
       - ./services/shared:/app/shared
+      - ./certs:/app/certs:ro
     command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "127.0.0.1:8001:8000"
@@ -82,6 +83,7 @@ services:
       - ./services/ad_sync_worker:/app
       - ./services/shared:/app/shared
       - ./docs:/app/docs:ro
+      - ./certs:/app/certs:ro
     dns:
       - 10.244.0.11
     healthcheck:

@@ -92,3 +92,14 @@ export interface SupportTicketCreateInput {
   sender_name?: string;
   sender_contact?: string;
 }
+
+export interface SecurityIncident {
+  ip: string;
+  attempts: number;
+  is_blocked: boolean;
+  is_permanent: boolean;
+  retry_after: number;
+  last_sam?: string | null;
+  last_attempt_at?: string | null;
+}
+

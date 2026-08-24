@@ -44,11 +44,11 @@ class LDAPClient:
         if settings.AD_SERVER.startswith("ldaps://"):
             if settings.AD_INSECURE_SKIP_VERIFY:
                 logger.warning("LDAP TLS certificate verification is DISABLED (AD_INSECURE_SKIP_VERIFY=True).")
-                tls_config = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLSv1_2)
+                tls_config = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLS_CLIENT)
             else:
                 tls_config = Tls(
                     validate=ssl.CERT_REQUIRED,
-                    version=ssl.PROTOCOL_TLSv1_2,
+                    version=ssl.PROTOCOL_TLS_CLIENT,
                     ca_certs_file=settings.AD_CA_CERT_PATH
                 )
 

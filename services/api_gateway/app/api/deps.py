@@ -17,7 +17,7 @@ def get_current_user_guid(request: Request) -> str:
             token = auth_header.split(" ")[1]
             
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Требуется авторизация")
 
     # 2. CSRF Protection for state-changing methods
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
@@ -29,17 +29,17 @@ def get_current_user_guid(request: Request) -> str:
         
         if not is_bearer:
             if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF token validation failed")
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Ошибка проверки CSRF-токена")
 
     # 3. Validate JWT
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_guid = payload.get("sub")
         if user_guid is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительный токен")
         return user_guid
     except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Не удалось проверить учетные данные")
 
 def get_current_user(
     db: Session = Depends(get_db), 
@@ -47,11 +47,11 @@ def get_current_user(
 ) -> User:
     user = get_user_by_guid(db, user_guid)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or deleted")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден или удален")
     
     # 4. Enforce user status (immediate revocation)
     if user.status != UserStatus.ACTIVE.value:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Учетная запись отключена")
         
     return user
 
@@ -60,7 +60,7 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role not in (UserRole.IT_OPERATOR.value, UserRole.ADMIN.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user does not have enough privileges",
+            detail="Недостаточно прав для выполнения операции",
         )
     return current_user
 

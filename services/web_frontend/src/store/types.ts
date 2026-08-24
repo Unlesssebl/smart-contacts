@@ -62,7 +62,12 @@ export interface SupportSlice {
 }
 
 export interface AdminSlice {
+  securityIncidents: import('@/types').SecurityIncident[];
+  isLoadingSecurity: boolean;
   fetchAdminData: () => Promise<void>;
+  fetchSecurityIncidents: () => Promise<void>;
+  unblockIp: (ip: string) => Promise<boolean>;
+  blockIp: (ip: string, permanent?: boolean, durationSeconds?: number) => Promise<boolean>;
   forceSync: () => Promise<void>;
 }
 

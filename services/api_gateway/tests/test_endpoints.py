@@ -89,7 +89,7 @@ def test_admin_endpoint_forbidden_for_normal_user(client: TestClient, mocker, te
     
     # Should be forbidden
     assert response.status_code == 403
-    assert "does not have enough privileges" in response.json()["detail"]
+    assert "Недостаточно прав" in response.json()["detail"]
 
 def test_admin_endpoint_allowed_for_admin(client: TestClient, mock_kerberos, test_admin_user):
     """
