@@ -100,7 +100,7 @@ CREATE INDEX idx_users_is_verified ON users (is_verified) WHERE is_verified = FA
 -- Уникальный индекс для change_requests: одна активная заявка на поле
 CREATE UNIQUE INDEX idx_cr_unique_pending
   ON change_requests (user_guid, attribute_name)
-  WHERE status IN ('pending', 'conflict');
+  WHERE status IN ('pending', 'conflict', 'approved');
 
 CREATE INDEX idx_cr_user_guid ON change_requests (user_guid);
 CREATE INDEX idx_cr_status  ON change_requests (status);

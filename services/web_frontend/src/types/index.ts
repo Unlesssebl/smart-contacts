@@ -40,9 +40,11 @@ export interface PaginatedUsers {
 
 export interface ChangeRequest {
   id: string;
-  user_id: string; // from user_guid
+  user_id: string;
+  user_guid?: string;
   user_name?: string | null;
-  field_name: string; // from attribute_name
+  field_name: string;
+  attribute_name?: string;
   new_value: string;
   status: ChangeRequestStatus;
   rejection_reason?: string | null;
@@ -51,11 +53,13 @@ export interface ChangeRequest {
 
 export interface Report {
   id: string;
-  user_id: string; // from target_user_guid
+  user_id: string;
+  target_user_guid?: string;
   target_user_name?: string | null;
   reporter_user_guid?: string | null;
   reporter_user_name?: string | null;
   attribute_name: string;
+  field_name?: string;
   new_value: string | null;
   rejection_reason?: string | null;
   description?: string;

@@ -16,7 +16,7 @@ export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeReq
       const activePending: Record<string, string> = {};
       requests.forEach((r) => {
         if (r.status === 'pending' || r.status === 'conflict' || r.status === 'approved') {
-          const fieldKey = r.field_name;
+          const fieldKey = r.field_name || r.attribute_name;
           if (fieldKey) activePending[fieldKey] = r.new_value;
         }
       });

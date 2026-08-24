@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, computed_field
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
@@ -13,7 +13,7 @@ class ReportCreateBulk(BaseModel):
 
 class ReportRead(BaseModel):
     id: UUID
-    user_id: UUID = Field(alias="target_user_guid")
+    target_user_guid: UUID
     target_user_name: Optional[str] = None
     reporter_user_guid: Optional[UUID] = None
     reporter_user_name: Optional[str] = None
@@ -22,4 +22,15 @@ class ReportRead(BaseModel):
     status: str
     rejection_reason: Optional[str] = None
     created_at: datetime
+
+    @computed_field
+    @property
+    def user_id(self) -> UUID:
+        return self.target_user_guid
+
+    @computed_field
+    @property
+    def field_name(self) -> str:
+        return self.attribute_name
+
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

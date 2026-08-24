@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -50,10 +50,21 @@ class ChangeRequestCreate(ChangeRequestBase):
 
 class ChangeRequestRead(ChangeRequestBase):
     id: UUID
-    user_id: UUID = Field(alias="user_guid")
+    user_guid: UUID
     user_name: Optional[str] = None
-    field_name: str = Field(alias="attribute_name")
+    attribute_name: str
     status: str
     rejection_reason: Optional[str] = None
     created_at: datetime
+
+    @computed_field
+    @property
+    def user_id(self) -> UUID:
+        return self.user_guid
+
+    @computed_field
+    @property
+    def field_name(self) -> str:
+        return self.attribute_name
+
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

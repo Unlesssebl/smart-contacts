@@ -240,8 +240,8 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
 
                 {/* Content */}
                 <div className="p-8 overflow-y-auto space-y-6">
-                  {/* Sender info preview / input */}
-                  {effectiveIsGuest ? (
+                  {/* Sender info preview / input (only for tickets) */}
+                  {effectiveIsGuest && category !== 'data_error' ? (
                     <motion.div
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -278,7 +278,7 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
                         </div>
                       </div>
                     </motion.div>
-                  ) : (
+                  ) : !effectiveIsGuest && (
                     <div className="rounded-2xl border border-black/5 bg-slate-50/80 p-4 text-xs shadow-xs">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3.5">
@@ -329,7 +329,10 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
                             whileHover={{ y: -2, scale: 1.015 }}
                             whileTap={{ scale: 0.98 }}
                             type="button"
-                            onClick={() => setCategory(opt.value)}
+                            onClick={() => {
+                              setCategory(opt.value);
+                              setError(null);
+                            }}
                             className={`relative flex items-start gap-3.5 rounded-2xl border p-4 text-left transition-all ${
                               isSelected
                                 ? 'border-primary bg-gradient-to-br from-primary/[0.08] to-primary/[0.02] shadow-sm ring-2 ring-primary/30'
@@ -388,7 +391,7 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
                           </div>
 
                           <p className="text-xs text-indigo-950/80 leading-relaxed mb-5">
-                            Вам не обязательно писать обращение вручную. Вы можете нажать кнопку <strong>«Исправить»</strong> на карточке любого коллеги или в своем профиле — и форма исправления откроется автоматически.
+                            Вам не нужно писать текстовое обращение в техподдержку. Нажмите кнопку <strong>«Исправить»</strong> на карточке любого коллеги или в своем профиле — и форма предложения изменений откроется автоматически.
                           </p>
 
                           {/* Visual Demonstration Mockup Card */}
@@ -491,28 +494,30 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
                     )}
                   </AnimatePresence>
 
-                  {/* Message textarea with creative focus */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        Суть обращения <span className="text-rose-500">*</span>
-                      </label>
-                      <span className="text-xs text-muted-foreground">{message.length} / 5000</span>
+                  {/* Message textarea (only for non-data_error categories) */}
+                  {category !== 'data_error' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          Суть обращения <span className="text-rose-500">*</span>
+                        </label>
+                        <span className="text-xs text-muted-foreground">{message.length} / 5000</span>
+                      </div>
+                      <div className="relative rounded-2xl transition-all focus-within:ring-4 focus-within:ring-primary/10">
+                        <textarea
+                          rows={5}
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          placeholder={
+                            effectiveIsGuest
+                              ? 'Опишите проблему со входом, ошибку или ваш вопрос к IT-службе...'
+                              : 'Опишите ваш вопрос, возникшую сложность или предложение по улучшению справочника...'
+                          }
+                          className="w-full resize-none rounded-2xl border border-black/10 bg-white p-4 text-sm text-foreground leading-relaxed outline-none transition-all focus:border-primary placeholder:text-muted-foreground/50 min-h-[130px]"
+                        />
+                      </div>
                     </div>
-                    <div className="relative rounded-2xl transition-all focus-within:ring-4 focus-within:ring-primary/10">
-                      <textarea
-                        rows={5}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder={
-                          effectiveIsGuest
-                            ? 'Опишите проблему со входом, ошибку или ваш вопрос к IT-службе...'
-                            : 'Опишите ваш вопрос, возникшую сложность или предложение по улучшению справочника...'
-                        }
-                        className="w-full resize-none rounded-2xl border border-black/10 bg-white p-4 text-sm text-foreground leading-relaxed outline-none transition-all focus:border-primary placeholder:text-muted-foreground/50 min-h-[130px]"
-                      />
-                    </div>
-                  </div>
+                  )}
 
                   {/* Error display */}
                   {error && (
@@ -529,35 +534,61 @@ export function SupportModal({ onClose, isGuest = false }: SupportModalProps) {
 
                 {/* Footer */}
                 <div className="border-t border-black/5 p-5 px-8 bg-slate-50/70 shrink-0 flex items-center justify-end gap-3.5">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={isSubmitting}
-                    className="btn-secondary px-5 py-2.5 text-sm font-medium"
-                  >
-                    Отмена
-                  </button>
-                  <motion.button
-                    whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
-                    whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`btn-primary relative overflow-hidden flex items-center gap-2 px-7 py-2.5 text-sm font-bold shadow-lg shadow-primary/25 ${
-                      isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Отправка...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4" />
-                        <span>Отправить обращение</span>
-                      </>
-                    )}
-                  </motion.button>
+                  {category === 'data_error' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="btn-secondary px-5 py-2.5 text-sm font-medium"
+                      >
+                        Закрыть
+                      </button>
+                      {!effectiveIsGuest && (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          type="button"
+                          onClick={handleNavigateToDirectory}
+                          className="btn-primary flex items-center gap-2 px-6 py-2.5 text-sm font-bold shadow-lg shadow-primary/25"
+                        >
+                          <span>Перейти в Справочник</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </motion.button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSubmitting}
+                        className="btn-secondary px-5 py-2.5 text-sm font-medium"
+                      >
+                        Отмена
+                      </button>
+                      <motion.button
+                        whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                        whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`btn-primary relative overflow-hidden flex items-center gap-2 px-7 py-2.5 text-sm font-bold shadow-lg shadow-primary/25 ${
+                          isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Отправка...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4" />
+                            <span>Отправить обращение</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </>
+                  )}
                 </div>
               </form>
             )}

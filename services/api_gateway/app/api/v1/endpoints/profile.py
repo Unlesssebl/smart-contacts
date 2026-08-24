@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.db.session import get_db
 from app.api import deps
 from shared.models.user import User
@@ -19,7 +20,11 @@ def get_my_profile(
 ):
     pending_changes = db.query(ChangeRequest).filter(
         ChangeRequest.user_guid == current_user.object_guid,
-        ChangeRequest.status.in_([ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value])
+        ChangeRequest.status.in_([
+            ChangeRequestStatus.PENDING.value,
+            ChangeRequestStatus.CONFLICT.value,
+            ChangeRequestStatus.APPROVED.value,
+        ])
     ).all()
     
     return {
@@ -77,6 +82,7 @@ def acknowledge_gatekeeper(
     db.refresh(user)
     
     return {
+        "status": "success",
         "is_verified": user.is_verified,
         "grace_period_left": user.grace_period_left
     }
@@ -89,11 +95,23 @@ def create_change_request(
 ):
     if current_user.is_protected:
         raise HTTPException(status_code=403, detail="Profile is protected from changes")
-    # Проверка на наличие активной заявки на это же поле
+
+    # Проверка: значение не должно быть идентично текущему в профиле
+    current_val = getattr(current_user, data.attribute_name, None)
+    norm_current = current_val.strip() if isinstance(current_val, str) and current_val not in ("", "[]") else None
+    norm_new = data.new_value.strip() if isinstance(data.new_value, str) and data.new_value not in ("", "[]") else None
+    if norm_current == norm_new:
+        raise HTTPException(status_code=400, detail="New value is identical to the current profile data")
+
+    # Проверка на наличие активной заявки на это же поле (включая approved)
     existing = db.query(ChangeRequest).filter(
         ChangeRequest.user_guid == current_user.object_guid,
         ChangeRequest.attribute_name == data.attribute_name,
-        ChangeRequest.status.in_([ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value])
+        ChangeRequest.status.in_([
+            ChangeRequestStatus.PENDING.value,
+            ChangeRequestStatus.CONFLICT.value,
+            ChangeRequestStatus.APPROVED.value,
+        ])
     ).first()
     
     if existing:
@@ -111,9 +129,13 @@ def create_change_request(
         status=ChangeRequestStatus.PENDING.value
     )
     
-    db.add(new_request)
-    db.commit()
-    db.refresh(new_request, ['user'])
+    try:
+        db.add(new_request)
+        db.commit()
+        db.refresh(new_request, ['user'])
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Active request for {data.attribute_name} already exists")
     
     publish_admin_update()
     
