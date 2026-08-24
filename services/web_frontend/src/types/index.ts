@@ -45,9 +45,12 @@ export interface ChangeRequest {
   user_name?: string | null;
   field_name: string;
   attribute_name?: string;
+  old_value?: string | null;
   new_value: string;
   status: ChangeRequestStatus;
   rejection_reason?: string | null;
+  is_protected?: boolean;
+  user_status?: string;
   created_at: string;
 }
 
@@ -60,10 +63,13 @@ export interface Report {
   reporter_user_name?: string | null;
   attribute_name: string;
   field_name?: string;
+  old_value?: string | null;
   new_value: string | null;
   rejection_reason?: string | null;
   description?: string;
   status: ReportStatus;
+  is_protected?: boolean;
+  user_status?: string;
   created_at: string;
 }
 
@@ -88,6 +94,31 @@ export interface SupportTicket {
   closed_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PaginatedSupportTickets {
+  items: SupportTicket[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface BulkReviewResult {
+  approved: number;
+  rejected: number;
+  skipped: number;
+  errors: string[];
+}
+
+export interface AppNotification {
+  id: string;
+  type: 'field_applied' | 'field_rejected' | 'ticket_closed';
+  title: string;
+  body: string;
+  field?: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface SupportTicketCreateInput {

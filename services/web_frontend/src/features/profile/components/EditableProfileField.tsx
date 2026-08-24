@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, Copy, Check } from 'lucide-react';
+import { Clock, Copy, Check, XCircle, ArrowRight } from 'lucide-react';
 import { IMaskInput } from 'react-imask';
 import { copyToClipboard } from '@/utils/clipboard';
 
@@ -8,6 +8,8 @@ interface EditableProfileFieldProps {
   label: string;
   value: string;
   pendingValue?: string;
+  isRejected?: boolean;
+  onReapply?: () => void;
   isEditing?: boolean;
   onChange?: (value: string) => void;
   placeholder?: string;
@@ -28,6 +30,8 @@ export function EditableProfileField({
   label,
   value,
   pendingValue,
+  isRejected,
+  onReapply,
   isEditing,
   onChange,
   placeholder = 'Не указано',
@@ -59,6 +63,23 @@ export function EditableProfileField({
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600">
                 <Clock className="h-3 w-3" /> На рассмотрении
               </span>
+            </div>
+          ) : isRejected && !isEditing ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-sm text-foreground">{renderValue(value)}</span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-600">
+                <XCircle className="h-3 w-3" /> Отклонено
+              </span>
+              {onReapply && (
+                <button
+                  type="button"
+                  onClick={onReapply}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 transition-colors cursor-pointer"
+                >
+                  Подать снова
+                  <ArrowRight className="h-3 w-3" />
+                </button>
+              )}
             </div>
           ) : isEditing && onChange ? (
             <div>

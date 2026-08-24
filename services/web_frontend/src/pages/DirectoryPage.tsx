@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Users } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { SpotlightSearch } from '@/components/SpotlightSearch';
+import { NotificationBell } from '@/components/NotificationBell';
 import { EmployeeCard } from '@/components/EmployeeCard';
 import { ProfileModal } from '@/components/ProfileModal';
 import { RadialPagination } from '@/components/RadialPagination';
@@ -138,30 +139,19 @@ export function DirectoryPage() {
         {/* Header / Top Bar */}
         <header className="relative z-10 w-full shrink-0 border-b border-[#dfe5eb]/80 bg-[#f4f6f8]/90 px-8 py-3.5 backdrop-blur-md lg:px-12">
           <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between gap-4 lg:gap-8">
-            {/* Left: Employee Count Badge */}
-            <div className="hidden min-w-[200px] items-center sm:flex shrink-0">
-              <div className="flex items-center gap-3 rounded-2xl border border-[#d6e3ee] bg-white/95 px-4 py-2 shadow-xs backdrop-blur-sm">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#edf5fa] text-primary">
+            {/* Left: Employee Count Badge (Fixed width to prevent center search bar jitter) */}
+            <div className="hidden w-[220px] shrink-0 items-center justify-start sm:flex">
+              <div className="inline-flex items-center gap-2.5 rounded-2xl border border-[#d6e3ee] bg-white/95 px-3.5 py-2 shadow-xs transition-colors">
+                <div className="flex items-center justify-center text-primary">
                   <Users className="h-4.5 w-4.5" strokeWidth={1.8} />
                 </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5 leading-tight">
-                    <span className="text-[14px] font-bold text-[#142e47] tabular-nums">
-                      {totalUsers.toLocaleString('ru-RU')}
-                    </span>
-                    <span className="text-[12px] font-medium text-[#5c7287]">
-                      {getEmployeeWord(totalUsers)}
-                    </span>
-                  </div>
-                  {hasActiveFilterOrQuery ? (
-                    <span className="text-[10px] font-semibold text-primary">
-                      найдено по фильтрам
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-medium text-slate-400">
-                      всего в справочнике
-                    </span>
-                  )}
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-[13px] font-bold text-[#142e47] tabular-nums">
+                    {totalUsers.toLocaleString('ru-RU')}
+                  </span>
+                  <span className="text-[13px] font-medium text-[#5c7287]">
+                    {getEmployeeWord(totalUsers)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -171,8 +161,8 @@ export function DirectoryPage() {
               <SpotlightSearch />
             </div>
 
-            {/* Right Spacer for balanced centering */}
-            <div className="hidden min-w-[200px] shrink-0 sm:block pointer-events-none" aria-hidden="true" />
+            {/* Right: Notifications Bell */}
+            <NotificationBell />
           </div>
         </header>
 

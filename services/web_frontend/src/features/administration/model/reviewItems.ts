@@ -6,15 +6,21 @@ export interface AdminReviewItem {
   user_id: string;
   user_name: string;
   field_name: string;
+  old_value?: string | null;
   new_value: string | null;
   status: ChangeRequestStatus | ReportStatus;
   rejection_reason?: string | null;
   created_at: string;
   reporter_name?: string | null;
+  is_protected?: boolean;
+  user_status?: string;
+  has_conflict_with_peer?: boolean;
 }
 
 export interface AdminReviewGroup {
   user_name: string;
+  is_protected?: boolean;
+  user_status?: string;
   items: AdminReviewItem[];
 }
 
@@ -39,10 +45,13 @@ export function buildAdminReviewItems(
         user_id: userId,
         user_name: request.user_name || 'Неизвестный',
         field_name: field,
+        old_value: request.old_value,
         new_value: request.new_value,
         status: request.status,
         rejection_reason: request.rejection_reason,
         created_at: request.created_at,
+        is_protected: Boolean(request.is_protected),
+        user_status: request.user_status || 'active',
       };
     });
 
@@ -57,11 +66,14 @@ export function buildAdminReviewItems(
         user_id: userId,
         user_name: report.target_user_name || 'Неизвестный',
         field_name: field,
+        old_value: report.old_value,
         new_value: report.new_value,
         status: report.status,
         rejection_reason: report.rejection_reason,
         created_at: report.created_at,
         reporter_name: report.reporter_user_name,
+        is_protected: Boolean(report.is_protected),
+        user_status: report.user_status || 'active',
       };
     });
 
@@ -71,10 +83,32 @@ export function buildAdminReviewItems(
 }
 
 export function groupAdminReviewItems(items: AdminReviewItem[]): Record<string, AdminReviewGroup> {
-  return items.reduce<Record<string, AdminReviewGroup>>((groups, item) => {
+  const groups = items.reduce<Record<string, AdminReviewGroup>>((acc, item) => {
     const groupKey = item.user_id || item.user_name || item.id;
-    groups[groupKey] ??= { user_name: item.user_name, items: [] };
-    groups[groupKey].items.push(item);
-    return groups;
+    acc[groupKey] ??= {
+      user_name: item.user_name,
+      is_protected: item.is_protected,
+      user_status: item.user_status,
+      items: [],
+    };
+    if (item.is_protected) acc[groupKey].is_protected = true;
+    if (item.user_status === 'resigned') acc[groupKey].user_status = 'resigned';
+    acc[groupKey].items.push(item);
+    return acc;
   }, {});
+
+  // Mark peer conflicts within each group for identical field_name
+  Object.values(groups).forEach((group) => {
+    const fieldCount: Record<string, number> = {};
+    group.items.forEach((item) => {
+      fieldCount[item.field_name] = (fieldCount[item.field_name] || 0) + 1;
+    });
+    group.items.forEach((item) => {
+      if ((fieldCount[item.field_name] || 0) > 1) {
+        item.has_conflict_with_peer = true;
+      }
+    });
+  });
+
+  return groups;
 }

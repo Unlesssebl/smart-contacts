@@ -5,13 +5,30 @@ import type { AppState, SupportSlice } from '../types';
 
 export const createSupportSlice: StateCreator<AppState, [], [], SupportSlice> = (set, get) => ({
   supportTickets: [],
+  totalSupportTickets: 0,
+  supportTicketPage: 1,
+  supportTicketPageSize: 20,
+  supportTicketTotalPages: 0,
   isLoadingSupportTickets: false,
 
-  fetchSupportTickets: async (status?: string) => {
+  fetchSupportTickets: async (params) => {
     set({ isLoadingSupportTickets: true });
     try {
-      const tickets = await supportApi.getTickets(status);
-      set({ supportTickets: tickets });
+      const page = params?.page ?? get().supportTicketPage ?? 1;
+      const pageSize = params?.pageSize ?? get().supportTicketPageSize ?? 20;
+      const res = await supportApi.getTickets({
+        status: params?.status,
+        page,
+        pageSize,
+        search: params?.search,
+      });
+      set({
+        supportTickets: res.items,
+        totalSupportTickets: res.total,
+        supportTicketPage: res.page,
+        supportTicketPageSize: res.page_size,
+        supportTicketTotalPages: res.total_pages,
+      });
     } catch (error) {
       console.error('Failed to fetch support tickets', error);
       toast.error('Не удалось загрузить список обращений');

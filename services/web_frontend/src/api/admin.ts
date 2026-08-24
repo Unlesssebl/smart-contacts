@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { ChangeRequest, Report } from '@/types';
+import type { ChangeRequest, Report, BulkReviewResult } from '@/types';
 
 export const adminApi = {
   getChangeRequests: async (): Promise<ChangeRequest[]> => {
@@ -17,6 +17,11 @@ export const adminApi = {
     return response.data;
   },
 
+  updateChangeRequestValue: async (id: string, new_value: string | null): Promise<ChangeRequest> => {
+    const response = await apiClient.patch(`/admin/change-requests/${id}/value`, { new_value });
+    return response.data;
+  },
+
   getReports: async (): Promise<Report[]> => {
     const response = await apiClient.get('/admin/reports');
     return response.data;
@@ -29,6 +34,21 @@ export const adminApi = {
 
   rejectReport: async (id: string): Promise<Report> => {
     const response = await apiClient.patch(`/admin/reports/${id}/reject`);
+    return response.data;
+  },
+
+  updateReportValue: async (id: string, new_value: string | null): Promise<Report> => {
+    const response = await apiClient.patch(`/admin/reports/${id}/value`, { new_value });
+    return response.data;
+  },
+
+  bulkApprove: async (request_ids: string[], report_ids: string[]): Promise<BulkReviewResult> => {
+    const response = await apiClient.post('/admin/review-items/bulk-approve', { request_ids, report_ids });
+    return response.data;
+  },
+
+  bulkReject: async (request_ids: string[], report_ids: string[]): Promise<BulkReviewResult> => {
+    const response = await apiClient.post('/admin/review-items/bulk-reject', { request_ids, report_ids });
     return response.data;
   },
 

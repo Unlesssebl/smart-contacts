@@ -10,7 +10,7 @@ export const createAdminSlice: StateCreator<AppState, [], [], AdminSlice> = (set
 
   fetchAdminData: async () => {
     try {
-      const [requests, reportsData, tickets, incidents] = await Promise.all([
+      const [requests, reportsData, ticketsRes, incidents] = await Promise.all([
         adminApi.getChangeRequests(),
         adminApi.getReports(),
         supportApi.getTickets(),
@@ -19,7 +19,11 @@ export const createAdminSlice: StateCreator<AppState, [], [], AdminSlice> = (set
       set({
         changeRequests: requests,
         reports: reportsData,
-        supportTickets: tickets,
+        supportTickets: ticketsRes?.items || [],
+        totalSupportTickets: ticketsRes?.total || 0,
+        supportTicketPage: ticketsRes?.page || 1,
+        supportTicketPageSize: ticketsRes?.page_size || 20,
+        supportTicketTotalPages: ticketsRes?.total_pages || 0,
         securityIncidents: incidents,
       });
     } catch (error) {

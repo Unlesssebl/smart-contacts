@@ -19,13 +19,23 @@ import type { User, UserProfile } from '@/types';
 
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>();
-  const { getUserById, currentUser, addChangeRequest, globalPendingFields, acknowledgeGatekeeper } = useAppStore(
+  const {
+    getUserById,
+    currentUser,
+    addChangeRequest,
+    globalPendingFields,
+    acknowledgeGatekeeper,
+    rejectedFields,
+    clearRejectedField,
+  } = useAppStore(
     useShallow((state) => ({
       getUserById: state.getUserById,
       currentUser: state.currentUser,
       addChangeRequest: state.addChangeRequest,
       globalPendingFields: state.pendingFields,
       acknowledgeGatekeeper: state.acknowledgeGatekeeper,
+      rejectedFields: state.rejectedFields,
+      clearRejectedField: state.clearRejectedField,
     })),
   );
   const [isConfirmingGatekeeper, setIsConfirmingGatekeeper] = useState(false);
@@ -235,6 +245,11 @@ export function ProfilePage() {
                       label="Внутренний телефон" 
                       value={isEditing ? internalPhone : cleanValue(user.internal_phone)} 
                       pendingValue={pendingFields?.['internal_phone']}
+                      isRejected={currentUser?.id === user?.id && Boolean(rejectedFields?.['internal_phone'])}
+                      onReapply={() => {
+                        clearRejectedField('internal_phone');
+                        setIsEditing(true);
+                      }}
                       isEditing={isEditing}
                       onChange={setInternalPhone}
                       mask="00-00"
@@ -247,6 +262,11 @@ export function ProfilePage() {
                       label="Мобильный телефон" 
                       value={isEditing ? mobilePhone : cleanValue(user.mobile_phone)} 
                       pendingValue={pendingFields?.['mobile_phone']}
+                      isRejected={currentUser?.id === user?.id && Boolean(rejectedFields?.['mobile_phone'])}
+                      onReapply={() => {
+                        clearRejectedField('mobile_phone');
+                        setIsEditing(true);
+                      }}
                       isEditing={isEditing}
                       onChange={setMobilePhone}
                       mask="+{7} (000) 000-00-00"
@@ -259,6 +279,11 @@ export function ProfilePage() {
                       label="Офис / Расположение" 
                       value={isEditing ? officeLocation : cleanValue(user.office_location)} 
                       pendingValue={pendingFields?.['office_location']}
+                      isRejected={currentUser?.id === user?.id && Boolean(rejectedFields?.['office_location'])}
+                      onReapply={() => {
+                        clearRejectedField('office_location');
+                        setIsEditing(true);
+                      }}
                       isEditing={isEditing}
                       onChange={setOfficeLocation}
                       placeholder="Например: Кабинет 402"

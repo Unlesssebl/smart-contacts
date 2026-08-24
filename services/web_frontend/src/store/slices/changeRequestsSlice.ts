@@ -8,6 +8,21 @@ import { getErrorStatus } from '@/api/errors';
 export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeRequestsSlice> = (set, get) => ({
   changeRequests: [],
   pendingFields: null,
+  rejectedFields: {},
+
+  markFieldRejected: (field) => {
+    set((state) => ({
+      rejectedFields: { ...state.rejectedFields, [field]: true },
+    }));
+  },
+
+  clearRejectedField: (field) => {
+    set((state) => {
+      const next = { ...state.rejectedFields };
+      delete next[field];
+      return { rejectedFields: next };
+    });
+  },
 
   fetchMyPendingFields: async () => {
     if (!get().currentUser) return;
@@ -79,6 +94,66 @@ export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeReq
     } catch (error) {
       console.error('Failed to reject request', error);
       toast.error('Не удалось отклонить заявку');
+    }
+  },
+
+  updateChangeRequestValue: async (id, newValue) => {
+    try {
+      const updatedRequest = await adminApi.updateChangeRequestValue(id, newValue);
+      set((state) => ({
+        changeRequests: state.changeRequests.map((r) => (r.id === id ? updatedRequest : r)),
+      }));
+      toast.success('Значение успешно сохранено');
+    } catch (error) {
+      console.error('Failed to update change request value', error);
+      toast.error('Не удалось обновить значение');
+      throw error;
+    }
+  },
+
+  bulkApproveReviewItems: async (requestIds, reportIds) => {
+    try {
+      const result = await adminApi.bulkApprove(requestIds, reportIds);
+      // Optimistically update store
+      const reqSet = new Set(requestIds);
+      const repSet = new Set(reportIds);
+      set((state) => ({
+        changeRequests: state.changeRequests.map((r) =>
+          reqSet.has(r.id) ? { ...r, status: 'approved' } : r
+        ),
+        reports: state.reports.map((r) =>
+          repSet.has(r.id) ? { ...r, status: 'approved' } : r
+        ),
+      }));
+      toast.success(`Одобрено заявок: ${result.approved}${result.skipped > 0 ? `, пропущено: ${result.skipped}` : ''}`);
+      return result;
+    } catch (error) {
+      console.error('Failed to bulk approve items', error);
+      toast.error('Ошибка при массовом одобрении');
+      throw error;
+    }
+  },
+
+  bulkRejectReviewItems: async (requestIds, reportIds) => {
+    try {
+      const result = await adminApi.bulkReject(requestIds, reportIds);
+      // Optimistically update store
+      const reqSet = new Set(requestIds);
+      const repSet = new Set(reportIds);
+      set((state) => ({
+        changeRequests: state.changeRequests.map((r) =>
+          reqSet.has(r.id) ? { ...r, status: 'rejected' } : r
+        ),
+        reports: state.reports.map((r) =>
+          repSet.has(r.id) ? { ...r, status: 'rejected' } : r
+        ),
+      }));
+      toast.success(`Отклонено заявок: ${result.rejected}`);
+      return result;
+    } catch (error) {
+      console.error('Failed to bulk reject items', error);
+      toast.error('Ошибка при массовом отклонении');
+      throw error;
     }
   },
 });

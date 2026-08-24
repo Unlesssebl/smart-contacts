@@ -57,17 +57,21 @@ export function AdminPage() {
     if (activeTab === 'security') void fetchSecurityIncidents();
   }, [activeTab, fetchLDAPSettings, fetchSupportTickets, fetchSecurityIncidents]);
 
-  const reviewGroups = useMemo(
-    () => groupAdminReviewItems(buildAdminReviewItems(changeRequests, reports)),
+  const reviewItems = useMemo(
+    () => buildAdminReviewItems(changeRequests, reports),
     [changeRequests, reports],
   );
-  const requestCount = Object.keys(reviewGroups).length;
+  const reviewGroups = useMemo(
+    () => groupAdminReviewItems(reviewItems),
+    [reviewItems],
+  );
+  const requestCount = reviewItems.length;
   const openTicketsCount = useMemo(
-    () => supportTickets.filter((t) => t.status === 'open').length,
+    () => (Array.isArray(supportTickets) ? supportTickets.filter((t) => t.status === 'open').length : 0),
     [supportTickets]
   );
   const securityIncidentCount = useMemo(
-    () => securityIncidents.filter((i) => i.is_blocked || i.attempts >= 3).length,
+    () => (Array.isArray(securityIncidents) ? securityIncidents.filter((i) => i.is_blocked || i.attempts >= 3).length : 0),
     [securityIncidents]
   );
 

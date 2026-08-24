@@ -5,15 +5,18 @@ import { useAppStore } from '@/store/useAppStore';
 
 export function AppLifecycle() {
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
+  const currentUser = useAppStore((state) => state.currentUser);
   const fetchMyPendingFields = useAppStore((state) => state.fetchMyPendingFields);
+  const loadNotificationsFromStorage = useAppStore((state) => state.loadNotificationsFromStorage);
 
   usePresence();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && currentUser?.id) {
       void fetchMyPendingFields();
+      loadNotificationsFromStorage(currentUser.id);
     }
-  }, [isAuthenticated, fetchMyPendingFields]);
+  }, [isAuthenticated, currentUser?.id, fetchMyPendingFields, loadNotificationsFromStorage]);
 
   useEffect(() => {
     const instance = OverlayScrollbars(document.body, {

@@ -48,4 +48,18 @@ export const createReportsSlice: StateCreator<AppState, [], [], ReportsSlice> = 
       toast.error('Не удалось отклонить жалобу');
     }
   },
+
+  updateReportValue: async (id, newValue) => {
+    try {
+      const updatedReport = await adminApi.updateReportValue(id, newValue);
+      set((state) => ({
+        reports: state.reports.map((r) => (r.id === id ? updatedReport : r)),
+      }));
+      toast.success('Значение успешно сохранено');
+    } catch (error) {
+      console.error('Failed to update report value', error);
+      toast.error('Не удалось обновить значение');
+      throw error;
+    }
+  },
 });

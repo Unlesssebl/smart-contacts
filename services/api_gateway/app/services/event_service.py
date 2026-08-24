@@ -31,6 +31,21 @@ def publish_admin_update() -> bool:
     return publish_system_event("admin_update")
 
 
-def publish_moderation_update(user_id: UUID) -> None:
+def publish_moderation_update(
+    user_id: UUID,
+    applied_fields: list[str] | None = None,
+    rejected_fields: list[str] | None = None
+) -> None:
     publish_admin_update()
-    publish_system_event("profile_updated", user_id=str(user_id))
+    payload = {"user_id": str(user_id)}
+    if applied_fields:
+        payload["applied_fields"] = applied_fields
+    if rejected_fields:
+        payload["rejected_fields"] = rejected_fields
+    publish_system_event("profile_updated", **payload)
+
+
+def publish_ticket_closed(user_id: UUID | None) -> None:
+    publish_admin_update()
+    if user_id:
+        publish_system_event("ticket_closed", user_guid=str(user_id))

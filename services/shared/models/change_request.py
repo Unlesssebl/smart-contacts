@@ -26,3 +26,17 @@ class ChangeRequest(Base):
     @property
     def user_name(self) -> str | None:
         return self.user.full_name if self.user else None
+
+    @property
+    def is_protected(self) -> bool:
+        return bool(self.user.is_protected) if self.user else False
+
+    @property
+    def user_status(self) -> str:
+        return self.user.status if self.user else "active"
+
+    @property
+    def old_value(self) -> str | None:
+        if not self.user or not self.attribute_name:
+            return None
+        return getattr(self.user, self.attribute_name, None)

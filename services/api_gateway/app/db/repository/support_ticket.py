@@ -69,14 +69,39 @@ def create_ticket(
     db.refresh(ticket)
     return ticket
 
-def get_tickets(db: Session, status: Optional[str] = None) -> List[SupportTicket]:
-    query = db.query(SupportTicket).options(
+from sqlalchemy import or_
+
+def get_tickets(
+    db: Session,
+    status: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
+    search: Optional[str] = None,
+) -> tuple[List[SupportTicket], int]:
+    query = db.query(SupportTicket).outerjoin(SupportTicket.user).options(
         joinedload(SupportTicket.user),
         joinedload(SupportTicket.closer)
     )
     if status and status != "all":
         query = query.filter(SupportTicket.status == status)
-    return query.order_by(SupportTicket.created_at.desc()).all()
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                SupportTicket.message.ilike(term),
+                SupportTicket.sender_name.ilike(term),
+                SupportTicket.sender_contact.ilike(term),
+                User.full_name.ilike(term),
+                User.department.ilike(term),
+                User.sam_account_name.ilike(term),
+            )
+        )
+
+    total = query.count()
+    offset = max(0, (page - 1) * page_size)
+    items = query.order_by(SupportTicket.created_at.desc()).offset(offset).limit(page_size).all()
+    return items, total
 
 def get_ticket(db: Session, ticket_id: UUID) -> Optional[SupportTicket]:
     return db.query(SupportTicket).options(

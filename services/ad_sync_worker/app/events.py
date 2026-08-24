@@ -37,8 +37,17 @@ def publish_admin_update() -> bool:
     return publish_system_event("admin_update")
 
 
-def publish_profile_update(user_id: UUID | str) -> bool:
-    return publish_system_event("profile_updated", user_id=str(user_id))
+def publish_profile_update(
+    user_id: UUID | str,
+    applied_fields: list[str] | None = None,
+    rejected_fields: list[str] | None = None
+) -> bool:
+    payload = {"user_id": str(user_id)}
+    if applied_fields:
+        payload["applied_fields"] = applied_fields
+    if rejected_fields:
+        payload["rejected_fields"] = rejected_fields
+    return publish_system_event("profile_updated", **payload)
 
 
 def publish_ldap_status_update() -> bool:

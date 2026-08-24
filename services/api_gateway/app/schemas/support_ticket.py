@@ -29,3 +29,10 @@ class SupportTicketRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class PaginatedSupportTickets(BaseModel):
+    items: list[SupportTicketRead]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

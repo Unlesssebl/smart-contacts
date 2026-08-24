@@ -53,8 +53,11 @@ class ChangeRequestRead(ChangeRequestBase):
     user_guid: UUID
     user_name: Optional[str] = None
     attribute_name: str
+    old_value: Optional[str] = None
     status: str
     rejection_reason: Optional[str] = None
+    is_protected: bool = False
+    user_status: str = "active"
     created_at: datetime
 
     @computed_field
@@ -68,3 +71,16 @@ class ChangeRequestRead(ChangeRequestBase):
         return self.attribute_name
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class ChangeRequestUpdateValue(BaseModel):
+    new_value: Optional[str] = None
+
+class BulkReviewActionRequest(BaseModel):
+    request_ids: list[UUID] = []
+    report_ids: list[UUID] = []
+
+class BulkReviewResult(BaseModel):
+    approved: int = 0
+    rejected: int = 0
+    skipped: int = 0
+    errors: list[str] = []

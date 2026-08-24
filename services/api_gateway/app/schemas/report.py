@@ -18,9 +18,12 @@ class ReportRead(BaseModel):
     reporter_user_guid: Optional[UUID] = None
     reporter_user_name: Optional[str] = None
     attribute_name: str
+    old_value: Optional[str] = None
     new_value: Optional[str] = None
     status: str
     rejection_reason: Optional[str] = None
+    is_protected: bool = False
+    user_status: str = "active"
     created_at: datetime
 
     @computed_field
@@ -34,3 +37,6 @@ class ReportRead(BaseModel):
         return self.attribute_name
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+class ReportUpdateValue(BaseModel):
+    new_value: Optional[str] = None

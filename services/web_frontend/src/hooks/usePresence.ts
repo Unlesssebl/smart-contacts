@@ -4,6 +4,8 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { getWsToken } from '@/api/auth';
 import { usersApi } from '@/api/users';
+import { toast } from 'sonner';
+import { getAttributeLabel } from '@/lib/localization';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const THROTTLE_MS = 2000; // 2 seconds
@@ -77,12 +79,51 @@ export const usePresence = () => {
               useAppStore.getState().fetchLDAPSettings(true);
             }
           } else if (data.type === 'profile_updated') {
-            const currentUser = useAppStore.getState().currentUser;
+            const state = useAppStore.getState();
+            const currentUser = state.currentUser;
             if (currentUser && currentUser.id === data.user_id) {
-              useAppStore.getState().fetchMyPendingFields();
-              usersApi.getUserByGuid(data.user_id).then(user => {
-                useAppStore.getState().updateUserInStore(user.id, user);
+              state.fetchMyPendingFields();
+              usersApi.getUserByGuid(data.user_id).then((user) => {
+                state.updateUserInStore(user.id, user);
               });
+
+              if (Array.isArray(data.applied_fields) && data.applied_fields.length > 0) {
+                data.applied_fields.forEach((field: string) => {
+                  const label = getAttributeLabel(field);
+                  state.addNotification({
+                    type: 'field_applied',
+                    title: `${label.charAt(0).toUpperCase() + label.slice(1)} обновлён`,
+                    body: `Ваша заявка на изменение поля «${label}» принята и успешно применена в Active Directory`,
+                    field,
+                  });
+                  toast.success(`✓ Ваш ${label} обновлён и применён`);
+                });
+              }
+
+              if (Array.isArray(data.rejected_fields) && data.rejected_fields.length > 0) {
+                data.rejected_fields.forEach((field: string) => {
+                  const label = getAttributeLabel(field);
+                  state.markFieldRejected(field);
+                  state.addNotification({
+                    type: 'field_rejected',
+                    title: `Заявка на «${label}» отклонена`,
+                    body: `Заявка на изменение поля «${label}» была отклонена администратором`,
+                    field,
+                  });
+                  toast.warning(`Заявка на изменение поля «${label}» отклонена`);
+                });
+              }
+            }
+          } else if (data.type === 'ticket_closed') {
+            const state = useAppStore.getState();
+            const currentUser = state.currentUser;
+            if (currentUser && currentUser.id === data.user_guid) {
+              state.addNotification({
+                type: 'ticket_closed',
+                title: 'Обращение в поддержку рассмотрено',
+                body: 'Ваше обращение в службу поддержки было закрыто администратором',
+              });
+              toast.info('✓ Ваше обращение в службу поддержки рассмотрено');
             }
           }
         } catch (e) {

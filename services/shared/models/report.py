@@ -30,3 +30,17 @@ class Report(Base):
     @property
     def reporter_user_name(self) -> str | None:
         return self.reporter.full_name if self.reporter else None
+
+    @property
+    def is_protected(self) -> bool:
+        return bool(self.target_user.is_protected) if self.target_user else False
+
+    @property
+    def user_status(self) -> str:
+        return self.target_user.status if self.target_user else "active"
+
+    @property
+    def old_value(self) -> str | None:
+        if not self.target_user or not self.attribute_name:
+            return None
+        return getattr(self.target_user, self.attribute_name, None)

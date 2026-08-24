@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -6,16 +7,25 @@ from shared.models.user import User
 from app.db.repository import change_request as cr_repo
 from app.db.repository import report as report_repo
 from app.db.repository import support_ticket as support_repo
-from app.schemas.change_request import ChangeRequestRead
-from app.schemas.report import ReportRead
-from app.schemas.support_ticket import SupportTicketRead
+from app.schemas.change_request import (
+    ChangeRequestRead,
+    ChangeRequestUpdateValue,
+    BulkReviewActionRequest,
+    BulkReviewResult,
+)
+from app.schemas.report import ReportRead, ReportUpdateValue
+from app.schemas.support_ticket import SupportTicketRead, PaginatedSupportTickets
 from app.schemas.setting import LDAPSettingsRead, LDAPSettingsUpdate, OuMappingUpdate
 from app.core import settings_manager
 from typing import List, Dict, Any, Optional
 from uuid import UUID
 import json
 from app.services.ou_service import apply_ou_mapping_to_users_bg
-from app.services.event_service import publish_moderation_update, publish_admin_update
+from app.services.event_service import (
+    publish_moderation_update,
+    publish_admin_update,
+    publish_ticket_closed,
+)
 from app.schemas.user import UserVisibilityUpdate
 
 router = APIRouter()
@@ -35,12 +45,11 @@ def approve_change_request(
 ):
     req = cr_repo.approve_request(db, request_id, admin.object_guid)
     if not req:
-        # Check if it exists at all to return 404 vs 400
         existing = cr_repo.get_change_request(db, request_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Change request not found")
-        raise HTTPException(status_code=400, detail="Cannot approve request with current status")
-    publish_moderation_update(req.user_guid)
+        raise HTTPException(status_code=400, detail="Cannot approve request with current status or user is resigned")
+    publish_moderation_update(req.user_guid, applied_fields=[req.attribute_name])
     return req
 
 @router.patch("/change-requests/{request_id}/reject", response_model=ChangeRequestRead)
@@ -55,7 +64,20 @@ def reject_change_request(
         if not existing:
             raise HTTPException(status_code=404, detail="Change request not found")
         raise HTTPException(status_code=400, detail="Cannot reject request with current status")
-    publish_moderation_update(req.user_guid)
+    publish_moderation_update(req.user_guid, rejected_fields=[req.attribute_name])
+    return req
+
+@router.patch("/change-requests/{request_id}/value", response_model=ChangeRequestRead)
+def update_change_request_value(
+    request_id: UUID,
+    data: ChangeRequestUpdateValue,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    req = cr_repo.update_request_value(db, request_id, data.new_value)
+    if not req:
+        raise HTTPException(status_code=404, detail="Change request not found")
+    publish_admin_update()
     return req
 
 @router.get("/reports", response_model=List[ReportRead])
@@ -74,7 +96,7 @@ def approve_report(
     report = report_repo.approve_report(db, report_id, admin.object_guid)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found or cannot be approved")
-    publish_moderation_update(report.target_user_guid)
+    publish_moderation_update(report.target_user_guid, applied_fields=[report.attribute_name])
     return report
 
 @router.patch("/reports/{report_id}/reject", response_model=ReportRead)
@@ -86,8 +108,93 @@ def reject_report(
     report = report_repo.reject_report(db, report_id, admin.object_guid)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found or cannot be rejected")
-    publish_moderation_update(report.target_user_guid)
+    publish_moderation_update(report.target_user_guid, rejected_fields=[report.attribute_name])
     return report
+
+@router.patch("/reports/{report_id}/value", response_model=ReportRead)
+def update_report_value(
+    report_id: UUID,
+    data: ReportUpdateValue,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    report = report_repo.update_report_value(db, report_id, data.new_value)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    publish_admin_update()
+    return report
+
+@router.post("/review-items/bulk-approve", response_model=BulkReviewResult)
+def bulk_approve_review_items(
+    data: BulkReviewActionRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    approved = 0
+    rejected = 0
+    skipped = 0
+    errors: list[str] = []
+
+    for req_id in data.request_ids:
+        try:
+            req = cr_repo.approve_request(db, req_id, admin.object_guid)
+            if req:
+                approved += 1
+                publish_moderation_update(req.user_guid, applied_fields=[req.attribute_name])
+            else:
+                skipped += 1
+        except Exception as e:
+            errors.append(f"Request {req_id}: {str(e)}")
+
+    for rep_id in data.report_ids:
+        try:
+            rep = report_repo.approve_report(db, rep_id, admin.object_guid)
+            if rep:
+                approved += 1
+                publish_moderation_update(rep.target_user_guid, applied_fields=[rep.attribute_name])
+            else:
+                skipped += 1
+        except Exception as e:
+            errors.append(f"Report {rep_id}: {str(e)}")
+
+    publish_admin_update()
+    return BulkReviewResult(approved=approved, rejected=rejected, skipped=skipped, errors=errors)
+
+@router.post("/review-items/bulk-reject", response_model=BulkReviewResult)
+def bulk_reject_review_items(
+    data: BulkReviewActionRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    approved = 0
+    rejected = 0
+    skipped = 0
+    errors: list[str] = []
+
+    for req_id in data.request_ids:
+        try:
+            req = cr_repo.reject_request(db, req_id, admin.object_guid)
+            if req:
+                rejected += 1
+                publish_moderation_update(req.user_guid, rejected_fields=[req.attribute_name])
+            else:
+                skipped += 1
+        except Exception as e:
+            errors.append(f"Request {req_id}: {str(e)}")
+
+    for rep_id in data.report_ids:
+        try:
+            rep = report_repo.reject_report(db, rep_id, admin.object_guid)
+            if rep:
+                rejected += 1
+                publish_moderation_update(rep.target_user_guid, rejected_fields=[rep.attribute_name])
+            else:
+                skipped += 1
+        except Exception as e:
+            errors.append(f"Report {rep_id}: {str(e)}")
+
+    publish_admin_update()
+    return BulkReviewResult(approved=approved, rejected=rejected, skipped=skipped, errors=errors)
 
 @router.get("/settings/ldap", response_model=LDAPSettingsRead)
 def get_ldap_settings(
@@ -189,14 +296,28 @@ def update_user_visibility(
     
     return {"status": "ok", "is_hidden": user.is_hidden}
 
-@router.get("/support-tickets", response_model=List[SupportTicketRead])
+@router.get("/support-tickets", response_model=PaginatedSupportTickets)
 def list_support_tickets(
     status: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     admin: User = Depends(deps.require_admin)
 ):
-    tickets = support_repo.get_tickets(db, status=status)
-    return [support_repo.ticket_to_read_schema(t) for t in tickets]
+    page = max(1, page)
+    page_size = max(1, min(100, page_size))
+    tickets, total = support_repo.get_tickets(
+        db, status=status, page=page, page_size=page_size, search=search
+    )
+    total_pages = math.ceil(total / page_size) if total > 0 else 0
+    return PaginatedSupportTickets(
+        items=[support_repo.ticket_to_read_schema(t) for t in tickets],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages
+    )
 
 @router.patch("/support-tickets/{ticket_id}/close", response_model=SupportTicketRead)
 def close_support_ticket(
@@ -207,7 +328,7 @@ def close_support_ticket(
     ticket = support_repo.close_ticket(db, ticket_id, admin.object_guid)
     if not ticket:
         raise HTTPException(status_code=404, detail="Support ticket not found")
-    publish_admin_update()
+    publish_ticket_closed(ticket.user_guid)
     return support_repo.ticket_to_read_schema(ticket)
 
 @router.patch("/support-tickets/{ticket_id}/reopen", response_model=SupportTicketRead)

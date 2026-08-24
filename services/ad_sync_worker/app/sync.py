@@ -1,11 +1,13 @@
 import logging
-
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import select, update
 from .db import SessionLocal
 from shared.models.enums import UserStatus
 from shared.models.user import User
 from shared.models.change_request import ChangeRequest
+from shared.models.report import Report
+from shared.models.token import RefreshToken
+from shared.models.system_setting import SystemSetting
 from .ldap import LDAPClient
 from .logic import direct_corporate_ous, determine_status, match_organization_by_ou, prune_ou_mapping, save_known_ous
 from shared.utils import ad_guid_to_uuid
@@ -30,10 +32,8 @@ class SyncWorker:
     def __init__(self):
         self.last_usn = self._load_last_usn()
 
-
     def _load_last_usn(self) -> int:
         try:
-            from shared.models.system_setting import SystemSetting
             with SessionLocal() as session:
                 setting = session.get(SystemSetting, "LAST_AD_USN")
                 if setting and setting.value:
@@ -45,7 +45,6 @@ class SyncWorker:
     def _save_last_usn(self, usn: int):
         self.last_usn = usn
         try:
-            from shared.models.system_setting import SystemSetting
             with SessionLocal() as session:
                 setting = session.get(SystemSetting, "LAST_AD_USN")
                 if setting:
@@ -55,6 +54,32 @@ class SyncWorker:
                 session.commit()
         except Exception as e:
             logger.error(f"Error saving last USN to DB: {e}")
+
+    def _reject_active_requests_for_user(self, session, user_guid):
+        try:
+            crs = session.execute(
+                select(ChangeRequest).where(
+                    ChangeRequest.user_guid == user_guid,
+                    ChangeRequest.status.in_(["pending", "conflict", "approved"])
+                )
+            ).scalars().all()
+            for cr in crs:
+                cr.status = "rejected"
+                cr.rejection_reason = "Сотрудник уволен / удален из Active Directory"
+                cr.resolved_at = datetime.now(timezone.utc)
+                
+            reports = session.execute(
+                select(Report).where(
+                    Report.target_user_guid == user_guid,
+                    Report.status.in_(["pending", "conflict", "approved"])
+                )
+            ).scalars().all()
+            for rep in reports:
+                rep.status = "rejected"
+                rep.rejection_reason = "Сотрудник уволен / удален из Active Directory"
+                rep.processed_at = datetime.now(timezone.utc)
+        except Exception as e:
+            logger.error(f"Error rejecting active requests for resigned user {user_guid}: {e}")
 
     def pull(self, full: bool = False):
         """
@@ -77,7 +102,6 @@ class SyncWorker:
 
         with LDAPClient() as ldap:
             authoritative_ou_paths = ldap.search_ou_paths() if full else None
-            # 2.4. Одна сессия на весь цикл Pull
             with SessionLocal() as session:
                 for entry in ldap.search_paged(filter_str, attributes):
                     try:
@@ -118,6 +142,7 @@ class SyncWorker:
                         if user and not user.is_protected and user.status != UserStatus.RESIGNED.value:
                             user.status = UserStatus.RESIGNED.value
                             user.last_sync_timestamp = datetime.now(timezone.utc)
+                            self._reject_active_requests_for_user(session, user.object_guid)
                             tombstone_resigned += 1
                             logger.info(f"User {user.sam_account_name} ({user.object_guid}) found in AD tombstones -> marked as RESIGNED")
                     except Exception as e:
@@ -126,13 +151,10 @@ class SyncWorker:
                 if tombstone_resigned > 0:
                     logger.info(f"Tombstone sync: marked {tombstone_resigned} deleted users as RESIGNED.")
                     publish_admin_update()
-                    # Flush tombstone changes before reconciliation SELECT
                     session.commit()
 
                 if full and seen_guids:
                     # Reconciliation: mark users absent from AD as RESIGNED.
-                    # Only skip users explicitly protected (is_protected=True).
-                    # All legitimate employees come from AD, so absence from AD = RESIGNED.
                     all_users = session.execute(select(User)).scalars().all()
                     resigned_count = 0
                     for user in all_users:
@@ -142,6 +164,7 @@ class SyncWorker:
                             if user.status != UserStatus.RESIGNED.value:
                                 user.status = UserStatus.RESIGNED.value
                                 user.last_sync_timestamp = datetime.now(timezone.utc)
+                                self._reject_active_requests_for_user(session, user.object_guid)
                                 resigned_count += 1
                                 logger.info(f"User {user.sam_account_name} ({user.object_guid}) not in AD -> marked as RESIGNED")
                     
@@ -149,11 +172,8 @@ class SyncWorker:
                         logger.info(f"Full sync reconciliation completed: marked {resigned_count} users as RESIGNED.")
                         publish_admin_update()
 
-                # Финальный коммит если остались изменения
                 session.commit()
                 
-                # A full sync stores an authoritative AD snapshot; incremental
-                # syncs only add paths until the next full reconciliation.
                 ou_paths = authoritative_ou_paths if authoritative_ou_paths is not None else collected_ous
                 if full or ou_paths:
                     save_known_ous(session, ou_paths, replace=full)
@@ -162,8 +182,6 @@ class SyncWorker:
                         f"(replace={full}, authoritative={authoritative_ou_paths is not None})."
                     )
 
-                # Prune mappings only when the OU query itself succeeded. This
-                # prevents accidental deletion during LDAP outages.
                 if full and authoritative_ou_paths is not None:
                     valid_organization_ous = direct_corporate_ous(authoritative_ou_paths)
                     removed = prune_ou_mapping(session, valid_organization_ous)
@@ -188,7 +206,6 @@ class SyncWorker:
         dn = str(entry.get("distinguishedName", ""))
         org, warnings = match_organization_by_ou(dn, session)
         
-        # 1. User lookup/linking (Extracted)
         user = self._find_or_link_user(session, sam, guid_str)
 
         if not user:
@@ -206,18 +223,16 @@ class SyncWorker:
                 mobile_phone=format_phone(str(entry.get("mobile", ""))),
                 email=str(entry.get("mail", "")) if entry.get("mail") else None,
                 sync_error_log="\n".join(warnings) if warnings else None,
-                last_sync_timestamp=datetime.now(timezone.utc) # 4.1 UTC
+                last_sync_timestamp=datetime.now(timezone.utc)
             )
             session.add(user)
             logger.info(f"Created new user: {sam} ({guid_str})")
         else:
-            # 2. Update existing user (Extracted)
             self._resolve_conflicts_and_update(session, user, entry, org, warnings, status)
             user.sam_account_name = sam
             user.ad_dn = dn
             logger.info(f"Updated user: {sam}")
 
-        # Частичный коммит для сохранения прогресса
         session.commit()
         return guid_str
 
@@ -229,7 +244,6 @@ class SyncWorker:
         if user:
             return user
 
-        # Try to find by sam_account_name (handle stubs from API Gateway)
         user = session.execute(
             select(User).where(User.sam_account_name == sam)
         ).scalars().first()
@@ -248,8 +262,6 @@ class SyncWorker:
         """
         Updates user fields while respecting pending change requests.
         """
-        # We check for 'pending', 'conflict', or 'approved' status
-        # to prevent overwriting local DB before the push is applied and synced back.
         pending_cr = session.execute(
             select(ChangeRequest).where(
                 ChangeRequest.user_guid == user.object_guid,
@@ -259,12 +271,10 @@ class SyncWorker:
         
         pending_fields = {cr.attribute_name for cr in pending_cr}
         
-        # Core fields (Sync unconditionally)
         user.status = status
         user.organization = org
         user.job_title = str(entry.get("title", ""))
         
-        # User-editable fields (Sync with conflict resolution)
         if "full_name" not in pending_fields:
             user.full_name = str(entry.get("displayName", ""))
         
@@ -293,7 +303,6 @@ class SyncWorker:
         Push pending/approved changes to AD.
         """
         with SessionLocal() as session:
-            from shared.models.report import Report
             approved_crs = session.execute(
                 select(ChangeRequest).where(ChangeRequest.status == "approved")
             ).scalars().all()
@@ -324,7 +333,7 @@ class SyncWorker:
                         continue
                     
                     if user.is_protected:
-                        item.status = "conflict" # Or keep approved? Spec says skip.
+                        item.status = "conflict"
                         user.sync_error_log = (user.sync_error_log or "") + f"\nVIP profile, skipping push for {task['id']}"
                         logger.warning(f"Skipping push for protected user {user.sam_account_name}")
                         continue
@@ -358,13 +367,14 @@ class SyncWorker:
                         user.last_sync_timestamp = datetime.now(timezone.utc)
                         logger.info(f"Applied {task['attribute_name']} for {user.sam_account_name}")
                         events_to_publish.append({"type": "admin_update"})
-                        events_to_publish.append({"type": "profile_updated", "user_id": str(user.object_guid)})
+                        events_to_publish.append({
+                            "type": "profile_updated",
+                            "user_id": str(user.object_guid),
+                            "applied_fields": [task["attribute_name"]]
+                        })
                     else:
-                        # Check if another pending or conflict request already exists in DB
-                        # or if we already set one to conflict in this cycle.
                         conflict_key = (str(user.object_guid), task["attribute_name"])
                         
-                        existing = False
                         if task["type"] == "cr":
                             existing = session.execute(
                                 select(ChangeRequest).where(
@@ -375,7 +385,6 @@ class SyncWorker:
                                 )
                             ).scalars().first()
                         else:
-                            from shared.models.report import Report
                             existing = session.execute(
                                 select(Report).where(
                                     Report.target_user_guid == user.object_guid,
@@ -398,11 +407,35 @@ class SyncWorker:
                         logger.error(f"AD Push failed for {task['id']}: {error_msg}")
                         
                         events_to_publish.append({"type": "admin_update"})
-                        events_to_publish.append({"type": "profile_updated", "user_id": str(user.object_guid)})
+                        events_to_publish.append({
+                            "type": "profile_updated",
+                            "user_id": str(user.object_guid),
+                            "rejected_fields": [task["attribute_name"]]
+                        })
             
+            # Timeout for stale approved requests (EC-4)
+            try:
+                timeout_threshold = datetime.now(timezone.utc) - timedelta(hours=48)
+                stale_crs = session.execute(
+                    select(ChangeRequest).where(
+                        ChangeRequest.status == "approved",
+                        ChangeRequest.resolved_at < timeout_threshold
+                    )
+                ).scalars().all()
+                for cr in stale_crs:
+                    cr.status = "conflict"
+                    cr.rejection_reason = "Превышено время ожидания синхронизации с AD"
+                    events_to_publish.append({"type": "admin_update"})
+                    events_to_publish.append({
+                        "type": "profile_updated",
+                        "user_id": str(cr.user_guid),
+                        "rejected_fields": [cr.attribute_name]
+                    })
+            except Exception as e:
+                logger.error(f"Failed to process stale approved requests: {e}")
+
             # Clean up expired refresh tokens (EC-7)
             try:
-                from shared.models.token import RefreshToken
                 expired_tokens = session.execute(
                     select(RefreshToken).where(RefreshToken.expires_at < datetime.now(timezone.utc))
                 ).scalars().all()
@@ -417,7 +450,11 @@ class SyncWorker:
                 if event["type"] == "admin_update":
                     publish_admin_update()
                 else:
-                    publish_profile_update(event["user_id"])
+                    publish_profile_update(
+                        event["user_id"],
+                        applied_fields=event.get("applied_fields"),
+                        rejected_fields=event.get("rejected_fields")
+                    )
         
         logger.info("Push cycle completed.")
 

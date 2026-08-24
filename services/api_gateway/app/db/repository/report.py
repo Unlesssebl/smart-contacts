@@ -5,7 +5,7 @@ from shared.models.change_request import ChangeRequest
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
-from shared.models.enums import ChangeRequestStatus, ReportStatus
+from shared.models.enums import ChangeRequestStatus, ReportStatus, UserStatus
 
 from sqlalchemy.orm import joinedload
 
@@ -61,17 +61,46 @@ def approve_report(db: Session, report_id: UUID, admin_guid: UUID) -> Optional[R
     if not report:
         return None
     
+    if report.target_user and report.target_user.status == UserStatus.RESIGNED.value:
+        return None
+
     if report.status not in [ReportStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value]:
         return None
 
     report.status = "approved"
     report.processed_at = datetime.utcnow()
     report.processed_by = admin_guid
+    report.rejection_reason = None
+
+    # Auto-reject competing active change requests for the same target user and attribute
+    competing_crs = db.query(ChangeRequest).filter(
+        ChangeRequest.user_guid == report.target_user_guid,
+        ChangeRequest.attribute_name == report.attribute_name,
+        ChangeRequest.status.in_([ChangeRequestStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value])
+    ).all()
+    for c in competing_crs:
+        c.status = ChangeRequestStatus.REJECTED.value
+        c.rejection_reason = "Заменено другим одобренным изменением"
+        c.resolved_by = admin_guid
+        c.resolved_at = datetime.utcnow()
+
+    # Auto-reject competing active reports for the same target user and attribute
+    competing_reps = db.query(Report).filter(
+        Report.target_user_guid == report.target_user_guid,
+        Report.attribute_name == report.attribute_name,
+        Report.id != report.id,
+        Report.status.in_([ReportStatus.PENDING.value, ChangeRequestStatus.CONFLICT.value])
+    ).all()
+    for r in competing_reps:
+        r.status = "rejected"
+        r.rejection_reason = "Заменено другим одобренным изменением"
+        r.processed_by = admin_guid
+        r.processed_at = datetime.utcnow()
     
     db.commit()
     return get_report(db, report_id)
 
-def reject_report(db: Session, report_id: UUID, admin_guid: UUID) -> Optional[Report]:
+def reject_report(db: Session, report_id: UUID, admin_guid: UUID, reason: Optional[str] = None) -> Optional[Report]:
     report = get_report(db, report_id)
     if not report:
         return None
@@ -82,6 +111,21 @@ def reject_report(db: Session, report_id: UUID, admin_guid: UUID) -> Optional[Re
     report.status = "rejected"
     report.processed_at = datetime.utcnow()
     report.processed_by = admin_guid
+    if reason:
+        report.rejection_reason = reason
     
+    db.commit()
+    return get_report(db, report_id)
+
+def update_report_value(db: Session, report_id: UUID, new_value: Optional[str]) -> Optional[Report]:
+    report = get_report(db, report_id)
+    if not report:
+        return None
+    
+    report.new_value = new_value
+    if report.status in ["conflict", ChangeRequestStatus.CONFLICT.value]:
+        report.status = ReportStatus.PENDING.value
+        report.rejection_reason = None
+
     db.commit()
     return get_report(db, report_id)

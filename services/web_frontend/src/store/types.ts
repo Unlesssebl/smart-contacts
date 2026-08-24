@@ -1,4 +1,13 @@
-import type { User, UserProfile, ChangeRequest, Report, SupportTicket, SupportTicketCreateInput } from '@/types';
+import type {
+  User,
+  UserProfile,
+  ChangeRequest,
+  Report,
+  SupportTicket,
+  SupportTicketCreateInput,
+  AppNotification,
+  BulkReviewResult,
+} from '@/types';
 import type { UserFilters } from '@/api/users';
 import type { LDAPSettings } from '@/api/settings';
 
@@ -39,10 +48,16 @@ export interface UsersSlice {
 export interface ChangeRequestsSlice {
   changeRequests: ChangeRequest[];
   pendingFields: Record<string, string> | null;
+  rejectedFields: Record<string, boolean>;
+  markFieldRejected: (field: string) => void;
+  clearRejectedField: (field: string) => void;
   fetchMyPendingFields: () => Promise<void>;
   addChangeRequest: (request: { attribute_name: string; new_value: string }) => Promise<void>;
   approveChangeRequest: (id: string) => Promise<void>;
   rejectChangeRequest: (id: string) => Promise<void>;
+  updateChangeRequestValue: (id: string, newValue: string | null) => Promise<void>;
+  bulkApproveReviewItems: (requestIds: string[], reportIds: string[]) => Promise<BulkReviewResult>;
+  bulkRejectReviewItems: (requestIds: string[], reportIds: string[]) => Promise<BulkReviewResult>;
 }
 
 export interface ReportsSlice {
@@ -50,15 +65,30 @@ export interface ReportsSlice {
   addReport: (report: { target_user_id: string; changes: { attribute_name: string; new_value: string }[] }) => Promise<void>;
   approveReport: (id: string) => Promise<void>;
   rejectReport: (id: string) => Promise<void>;
+  updateReportValue: (id: string, newValue: string | null) => Promise<void>;
 }
 
 export interface SupportSlice {
   supportTickets: SupportTicket[];
+  totalSupportTickets: number;
+  supportTicketPage: number;
+  supportTicketPageSize: number;
+  supportTicketTotalPages: number;
   isLoadingSupportTickets: boolean;
-  fetchSupportTickets: (status?: string) => Promise<void>;
+  fetchSupportTickets: (params?: { status?: string; page?: number; pageSize?: number; search?: string }) => Promise<void>;
   sendSupportTicket: (data: SupportTicketCreateInput) => Promise<{ success: boolean; error?: string }>;
   closeSupportTicket: (id: string) => Promise<void>;
   reopenSupportTicket: (id: string) => Promise<void>;
+}
+
+export interface NotificationsSlice {
+  notifications: AppNotification[];
+  unreadCount: number;
+  addNotification: (notif: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  loadNotificationsFromStorage: (userGuid?: string) => void;
+  clearNotifications: () => void;
 }
 
 export interface AdminSlice {
@@ -92,6 +122,7 @@ export type AppState = AuthSlice &
   ChangeRequestsSlice &
   ReportsSlice &
   SupportSlice &
+  NotificationsSlice &
   AdminSlice &
   InfraSlice &
   SettingsSlice;

@@ -35,6 +35,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
   },
 
   logout: async () => {
+    get().clearNotifications();
     set({ currentUser: null, isAuthenticated: false, users: [], changeRequests: [], reports: [] });
     try {
       await apiClient.post('/auth/logout');
@@ -47,6 +48,7 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
     try {
       const profile = await getMe();
       set({ currentUser: profile, isAuthenticated: true });
+      get().loadNotificationsFromStorage(profile.id);
       await get().fetchMyPendingFields();
     } catch (error) {
       console.error('Failed to fetch profile', error);
