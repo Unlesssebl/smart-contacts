@@ -84,9 +84,10 @@ export interface SupportSlice {
 export interface NotificationsSlice {
   notifications: AppNotification[];
   unreadCount: number;
-  addNotification: (notif: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => void;
+  addNotification: (notif: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => boolean;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  deleteNotification: (id: string) => void;
   loadNotificationsFromStorage: (userGuid?: string) => void;
   clearNotifications: () => void;
 }

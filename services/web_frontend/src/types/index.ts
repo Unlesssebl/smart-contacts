@@ -113,10 +113,11 @@ export interface BulkReviewResult {
 
 export interface AppNotification {
   id: string;
-  type: 'field_applied' | 'field_rejected' | 'ticket_closed';
+  type: 'field_applied' | 'field_rejected' | 'ticket_closed' | 'report_approved' | 'report_rejected';
   title: string;
   body: string;
   field?: string;
+  category?: string;
   read: boolean;
   createdAt: string;
 }

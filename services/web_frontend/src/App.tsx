@@ -16,7 +16,7 @@ export default function App() {
       <GatekeeperModal />
       <OnboardingGuide />
       <Toaster
-        position="top-right"
+        position="bottom-right"
         toastOptions={{
           style: {
             background: 'rgba(255, 255, 255, 0.95)',

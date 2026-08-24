@@ -45,7 +45,44 @@ def publish_moderation_update(
     publish_system_event("profile_updated", **payload)
 
 
-def publish_ticket_closed(user_id: UUID | None) -> None:
+def publish_ticket_closed(
+    user_id: UUID | None,
+    category: str | None = None,
+    message: str | None = None
+) -> None:
     publish_admin_update()
     if user_id:
-        publish_system_event("ticket_closed", user_guid=str(user_id))
+        payload: dict[str, Any] = {"user_guid": str(user_id)}
+        if category:
+            payload["category"] = category
+        if message:
+            payload["message_snippet"] = message[:60]
+        publish_system_event("ticket_closed", **payload)
+
+
+def publish_report_updated(
+    reporter_guid: UUID | None,
+    target_user_guid: UUID,
+    attribute_name: str,
+    status: str,
+    target_user_name: str | None = None,
+    rejection_reason: str | None = None,
+) -> None:
+    publish_admin_update()
+    if status in ["approved", "applied"]:
+        publish_system_event(
+            "profile_updated",
+            user_id=str(target_user_guid),
+            applied_fields=[attribute_name]
+        )
+    if reporter_guid:
+        publish_system_event(
+            "report_moderated",
+            reporter_guid=str(reporter_guid),
+            target_user_guid=str(target_user_guid),
+            target_user_name=target_user_name,
+            attribute_name=attribute_name,
+            status=status,
+            rejection_reason=rejection_reason,
+        )
+

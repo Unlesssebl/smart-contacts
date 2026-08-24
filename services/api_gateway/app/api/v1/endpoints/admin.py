@@ -23,6 +23,7 @@ import json
 from app.services.ou_service import apply_ou_mapping_to_users_bg
 from app.services.event_service import (
     publish_moderation_update,
+    publish_report_updated,
     publish_admin_update,
     publish_ticket_closed,
 )
@@ -49,7 +50,7 @@ def approve_change_request(
         if not existing:
             raise HTTPException(status_code=404, detail="Change request not found")
         raise HTTPException(status_code=400, detail="Cannot approve request with current status or user is resigned")
-    publish_moderation_update(req.user_guid, applied_fields=[req.attribute_name])
+    publish_admin_update()
     return req
 
 @router.patch("/change-requests/{request_id}/reject", response_model=ChangeRequestRead)
@@ -96,7 +97,7 @@ def approve_report(
     report = report_repo.approve_report(db, report_id, admin.object_guid)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found or cannot be approved")
-    publish_moderation_update(report.target_user_guid, applied_fields=[report.attribute_name])
+    publish_admin_update()
     return report
 
 @router.patch("/reports/{report_id}/reject", response_model=ReportRead)
@@ -108,7 +109,14 @@ def reject_report(
     report = report_repo.reject_report(db, report_id, admin.object_guid)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found or cannot be rejected")
-    publish_moderation_update(report.target_user_guid, rejected_fields=[report.attribute_name])
+    publish_report_updated(
+        reporter_guid=report.reporter_user_guid,
+        target_user_guid=report.target_user_guid,
+        attribute_name=report.attribute_name,
+        status="rejected",
+        target_user_name=report.target_user_name,
+        rejection_reason=report.rejection_reason,
+    )
     return report
 
 @router.patch("/reports/{report_id}/value", response_model=ReportRead)
@@ -140,7 +148,6 @@ def bulk_approve_review_items(
             req = cr_repo.approve_request(db, req_id, admin.object_guid)
             if req:
                 approved += 1
-                publish_moderation_update(req.user_guid, applied_fields=[req.attribute_name])
             else:
                 skipped += 1
         except Exception as e:
@@ -151,7 +158,6 @@ def bulk_approve_review_items(
             rep = report_repo.approve_report(db, rep_id, admin.object_guid)
             if rep:
                 approved += 1
-                publish_moderation_update(rep.target_user_guid, applied_fields=[rep.attribute_name])
             else:
                 skipped += 1
         except Exception as e:
@@ -187,7 +193,14 @@ def bulk_reject_review_items(
             rep = report_repo.reject_report(db, rep_id, admin.object_guid)
             if rep:
                 rejected += 1
-                publish_moderation_update(rep.target_user_guid, rejected_fields=[rep.attribute_name])
+                publish_report_updated(
+                    reporter_guid=rep.reporter_user_guid,
+                    target_user_guid=rep.target_user_guid,
+                    attribute_name=rep.attribute_name,
+                    status="rejected",
+                    target_user_name=rep.target_user_name,
+                    rejection_reason=rep.rejection_reason,
+                )
             else:
                 skipped += 1
         except Exception as e:
@@ -328,7 +341,11 @@ def close_support_ticket(
     ticket = support_repo.close_ticket(db, ticket_id, admin.object_guid)
     if not ticket:
         raise HTTPException(status_code=404, detail="Support ticket not found")
-    publish_ticket_closed(ticket.user_guid)
+    publish_ticket_closed(
+        ticket.user_guid,
+        category=ticket.category,
+        message=ticket.message
+    )
     return support_repo.ticket_to_read_schema(ticket)
 
 @router.patch("/support-tickets/{ticket_id}/reopen", response_model=SupportTicketRead)

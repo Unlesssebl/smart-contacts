@@ -12,7 +12,7 @@ from .ldap import LDAPClient
 from .logic import direct_corporate_ous, determine_status, match_organization_by_ou, prune_ou_mapping, save_known_ous
 from shared.utils import ad_guid_to_uuid
 from .utils import with_retry, format_phone
-from .events import publish_admin_update, publish_profile_update
+from .events import publish_admin_update, publish_profile_update, publish_report_moderated
 
 logger = logging.getLogger(__name__)
 
@@ -320,7 +320,15 @@ class SyncWorker:
             for cr in approved_crs:
                 tasks.append({"item": cr, "user_guid": cr.user_guid, "attribute_name": cr.attribute_name, "new_value": cr.new_value, "id": cr.id, "type": "cr"})
             for rep in approved_reports:
-                tasks.append({"item": rep, "user_guid": rep.target_user_guid, "attribute_name": rep.attribute_name, "new_value": rep.new_value, "id": rep.id, "type": "report"})
+                tasks.append({
+                    "item": rep,
+                    "user_guid": rep.target_user_guid,
+                    "attribute_name": rep.attribute_name,
+                    "new_value": rep.new_value,
+                    "id": rep.id,
+                    "type": "report",
+                    "reporter_user_guid": rep.reporter_user_guid,
+                })
 
             processed_conflicts = set()
             events_to_publish = []
@@ -372,6 +380,15 @@ class SyncWorker:
                             "user_id": str(user.object_guid),
                             "applied_fields": [task["attribute_name"]]
                         })
+                        if task["type"] == "report" and task.get("reporter_user_guid"):
+                            events_to_publish.append({
+                                "type": "report_moderated",
+                                "reporter_guid": str(task["reporter_user_guid"]),
+                                "target_user_guid": str(user.object_guid),
+                                "target_user_name": user.full_name,
+                                "attribute_name": task["attribute_name"],
+                                "status": "applied",
+                            })
                     else:
                         conflict_key = (str(user.object_guid), task["attribute_name"])
                         
@@ -412,6 +429,16 @@ class SyncWorker:
                             "user_id": str(user.object_guid),
                             "rejected_fields": [task["attribute_name"]]
                         })
+                        if task["type"] == "report" and task.get("reporter_user_guid"):
+                            events_to_publish.append({
+                                "type": "report_moderated",
+                                "reporter_guid": str(task["reporter_user_guid"]),
+                                "target_user_guid": str(user.object_guid),
+                                "target_user_name": user.full_name,
+                                "attribute_name": task["attribute_name"],
+                                "status": "rejected" if item.status == "rejected" else "conflict",
+                                "rejection_reason": error_msg,
+                            })
             
             # Timeout for stale approved requests (EC-4)
             try:
@@ -449,6 +476,15 @@ class SyncWorker:
             for event in events_to_publish:
                 if event["type"] == "admin_update":
                     publish_admin_update()
+                elif event["type"] == "report_moderated":
+                    publish_report_moderated(
+                        event["reporter_guid"],
+                        event["target_user_guid"],
+                        attribute_name=event["attribute_name"],
+                        status=event["status"],
+                        target_user_name=event.get("target_user_name"),
+                        rejection_reason=event.get("rejection_reason")
+                    )
                 else:
                     publish_profile_update(
                         event["user_id"],

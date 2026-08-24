@@ -90,13 +90,15 @@ export const usePresence = () => {
               if (Array.isArray(data.applied_fields) && data.applied_fields.length > 0) {
                 data.applied_fields.forEach((field: string) => {
                   const label = getAttributeLabel(field);
-                  state.addNotification({
+                  const added = state.addNotification({
                     type: 'field_applied',
                     title: `${label.charAt(0).toUpperCase() + label.slice(1)} обновлён`,
                     body: `Ваша заявка на изменение поля «${label}» принята и успешно применена в Active Directory`,
                     field,
                   });
-                  toast.success(`✓ Ваш ${label} обновлён и применён`);
+                  if (added) {
+                    toast.success(`✓ Ваш ${label} обновлён и применён`);
+                  }
                 });
               }
 
@@ -104,26 +106,73 @@ export const usePresence = () => {
                 data.rejected_fields.forEach((field: string) => {
                   const label = getAttributeLabel(field);
                   state.markFieldRejected(field);
-                  state.addNotification({
+                  const added = state.addNotification({
                     type: 'field_rejected',
                     title: `Заявка на «${label}» отклонена`,
                     body: `Заявка на изменение поля «${label}» была отклонена администратором`,
                     field,
                   });
-                  toast.warning(`Заявка на изменение поля «${label}» отклонена`);
+                  if (added) {
+                    toast.warning(`Заявка на изменение поля «${label}» отклонена`);
+                  }
                 });
+              }
+            }
+          } else if (data.type === 'report_moderated') {
+            const state = useAppStore.getState();
+            const currentUser = state.currentUser;
+            if (currentUser && currentUser.id === data.reporter_guid) {
+              const label = getAttributeLabel(data.attribute_name);
+              const targetDesc = data.target_user_name ? ` по сотруднику «${data.target_user_name}»` : '';
+              const isSuccess = data.status === 'approved' || data.status === 'applied';
+
+              if (isSuccess) {
+                const title = 'Сообщение об ошибке принято';
+                const body = `Ваше сообщение об ошибке${targetDesc} (поле «${label}») рассмотрено и данные успешно обновлены`;
+                const added = state.addNotification({
+                  type: 'report_approved',
+                  title,
+                  body,
+                  field: data.attribute_name,
+                });
+                if (added) {
+                  toast.success(`✓ ${title} (${label})`);
+                }
+              } else {
+                const title = 'Сообщение об ошибке отклонено';
+                const reasonStr = data.rejection_reason ? `: ${data.rejection_reason}` : '';
+                const body = `Ваше сообщение об ошибке${targetDesc} (поле «${label}») отклонено администратором${reasonStr}`;
+                const added = state.addNotification({
+                  type: 'report_rejected',
+                  title,
+                  body,
+                  field: data.attribute_name,
+                });
+                if (added) {
+                  toast.warning(`Сообщение об ошибке отклонено (${label})`);
+                }
               }
             }
           } else if (data.type === 'ticket_closed') {
             const state = useAppStore.getState();
             const currentUser = state.currentUser;
             if (currentUser && currentUser.id === data.user_guid) {
-              state.addNotification({
+              const isSuggestion = data.category === 'suggestion';
+              const title = isSuggestion
+                ? 'Предложение по улучшению рассмотрено'
+                : 'Обращение в поддержку рассмотрено';
+              const body = isSuggestion
+                ? 'Ваше предложение по улучшению сервиса было рассмотрено и закрыто администратором'
+                : 'Ваше обращение в службу поддержки было рассмотрено и закрыто администратором';
+              const added = state.addNotification({
                 type: 'ticket_closed',
-                title: 'Обращение в поддержку рассмотрено',
-                body: 'Ваше обращение в службу поддержки было закрыто администратором',
+                title,
+                body,
+                category: data.category,
               });
-              toast.info('✓ Ваше обращение в службу поддержки рассмотрено');
+              if (added) {
+                toast.info(`✓ ${title}`);
+              }
             }
           }
         } catch (e) {

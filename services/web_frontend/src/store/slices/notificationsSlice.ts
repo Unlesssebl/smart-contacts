@@ -15,6 +15,23 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
     const currentUser = state.currentUser;
     const key = getStorageKey(currentUser?.id);
 
+    // Deduplication check: ignore if an identical notification was added in the last 60 seconds
+    const now = Date.now();
+    const isDuplicate = state.notifications.some((n) => {
+      const isSameContent =
+        n.type === notifData.type &&
+        n.title === notifData.title &&
+        n.body === notifData.body &&
+        n.field === notifData.field;
+      if (!isSameContent) return false;
+      const createdTime = new Date(n.createdAt).getTime();
+      return now - createdTime < 60000;
+    });
+
+    if (isDuplicate) {
+      return false;
+    }
+
     const newNotif: AppNotification = {
       ...notifData,
       id: typeof crypto !== 'undefined' && crypto.randomUUID
@@ -34,6 +51,7 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
     }
 
     set({ notifications: updated, unreadCount: unread });
+    return true;
   },
 
   markNotificationRead: (id) => {
@@ -42,6 +60,23 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
     const key = getStorageKey(currentUser?.id);
 
     const updated = state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+    const unread = updated.filter((n) => !n.read).length;
+
+    try {
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch {
+      // LocalStorage error handling
+    }
+
+    set({ notifications: updated, unreadCount: unread });
+  },
+
+  deleteNotification: (id) => {
+    const state = get();
+    const currentUser = state.currentUser;
+    const key = getStorageKey(currentUser?.id);
+
+    const updated = state.notifications.filter((n) => n.id !== id);
     const unread = updated.filter((n) => !n.read).length;
 
     try {
@@ -86,6 +121,14 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
   },
 
   clearNotifications: () => {
+    const state = get();
+    const currentUser = state.currentUser;
+    const key = getStorageKey(currentUser?.id);
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // LocalStorage error handling
+    }
     set({ notifications: [], unreadCount: 0 });
   },
 });

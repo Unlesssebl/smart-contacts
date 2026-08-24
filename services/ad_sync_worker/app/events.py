@@ -50,5 +50,27 @@ def publish_profile_update(
     return publish_system_event("profile_updated", **payload)
 
 
+def publish_report_moderated(
+    reporter_guid: UUID | str | None,
+    target_user_guid: UUID | str,
+    attribute_name: str,
+    status: str,
+    target_user_name: str | None = None,
+    rejection_reason: str | None = None,
+) -> bool:
+    if not reporter_guid:
+        return False
+    return publish_system_event(
+        "report_moderated",
+        reporter_guid=str(reporter_guid),
+        target_user_guid=str(target_user_guid),
+        target_user_name=target_user_name,
+        attribute_name=attribute_name,
+        status=status,
+        rejection_reason=rejection_reason,
+    )
+
+
 def publish_ldap_status_update() -> bool:
     return publish_system_event("ldap_status_updated")
+
