@@ -52,9 +52,9 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
           onClick={handlePrev}
           disabled={currentPage === 1}
           aria-label="Предыдущая страница"
-          className="rounded-full border border-transparent p-2 text-primary/60 shadow-sm transition-[background-color,color,transform] hover:border-white/50 hover:bg-white/60 hover:text-primary active:translate-y-px disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="rounded-full border border-transparent p-2 text-[#2b5982] shadow-sm transition-[background-color,color,transform] hover:border-white/80 hover:bg-white/90 hover:text-[#0e304f] active:translate-y-px disabled:pointer-events-none disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 cursor-pointer"
         >
-          <ChevronUp className="h-5 w-5" />
+          <ChevronUp className="h-5 w-5" strokeWidth={2.2} />
         </button>
 
         {/* Page Nodes */}
@@ -121,9 +121,9 @@ export function RadialPagination({ currentPage, totalPages, onPageChange }: Radi
           onClick={handleNext}
           disabled={currentPage === totalPages}
           aria-label="Следующая страница"
-          className="rounded-full border border-transparent p-2 text-primary/60 shadow-sm transition-[background-color,color,transform] hover:border-white/50 hover:bg-white/60 hover:text-primary active:translate-y-px disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          className="rounded-full border border-transparent p-2 text-[#2b5982] shadow-sm transition-[background-color,color,transform] hover:border-white/80 hover:bg-white/90 hover:text-[#0e304f] active:translate-y-px disabled:pointer-events-none disabled:opacity-25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 cursor-pointer"
         >
-          <ChevronDown className="h-5 w-5" />
+          <ChevronDown className="h-5 w-5" strokeWidth={2.2} />
         </button>
       </div>
     </div>

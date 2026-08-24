@@ -90,9 +90,6 @@ export function Sidebar() {
 
             <div className="relative z-10 flex items-center justify-between">
               <h4 className="text-sm font-bold text-white tracking-tight">Помощь</h4>
-              <span className="rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-200 backdrop-blur-sm">
-                IT-служба
-              </span>
             </div>
 
             <p className="relative z-10 mt-2 text-xs leading-relaxed text-white/80">
