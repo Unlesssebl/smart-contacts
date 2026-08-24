@@ -40,6 +40,11 @@ def determine_status(uac: int, sam_account_name: str) -> str:
 
 _ou_mapping_cache: Optional[dict[str, Any]] = None
 _ou_mapping_cache_time: float = 0
+_dept_mapping_cache: Optional[dict[str, str]] = None
+_dept_mapping_cache_time: float = 0
+_job_title_mapping_cache: Optional[dict[str, str]] = None
+_job_title_mapping_cache_time: float = 0
+
 
 
 def build_known_ou_tree(paths: set[tuple[str, ...]]) -> dict[str, Any]:
@@ -151,7 +156,49 @@ def get_ou_mapping(session) -> dict[str, Any]:
     _ou_mapping_cache_time = current_time
     return _ou_mapping_cache
 
-from shared.utils import parse_ou_structure
+from shared.utils import parse_ou_structure, apply_canonical_mapping
+
+
+def get_dept_mapping(session) -> dict[str, str]:
+    """Returns DEPT_MAPPING from DB, cached for 60 seconds."""
+    global _dept_mapping_cache, _dept_mapping_cache_time
+    current_time = time.time()
+    if _dept_mapping_cache is not None and current_time - _dept_mapping_cache_time < 60:
+        return _dept_mapping_cache
+        
+    setting = session.get(SystemSetting, "DEPT_MAPPING")
+    mapping = {}
+    if setting and setting.value:
+        try:
+            mapping = json.loads(setting.value)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse DEPT_MAPPING JSON from DB")
+            mapping = {}
+            
+    _dept_mapping_cache = mapping
+    _dept_mapping_cache_time = current_time
+    return _dept_mapping_cache
+
+
+def get_job_title_mapping(session) -> dict[str, str]:
+    """Returns JOB_TITLE_MAPPING from DB, cached for 60 seconds."""
+    global _job_title_mapping_cache, _job_title_mapping_cache_time
+    current_time = time.time()
+    if _job_title_mapping_cache is not None and current_time - _job_title_mapping_cache_time < 60:
+        return _job_title_mapping_cache
+        
+    setting = session.get(SystemSetting, "JOB_TITLE_MAPPING")
+    mapping = {}
+    if setting and setting.value:
+        try:
+            mapping = json.loads(setting.value)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse JOB_TITLE_MAPPING JSON from DB")
+            mapping = {}
+            
+    _job_title_mapping_cache = mapping
+    _job_title_mapping_cache_time = current_time
+    return _job_title_mapping_cache
 
 
 def extract_ou_structure(
@@ -172,3 +219,4 @@ def match_organization_by_ou(dn: str, session) -> tuple[Optional[str], list[str]
     """
     org, _, warnings = extract_ou_structure(dn, session)
     return org, warnings
+

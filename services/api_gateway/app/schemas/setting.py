@@ -13,3 +13,15 @@ class LDAPSettingsRead(BaseModel):
 
 class OuMappingUpdate(BaseModel):
     mapping: dict[str, Any]
+
+class CanonicalMappingUpdate(BaseModel):
+    mapping: dict[str, str]
+
+class CanonicalSuggestionCluster(BaseModel):
+    suggested_canonical: str
+    variants: list[str]
+
+class CanonicalSuggestionsResponse(BaseModel):
+    departments: list[CanonicalSuggestionCluster]
+    job_titles: list[CanonicalSuggestionCluster]
+

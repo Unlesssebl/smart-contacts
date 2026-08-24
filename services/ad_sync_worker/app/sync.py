@@ -9,8 +9,8 @@ from shared.models.report import Report
 from shared.models.token import RefreshToken
 from shared.models.system_setting import SystemSetting
 from .ldap import LDAPClient
-from .logic import direct_corporate_ous, determine_status, extract_ou_structure, prune_ou_mapping, save_known_ous
-from shared.utils import ad_guid_to_uuid
+from .logic import direct_corporate_ous, determine_status, extract_ou_structure, prune_ou_mapping, save_known_ous, get_dept_mapping, get_job_title_mapping
+from shared.utils import ad_guid_to_uuid, apply_canonical_mapping
 from .utils import with_retry, format_phone
 from .events import publish_admin_update, publish_profile_update, publish_report_moderated
 
@@ -207,6 +207,15 @@ class SyncWorker:
         ad_dept = str(entry.get("department", "")) if entry.get("department") else None
         org, dept, warnings = extract_ou_structure(dn, session, fallback_dept=ad_dept)
         
+        raw_dept = dept
+        raw_job = str(entry.get("title", "")) if entry.get("title") else None
+        
+        dept_mapping = get_dept_mapping(session)
+        job_title_mapping = get_job_title_mapping(session)
+        
+        canonical_dept = apply_canonical_mapping(raw_dept, dept_mapping)
+        canonical_job = apply_canonical_mapping(raw_job, job_title_mapping)
+        
         user = self._find_or_link_user(session, sam, guid_str)
 
         if not user:
@@ -215,8 +224,10 @@ class SyncWorker:
                 sam_account_name=sam,
                 status=status,
                 full_name=str(entry.get("displayName", "")),
-                job_title=str(entry.get("title", "")),
-                department=dept,
+                job_title=canonical_job,
+                job_title_raw=raw_job,
+                department=canonical_dept,
+                department_raw=raw_dept,
                 office_location=str(entry.get("physicalDeliveryOfficeName", "")),
                 organization=org,
                 ad_dn=dn,
@@ -229,7 +240,7 @@ class SyncWorker:
             session.add(user)
             logger.info(f"Created new user: {sam} ({guid_str})")
         else:
-            self._resolve_conflicts_and_update(session, user, entry, org, dept, warnings, status)
+            self._resolve_conflicts_and_update(session, user, entry, org, canonical_dept, raw_dept, canonical_job, raw_job, warnings, status)
             user.sam_account_name = sam
             user.ad_dn = dn
             logger.info(f"Updated user: {sam}")
@@ -259,7 +270,7 @@ class SyncWorker:
             
         return None
 
-    def _resolve_conflicts_and_update(self, session, user: User, entry: dict, org: str, dept: str, warnings: list, status: str):
+    def _resolve_conflicts_and_update(self, session, user: User, entry: dict, org: str, canonical_dept: str, raw_dept: str, canonical_job: str, raw_job: str, warnings: list, status: str):
         """
         Updates user fields while respecting pending change requests.
         """
@@ -274,13 +285,17 @@ class SyncWorker:
         
         user.status = status
         user.organization = org
-        user.job_title = str(entry.get("title", ""))
+        user.job_title_raw = raw_job
+        user.department_raw = raw_dept
+        
+        if "job_title" not in pending_fields:
+            user.job_title = canonical_job
         
         if "full_name" not in pending_fields:
             user.full_name = str(entry.get("displayName", ""))
         
         if "department" not in pending_fields:
-            user.department = dept
+            user.department = canonical_dept
             
         if "office_location" not in pending_fields:
             user.office_location = str(entry.get("physicalDeliveryOfficeName", ""))

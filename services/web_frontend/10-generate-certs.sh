@@ -28,7 +28,7 @@ openssl req -x509 \
     -keyout "$KEY_FILE" \
     -out "$CERT_FILE" \
     -subj "/C=RU/O=Corporate/CN=${DOMAIN}" \
-    -addext "subjectAltName=DNS:${DOMAIN},DNS:localhost,IP:127.0.0.1"
+    -addext "subjectAltName=DNS:${DOMAIN},DNS:localhost,IP:127.0.0.1,IP:10.245.19.85,IP:172.18.128.32"
 
 chmod 600 "$KEY_FILE"
 chmod 644 "$CERT_FILE"

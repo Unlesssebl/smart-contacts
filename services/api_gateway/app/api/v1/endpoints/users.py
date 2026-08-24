@@ -44,7 +44,11 @@ async def list_users(
                 User.department == department,
                 User.department.ilike(f"{department} / %"),
                 User.department.ilike(f"% / {department}"),
-                User.department.ilike(f"% / {department} / %")
+                User.department.ilike(f"% / {department} / %"),
+                User.department_raw == department,
+                User.department_raw.ilike(f"{department} / %"),
+                User.department_raw.ilike(f"% / {department}"),
+                User.department_raw.ilike(f"% / {department} / %"),
             )
         )
         
@@ -52,7 +56,12 @@ async def list_users(
         query = query.filter(User.organization == organization)
         
     if job_title:
-        query = query.filter(User.job_title == job_title)
+        query = query.filter(
+            or_(
+                User.job_title == job_title,
+                User.job_title_raw == job_title
+            )
+        )
         
     if has_phone:
         query = query.filter(
@@ -179,11 +188,20 @@ async def list_organizations(
                 User.department == department,
                 User.department.ilike(f"{department} / %"),
                 User.department.ilike(f"% / {department}"),
-                User.department.ilike(f"% / {department} / %")
+                User.department.ilike(f"% / {department} / %"),
+                User.department_raw == department,
+                User.department_raw.ilike(f"{department} / %"),
+                User.department_raw.ilike(f"% / {department}"),
+                User.department_raw.ilike(f"% / {department} / %"),
             )
         )
     if job_title:
-        query = query.filter(User.job_title == job_title)
+        query = query.filter(
+            or_(
+                User.job_title == job_title,
+                User.job_title_raw == job_title
+            )
+        )
         
     organizations = query.distinct().order_by(User.organization).all()
     return [o[0] for o in organizations if o[0]]
@@ -212,7 +230,11 @@ async def list_job_titles(
                 User.department == department,
                 User.department.ilike(f"{department} / %"),
                 User.department.ilike(f"% / {department}"),
-                User.department.ilike(f"% / {department} / %")
+                User.department.ilike(f"% / {department} / %"),
+                User.department_raw == department,
+                User.department_raw.ilike(f"{department} / %"),
+                User.department_raw.ilike(f"% / {department}"),
+                User.department_raw.ilike(f"% / {department} / %"),
             )
         )
         

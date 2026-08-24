@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 
-export type AdminTab = 'requests' | 'tickets' | 'security' | 'settings' | 'ou-mapping';
+export type AdminTab = 'requests' | 'tickets' | 'security' | 'settings' | 'ou-mapping' | 'canonical';
 
 interface AdminTabsProps {
   activeTab: AdminTab;
@@ -16,6 +16,7 @@ const TABS: Array<{ id: AdminTab; label: string }> = [
   { id: 'security', label: 'Безопасность' },
   { id: 'settings', label: 'Настройки LDAP' },
   { id: 'ou-mapping', label: 'Организации (OU)' },
+  { id: 'canonical', label: 'Справочники' },
 ];
 
 export function AdminTabs({ activeTab, requestCount, ticketsCount = 0, securityCount = 0, onChange }: AdminTabsProps) {

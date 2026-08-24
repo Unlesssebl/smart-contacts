@@ -116,6 +116,15 @@ export interface SettingsSlice {
   ouMapping: Record<string, import('@/api/settings').OUMappingValue>;
   fetchOUMapping: () => Promise<void>;
   updateOUMapping: (mapping: Record<string, import('@/api/settings').OUMappingValue>) => Promise<void>;
+  deptMapping: Record<string, string>;
+  jobTitleMapping: Record<string, string>;
+  canonicalSuggestions: import('@/api/settings').CanonicalSuggestionsResponse | null;
+  isLoadingSuggestions: boolean;
+  fetchDeptMapping: () => Promise<void>;
+  updateDeptMapping: (mapping: Record<string, string>) => Promise<void>;
+  fetchJobTitleMapping: () => Promise<void>;
+  updateJobTitleMapping: (mapping: Record<string, string>) => Promise<void>;
+  fetchCanonicalSuggestions: () => Promise<void>;
 }
 
 export type AppState = AuthSlice &

@@ -191,3 +191,62 @@ def test_department_filtering_and_listing(client: TestClient, mocker, db_session
     assert resp_sub.json()["total"] == 1
     assert resp_sub.json()["items"][0]["object_guid"] == str(test_admin_user.object_guid)
 
+
+def test_canonical_mapping_and_suggestions(client: TestClient, mocker, db_session, test_admin_user, test_normal_user):
+    """
+    Test admin canonical endpoints and AI suggestions.
+    """
+    test_admin_user.department_raw = "ПЭО"
+    test_admin_user.department = "ПЭО"
+    test_admin_user.job_title_raw = "зам начальника отдела"
+    test_admin_user.job_title = "зам начальника отдела"
+
+    test_normal_user.department_raw = "Планово-экономический отдел"
+    test_normal_user.department = "Планово-экономический отдел"
+    test_normal_user.job_title_raw = "Заместитель начальника отдела"
+    test_normal_user.job_title = "Заместитель начальника отдела"
+    db_session.commit()
+
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_admin_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_admin"})
+    csrf_token = client.cookies.get("csrf_token") or "mock_csrf_token"
+    auth_headers = {"X-CSRF-Token": csrf_token}
+
+    # 1. Test canonical suggestions
+    resp_sugg = client.get("/api/v1/admin/canonical/suggestions")
+    assert resp_sugg.status_code == 200
+    sugg_data = resp_sugg.json()
+    assert "departments" in sugg_data
+    assert "job_titles" in sugg_data
+    assert len(sugg_data["departments"]) >= 1
+    assert len(sugg_data["job_titles"]) >= 1
+
+    # 2. Update dept mapping
+    resp_post_dept = client.post(
+        "/api/v1/admin/settings/dept-mapping",
+        json={"mapping": {"ПЭО": "Планово-экономический отдел"}},
+        headers=auth_headers
+    )
+    assert resp_post_dept.status_code == 200
+
+    resp_get_dept = client.get("/api/v1/admin/settings/dept-mapping")
+    assert resp_get_dept.status_code == 200
+    assert resp_get_dept.json()["mapping"]["ПЭО"] == "Планово-экономический отдел"
+
+    # 3. Update job title mapping
+    resp_post_job = client.post(
+        "/api/v1/admin/settings/job-title-mapping",
+        json={"mapping": {"зам начальника отдела": "Заместитель начальника отдела"}},
+        headers=auth_headers
+    )
+    assert resp_post_job.status_code == 200
+
+    resp_get_job = client.get("/api/v1/admin/settings/job-title-mapping")
+    assert resp_get_job.status_code == 200
+    assert resp_get_job.json()["mapping"]["зам начальника отдела"] == "Заместитель начальника отдела"
+
+
+

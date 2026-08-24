@@ -52,4 +52,68 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
       toast.error('Ошибка при сохранении маппинга OU');
     }
   },
+
+  deptMapping: {},
+  jobTitleMapping: {},
+  canonicalSuggestions: null,
+  isLoadingSuggestions: false,
+
+  fetchDeptMapping: async () => {
+    try {
+      const { settingsApi } = await import('@/api/settings');
+      const mapping = await settingsApi.getDeptMapping();
+      set({ deptMapping: mapping });
+    } catch (error) {
+      console.error('Failed to fetch dept mapping', error);
+      toast.error('Не удалось загрузить справочник отделов');
+    }
+  },
+
+  updateDeptMapping: async (mapping) => {
+    try {
+      const { settingsApi } = await import('@/api/settings');
+      const newMapping = await settingsApi.updateDeptMapping(mapping);
+      set({ deptMapping: newMapping });
+      toast.success('Справочник отделов успешно обновлен');
+    } catch (error) {
+      console.error('Failed to update dept mapping', error);
+      toast.error('Ошибка при сохранении справочника отделов');
+    }
+  },
+
+  fetchJobTitleMapping: async () => {
+    try {
+      const { settingsApi } = await import('@/api/settings');
+      const mapping = await settingsApi.getJobTitleMapping();
+      set({ jobTitleMapping: mapping });
+    } catch (error) {
+      console.error('Failed to fetch job title mapping', error);
+      toast.error('Не удалось загрузить справочник должностей');
+    }
+  },
+
+  updateJobTitleMapping: async (mapping) => {
+    try {
+      const { settingsApi } = await import('@/api/settings');
+      const newMapping = await settingsApi.updateJobTitleMapping(mapping);
+      set({ jobTitleMapping: newMapping });
+      toast.success('Справочник должностей успешно обновлен');
+    } catch (error) {
+      console.error('Failed to update job title mapping', error);
+      toast.error('Ошибка при сохранении справочника должностей');
+    }
+  },
+
+  fetchCanonicalSuggestions: async () => {
+    set({ isLoadingSuggestions: true });
+    try {
+      const { settingsApi } = await import('@/api/settings');
+      const suggestions = await settingsApi.getCanonicalSuggestions();
+      set({ canonicalSuggestions: suggestions, isLoadingSuggestions: false });
+    } catch (error) {
+      console.error('Failed to fetch canonical suggestions', error);
+      set({ isLoadingSuggestions: false });
+    }
+  },
 });
+

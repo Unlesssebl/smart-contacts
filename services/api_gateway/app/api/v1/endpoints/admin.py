@@ -15,12 +15,17 @@ from app.schemas.change_request import (
 )
 from app.schemas.report import ReportRead, ReportUpdateValue
 from app.schemas.support_ticket import SupportTicketRead, PaginatedSupportTickets
-from app.schemas.setting import LDAPSettingsRead, LDAPSettingsUpdate, OuMappingUpdate
+from app.schemas.setting import LDAPSettingsRead, LDAPSettingsUpdate, OuMappingUpdate, CanonicalMappingUpdate, CanonicalSuggestionsResponse
 from app.core import settings_manager
 from typing import List, Dict, Any, Optional
 from uuid import UUID
 import json
 from app.services.ou_service import apply_ou_mapping_to_users_bg
+from app.services.canonical_service import (
+    apply_dept_canonical_mapping_bg,
+    apply_job_title_canonical_mapping_bg,
+    get_canonical_suggestions,
+)
 from app.services.event_service import (
     publish_moderation_update,
     publish_report_updated,
@@ -268,6 +273,68 @@ def update_ou_mapping(
     background_tasks.add_task(apply_ou_mapping_to_users_bg, data.mapping)
     
     return get_ou_mapping(db, admin)
+
+@router.get("/settings/dept-mapping", response_model=CanonicalMappingUpdate)
+def get_dept_mapping(
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    mapping_str = settings_manager.get_setting(db, "DEPT_MAPPING")
+    mapping = {}
+    if mapping_str:
+        try:
+            mapping = json.loads(mapping_str)
+        except json.JSONDecodeError:
+            mapping = {}
+    return CanonicalMappingUpdate(mapping=mapping)
+
+@router.post("/settings/dept-mapping", response_model=CanonicalMappingUpdate)
+def update_dept_mapping(
+    data: CanonicalMappingUpdate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    mapping_str = json.dumps(data.mapping, ensure_ascii=False)
+    settings_manager.set_setting(db, "DEPT_MAPPING", mapping_str)
+    
+    background_tasks.add_task(apply_dept_canonical_mapping_bg, data.mapping)
+    return CanonicalMappingUpdate(mapping=data.mapping)
+
+@router.get("/settings/job-title-mapping", response_model=CanonicalMappingUpdate)
+def get_job_title_mapping(
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    mapping_str = settings_manager.get_setting(db, "JOB_TITLE_MAPPING")
+    mapping = {}
+    if mapping_str:
+        try:
+            mapping = json.loads(mapping_str)
+        except json.JSONDecodeError:
+            mapping = {}
+    return CanonicalMappingUpdate(mapping=mapping)
+
+@router.post("/settings/job-title-mapping", response_model=CanonicalMappingUpdate)
+def update_job_title_mapping(
+    data: CanonicalMappingUpdate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    mapping_str = json.dumps(data.mapping, ensure_ascii=False)
+    settings_manager.set_setting(db, "JOB_TITLE_MAPPING", mapping_str)
+    
+    background_tasks.add_task(apply_job_title_canonical_mapping_bg, data.mapping)
+    return CanonicalMappingUpdate(mapping=data.mapping)
+
+@router.get("/canonical/suggestions", response_model=CanonicalSuggestionsResponse)
+def list_canonical_suggestions(
+    db: Session = Depends(get_db),
+    admin: User = Depends(deps.require_admin)
+):
+    return get_canonical_suggestions(db)
+
 
 @router.get("/ldap/ous", response_model=Dict[str, Any])
 def list_ad_ous(

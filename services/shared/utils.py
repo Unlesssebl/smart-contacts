@@ -123,3 +123,74 @@ def parse_ou_structure(
     return org_name, dept_name, warnings
 
 
+HOMOGLYPHS = str.maketrans({
+    'A': 'А', 'B': 'В', 'C': 'С', 'E': 'Е', 'H': 'Н', 'K': 'К', 'M': 'М', 'O': 'О', 'P': 'Р', 'T': 'Т', 'X': 'Х',
+    'a': 'а', 'c': 'с', 'e': 'е', 'o': 'о', 'p': 'р', 'x': 'х', 'y': 'у'
+})
+
+
+def _sanitize_string(s: str) -> str:
+    if not s:
+        return ""
+    # Normalize 'ё', non-breaking spaces, and duplicate whitespace
+    res = s.replace('ё', 'е').replace('Ё', 'Е').replace('\u00a0', ' ')
+    res = res.translate(HOMOGLYPHS)
+    return re.sub(r'\s+', ' ', res).strip().lower()
+
+
+def apply_canonical_mapping(
+    raw_value: Optional[str],
+    mapping: Optional[dict[str, str]] = None
+) -> Optional[str]:
+    """
+    Applies canonical normalization mapping to a department or job_title string.
+    Supports both whole string replacement and sub-part replacement for ' / ' separated paths.
+    Matching is done case-insensitively with exact-case preference and typo/sanitization tolerance.
+    """
+    if not raw_value or not raw_value.strip() or raw_value.strip() in ("", "[]"):
+        return None
+
+    raw_clean = raw_value.strip()
+    if not mapping:
+        return raw_clean
+
+    # Build case-insensitive and sanitized lookups
+    mapping_lower = {k.lower().strip(): v.strip() for k, v in mapping.items() if k and v}
+    mapping_sanitized = {_sanitize_string(k): v.strip() for k, v in mapping.items() if k and v}
+
+    # 1. Direct full match (case-sensitive first, then case-insensitive, then sanitized)
+    if raw_clean in mapping:
+        return mapping[raw_clean]
+    if raw_clean.lower() in mapping_lower:
+        return mapping_lower[raw_clean.lower()]
+    sanitized_raw = _sanitize_string(raw_clean)
+    if sanitized_raw in mapping_sanitized:
+        return mapping_sanitized[sanitized_raw]
+
+    # 2. If it's a composite department path ("A / B / C"), check sub-parts
+    if " / " in raw_clean:
+        parts = [p.strip() for p in raw_clean.split(" / ")]
+        new_parts = []
+        changed = False
+        for part in parts:
+            if part in mapping:
+                new_parts.append(mapping[part])
+                changed = True
+            elif part.lower() in mapping_lower:
+                new_parts.append(mapping_lower[part.lower()])
+                changed = True
+            else:
+                sanitized_part = _sanitize_string(part)
+                if sanitized_part in mapping_sanitized:
+                    new_parts.append(mapping_sanitized[sanitized_part])
+                    changed = True
+                else:
+                    new_parts.append(part)
+        if changed:
+            return " / ".join(new_parts)
+
+    return raw_clean
+
+
+
+

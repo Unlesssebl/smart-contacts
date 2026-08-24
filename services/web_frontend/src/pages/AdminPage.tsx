@@ -7,6 +7,7 @@ import { AdminReviewPanel } from '@/features/administration/components/AdminRevi
 import { AdminTabs, type AdminTab } from '@/features/administration/components/AdminTabs';
 import { LdapSettingsPanel } from '@/features/administration/components/LdapSettingsPanel';
 import { OuMappingPanel } from '@/features/administration/components/OuMappingPanel';
+import { CanonicalMappingPanel } from '@/features/administration/components/CanonicalMappingPanel';
 import { SupportTicketsPanel } from '@/features/administration/components/SupportTicketsPanel';
 import { SecurityPanel } from '@/features/administration/components/SecurityPanel';
 import { buildAdminReviewItems, groupAdminReviewItems } from '@/features/administration/model/reviewItems';
@@ -27,6 +28,12 @@ export function AdminPage() {
     ouMapping,
     fetchOUMapping,
     updateOUMapping,
+    deptMapping,
+    fetchDeptMapping,
+    updateDeptMapping,
+    jobTitleMapping,
+    fetchJobTitleMapping,
+    updateJobTitleMapping,
     forceSync,
   } = useAppStore(
     useShallow((state) => ({
@@ -43,19 +50,35 @@ export function AdminPage() {
       ouMapping: state.ouMapping,
       fetchOUMapping: state.fetchOUMapping,
       updateOUMapping: state.updateOUMapping,
+      deptMapping: state.deptMapping,
+      fetchDeptMapping: state.fetchDeptMapping,
+      updateDeptMapping: state.updateDeptMapping,
+      jobTitleMapping: state.jobTitleMapping,
+      fetchJobTitleMapping: state.fetchJobTitleMapping,
+      updateJobTitleMapping: state.updateJobTitleMapping,
       forceSync: state.forceSync,
     })),
   );
 
   useEffect(() => {
-    void Promise.all([fetchAdminData(), fetchLDAPSettings(), fetchOUMapping()]);
-  }, [fetchAdminData, fetchLDAPSettings, fetchOUMapping]);
+    void Promise.all([
+      fetchAdminData(),
+      fetchLDAPSettings(),
+      fetchOUMapping(),
+      fetchDeptMapping(),
+      fetchJobTitleMapping(),
+    ]);
+  }, [fetchAdminData, fetchLDAPSettings, fetchOUMapping, fetchDeptMapping, fetchJobTitleMapping]);
 
   useEffect(() => {
     if (activeTab === 'settings') void fetchLDAPSettings(true);
     if (activeTab === 'tickets') void fetchSupportTickets();
     if (activeTab === 'security') void fetchSecurityIncidents();
-  }, [activeTab, fetchLDAPSettings, fetchSupportTickets, fetchSecurityIncidents]);
+    if (activeTab === 'canonical') {
+      void fetchDeptMapping();
+      void fetchJobTitleMapping();
+    }
+  }, [activeTab, fetchLDAPSettings, fetchSupportTickets, fetchSecurityIncidents, fetchDeptMapping, fetchJobTitleMapping]);
 
   const reviewItems = useMemo(
     () => buildAdminReviewItems(changeRequests, reports),
@@ -95,9 +118,18 @@ export function AdminPage() {
               <LdapSettingsPanel settings={ldapSettings} onSave={updateLDAPSettings} onForceSync={forceSync} />
             )}
             {activeTab === 'ou-mapping' && <OuMappingPanel mapping={ouMapping} onSave={updateOUMapping} />}
+            {activeTab === 'canonical' && (
+              <CanonicalMappingPanel
+                deptMapping={deptMapping}
+                jobTitleMapping={jobTitleMapping}
+                onSaveDeptMapping={updateDeptMapping}
+                onSaveJobTitleMapping={updateJobTitleMapping}
+              />
+            )}
           </motion.div>
         </div>
       </main>
     </div>
   );
 }
+

@@ -150,7 +150,30 @@ class OrganizationMappingTests(unittest.TestCase):
         self.assertEqual(org, "АО КЗМК ТЭМПО")
         self.assertIsNone(dept)
 
+    def test_apply_canonical_mapping_whole_and_parts(self):
+        dept_mapping = {
+            "ПЭО": "Планово-экономический отдел",
+            "ОТиЗ": "Отдел труда и заработной платы",
+            "Сектор веб": "Сектор веб-разработки"
+        }
+        # Direct match
+        res = logic.apply_canonical_mapping("ПЭО", dept_mapping)
+        self.assertEqual(res, "Планово-экономический отдел")
+
+        # Case-insensitive direct match
+        res = logic.apply_canonical_mapping("пэо", dept_mapping)
+        self.assertEqual(res, "Планово-экономический отдел")
+
+        # Nested path part substitution
+        res = logic.apply_canonical_mapping("Департамент ИТ / Сектор веб", dept_mapping)
+        self.assertEqual(res, "Департамент ИТ / Сектор веб-разработки")
+
+        # No match returns raw
+        res = logic.apply_canonical_mapping("Бухгалтерия", dept_mapping)
+        self.assertEqual(res, "Бухгалтерия")
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

@@ -8,9 +8,11 @@ class UserBase(BaseModel):
     internal_phone: Optional[str] = None
     mobile_phone: Optional[str] = None
     department: Optional[str] = None
+    department_raw: Optional[str] = None
     office_location: Optional[str] = None
     organization: Optional[str] = None
     job_title: Optional[str] = None
+    job_title_raw: Optional[str] = None
     email: Optional[str] = None
     ad_dn: Optional[str] = None
     avatar_color: Optional[str] = None
@@ -32,8 +34,6 @@ class UserFull(UserRead):
     grace_period_left: int
     last_sync_timestamp: Optional[datetime] = None
 
-
-
 class PaginatedUsers(BaseModel):
     total: int
     page: int
@@ -52,7 +52,6 @@ class ProfileAcknowledge(BaseModel):
 
 class AvatarColorUpdate(BaseModel):
     avatar_color: str = Field(..., max_length=7, pattern=r'^#[0-9a-fA-F]{6}$')
-
 
 class UserVisibilityUpdate(BaseModel):
     is_hidden: bool
