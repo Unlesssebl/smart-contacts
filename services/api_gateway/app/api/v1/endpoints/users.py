@@ -39,7 +39,14 @@ async def list_users(
         query = query.filter(User.is_hidden.is_(True))
     
     if department:
-        query = query.filter(User.department == department)
+        query = query.filter(
+            or_(
+                User.department == department,
+                User.department.ilike(f"{department} / %"),
+                User.department.ilike(f"% / {department}"),
+                User.department.ilike(f"% / {department} / %")
+            )
+        )
         
     if organization:
         query = query.filter(User.organization == organization)
@@ -116,27 +123,101 @@ async def list_users(
 
 @router.get("/departments", response_model=List[str])
 async def list_departments(
+    organization: Optional[str] = Query(None, description="Filter departments by organization"),
+    job_title: Optional[str] = Query(None, description="Filter departments by job title"),
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    departments = db.query(User.department).filter(User.department.isnot(None), User.department != '', User.department != '[]').distinct().order_by(User.department).all()
-    return [d[0] for d in departments]
+    is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    query = db.query(User.department).filter(
+        User.status != UserStatus.RESIGNED.value,
+        User.organization.isnot(None),
+        User.organization != '',
+        User.organization != '[]',
+        User.department.isnot(None),
+        User.department != '',
+        User.department != '[]'
+    )
+    if not is_admin:
+        query = query.filter(User.is_hidden.is_(False))
+    if organization:
+        query = query.filter(User.organization == organization)
+    if job_title:
+        query = query.filter(User.job_title == job_title)
+        
+    raw_departments = query.distinct().all()
+    dept_set = set()
+    for (d,) in raw_departments:
+        if d:
+            dept_set.add(d)
+            for part in d.split(" / "):
+                clean_part = part.strip()
+                if clean_part:
+                    dept_set.add(clean_part)
+                    
+    return sorted(dept_set, key=lambda x: x.lower())
 
 @router.get("/organizations", response_model=List[str])
 async def list_organizations(
+    department: Optional[str] = Query(None, description="Filter organizations by department"),
+    job_title: Optional[str] = Query(None, description="Filter organizations by job title"),
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    organizations = db.query(User.organization).filter(User.organization.isnot(None), User.organization != '', User.organization != '[]').distinct().order_by(User.organization).all()
-    return [o[0] for o in organizations]
+    is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    query = db.query(User.organization).filter(
+        User.status != UserStatus.RESIGNED.value,
+        User.organization.isnot(None),
+        User.organization != '',
+        User.organization != '[]'
+    )
+    if not is_admin:
+        query = query.filter(User.is_hidden.is_(False))
+    if department:
+        query = query.filter(
+            or_(
+                User.department == department,
+                User.department.ilike(f"{department} / %"),
+                User.department.ilike(f"% / {department}"),
+                User.department.ilike(f"% / {department} / %")
+            )
+        )
+    if job_title:
+        query = query.filter(User.job_title == job_title)
+        
+    organizations = query.distinct().order_by(User.organization).all()
+    return [o[0] for o in organizations if o[0]]
 
 @router.get("/job-titles", response_model=List[str])
 async def list_job_titles(
+    organization: Optional[str] = Query(None, description="Filter job titles by organization"),
+    department: Optional[str] = Query(None, description="Filter job titles by department"),
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    job_titles = db.query(User.job_title).filter(User.job_title.isnot(None), User.job_title != '', User.job_title != '[]').distinct().order_by(User.job_title).all()
-    return [j[0] for j in job_titles]
+    is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    query = db.query(User.job_title).filter(
+        User.status != UserStatus.RESIGNED.value,
+        User.job_title.isnot(None),
+        User.job_title != '',
+        User.job_title != '[]'
+    )
+    if not is_admin:
+        query = query.filter(User.is_hidden.is_(False))
+    if organization:
+        query = query.filter(User.organization == organization)
+    if department:
+        query = query.filter(
+            or_(
+                User.department == department,
+                User.department.ilike(f"{department} / %"),
+                User.department.ilike(f"% / {department}"),
+                User.department.ilike(f"% / {department} / %")
+            )
+        )
+        
+    job_titles = query.distinct().order_by(User.job_title).all()
+    return [j[0] for j in job_titles if j[0]]
 
 @router.get("/{user_id}", response_model=UserFull)
 async def get_user(

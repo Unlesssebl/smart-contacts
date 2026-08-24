@@ -102,6 +102,55 @@ class OrganizationMappingTests(unittest.TestCase):
 
         self.assertEqual(logic.direct_corporate_ous(paths), {"Plant"})
 
+    def test_extract_ou_structure_single_and_nested_dept(self):
+        session = Mock()
+        session.get.return_value = Mock(
+            value=json.dumps({"АО КЗМК ТЭМПО": {"org": "АО КЗМК ТЭМПО"}})
+        )
+
+        # Single department OU
+        org, dept, warnings = logic.extract_ou_structure(
+            "CN=Иванов Иван,OU=Бухгалтерия,OU=АО КЗМК ТЭМПО,OU=CORPORATE_USERS,DC=tempo,DC=local",
+            session,
+        )
+        self.assertEqual(org, "АО КЗМК ТЭМПО")
+        self.assertEqual(dept, "Бухгалтерия")
+        self.assertEqual(warnings, [])
+
+        # Nested department OUs (from parent to child)
+        org, dept, warnings = logic.extract_ou_structure(
+            "CN=Петров Петр,OU=Сектор веб,OU=Отдел разработки,OU=Департамент ИТ,OU=АО КЗМК ТЭМПО,OU=CORPORATE_USERS,DC=tempo,DC=local",
+            session,
+        )
+        self.assertEqual(org, "АО КЗМК ТЭМПО")
+        self.assertEqual(dept, "Департамент ИТ / Отдел разработки / Сектор веб")
+        self.assertEqual(warnings, [])
+
+    def test_extract_ou_structure_fallback(self):
+        session = Mock()
+        session.get.return_value = Mock(
+            value=json.dumps({"АО КЗМК ТЭМПО": {"org": "АО КЗМК ТЭМПО"}})
+        )
+
+        # No department OU, but fallback provided
+        org, dept, warnings = logic.extract_ou_structure(
+            "CN=Сидоров,OU=АО КЗМК ТЭМПО,OU=CORPORATE_USERS,DC=tempo,DC=local",
+            session,
+            fallback_dept="Склад",
+        )
+        self.assertEqual(org, "АО КЗМК ТЭМПО")
+        self.assertEqual(dept, "Склад")
+
+        # Fallback repeats org name -> should not use it
+        org, dept, warnings = logic.extract_ou_structure(
+            "CN=Сидоров,OU=АО КЗМК ТЭМПО,OU=CORPORATE_USERS,DC=tempo,DC=local",
+            session,
+            fallback_dept="АО КЗМК ТЭМПО",
+        )
+        self.assertEqual(org, "АО КЗМК ТЭМПО")
+        self.assertIsNone(dept)
+
 
 if __name__ == "__main__":
     unittest.main()
+

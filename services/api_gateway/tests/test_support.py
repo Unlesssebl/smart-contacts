@@ -108,7 +108,8 @@ def test_admin_support_tickets_lifecycle(client, test_admin_user, test_normal_us
         headers={"X-CSRF-Token": "mock_csrf_token"}
     )
     assert admin_list_res.status_code == 200
-    tickets = admin_list_res.json()
+    admin_data = admin_list_res.json()
+    tickets = admin_data.get("items", admin_data) if isinstance(admin_data, dict) else admin_data
     assert len(tickets) >= 1
     target = next((t for t in tickets if t["id"] == ticket_id), None)
     assert target is not None
@@ -132,7 +133,9 @@ def test_admin_support_tickets_lifecycle(client, test_admin_user, test_normal_us
         headers={"X-CSRF-Token": "mock_csrf_token"}
     )
     assert open_list_res.status_code == 200
-    assert all(t["id"] != ticket_id for t in open_list_res.json())
+    open_data = open_list_res.json()
+    open_tickets = open_data.get("items", open_data) if isinstance(open_data, dict) else open_data
+    assert all(t["id"] != ticket_id for t in open_tickets)
 
     # 6. Admin reopens ticket
     reopen_res = client.patch(

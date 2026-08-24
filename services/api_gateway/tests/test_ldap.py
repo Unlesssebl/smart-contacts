@@ -31,12 +31,12 @@ def test_init_ldap_pool(mocker, caplog):
 
 def test_apply_ou_mapping_to_users_bg(db_session, test_normal_user, mocker):
     """
-    Test the background task logic for OU mapping to Organization field.
+    Test the background task logic for OU mapping to Organization and Department fields.
     """
     from app.api.v1.endpoints.admin import apply_ou_mapping_to_users_bg
     
-    # Give the user an AD DN
-    test_normal_user.ad_dn = "CN=Normal User,OU=Moscow_HQ,OU=Users,DC=domain,DC=local"
+    # Give the user an AD DN with nested department OU
+    test_normal_user.ad_dn = "CN=Normal User,OU=Engineering,OU=Moscow_HQ,OU=Users,DC=domain,DC=local"
     db_session.commit()
     
     mapping = {
@@ -46,10 +46,11 @@ def test_apply_ou_mapping_to_users_bg(db_session, test_normal_user, mocker):
     
     apply_ou_mapping_to_users_bg(mapping)
     
-    # Fetch the user again to see if organization was updated
+    # Fetch the user again to see if organization and department were updated
     db_session.refresh(test_normal_user)
     
     assert test_normal_user.organization == "Central Office"
+    assert test_normal_user.department == "Engineering"
 
 def test_apply_ou_mapping_case_insensitive(db_session, test_normal_user, mocker):
     """

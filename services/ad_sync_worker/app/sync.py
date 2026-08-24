@@ -9,7 +9,7 @@ from shared.models.report import Report
 from shared.models.token import RefreshToken
 from shared.models.system_setting import SystemSetting
 from .ldap import LDAPClient
-from .logic import direct_corporate_ous, determine_status, match_organization_by_ou, prune_ou_mapping, save_known_ous
+from .logic import direct_corporate_ous, determine_status, extract_ou_structure, prune_ou_mapping, save_known_ous
 from shared.utils import ad_guid_to_uuid
 from .utils import with_retry, format_phone
 from .events import publish_admin_update, publish_profile_update, publish_report_moderated
@@ -204,7 +204,8 @@ class SyncWorker:
         
         status = determine_status(uac, sam)
         dn = str(entry.get("distinguishedName", ""))
-        org, warnings = match_organization_by_ou(dn, session)
+        ad_dept = str(entry.get("department", "")) if entry.get("department") else None
+        org, dept, warnings = extract_ou_structure(dn, session, fallback_dept=ad_dept)
         
         user = self._find_or_link_user(session, sam, guid_str)
 
@@ -215,7 +216,7 @@ class SyncWorker:
                 status=status,
                 full_name=str(entry.get("displayName", "")),
                 job_title=str(entry.get("title", "")),
-                department=str(entry.get("department", "")),
+                department=dept,
                 office_location=str(entry.get("physicalDeliveryOfficeName", "")),
                 organization=org,
                 ad_dn=dn,
@@ -228,7 +229,7 @@ class SyncWorker:
             session.add(user)
             logger.info(f"Created new user: {sam} ({guid_str})")
         else:
-            self._resolve_conflicts_and_update(session, user, entry, org, warnings, status)
+            self._resolve_conflicts_and_update(session, user, entry, org, dept, warnings, status)
             user.sam_account_name = sam
             user.ad_dn = dn
             logger.info(f"Updated user: {sam}")
@@ -258,7 +259,7 @@ class SyncWorker:
             
         return None
 
-    def _resolve_conflicts_and_update(self, session, user: User, entry: dict, org: str, warnings: list, status: str):
+    def _resolve_conflicts_and_update(self, session, user: User, entry: dict, org: str, dept: str, warnings: list, status: str):
         """
         Updates user fields while respecting pending change requests.
         """
@@ -279,7 +280,7 @@ class SyncWorker:
             user.full_name = str(entry.get("displayName", ""))
         
         if "department" not in pending_fields:
-            user.department = str(entry.get("department", ""))
+            user.department = dept
             
         if "office_location" not in pending_fields:
             user.office_location = str(entry.get("physicalDeliveryOfficeName", ""))

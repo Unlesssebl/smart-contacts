@@ -52,18 +52,30 @@ export const usersApi = {
     };
   },
 
-  getDepartments: async (): Promise<string[]> => {
-    const response = await apiClient.get('/users/departments');
+  getDepartments: async (filters?: { organization?: string; job_title?: string }): Promise<string[]> => {
+    const params = new URLSearchParams();
+    if (filters?.organization) params.append('organization', filters.organization);
+    if (filters?.job_title) params.append('job_title', filters.job_title);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await apiClient.get<string[]>(`/users/departments${query}`);
     return response.data;
   },
 
-  getOrganizations: async (): Promise<string[]> => {
-    const response = await apiClient.get('/users/organizations');
+  getOrganizations: async (filters?: { department?: string; job_title?: string }): Promise<string[]> => {
+    const params = new URLSearchParams();
+    if (filters?.department) params.append('department', filters.department);
+    if (filters?.job_title) params.append('job_title', filters.job_title);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await apiClient.get<string[]>(`/users/organizations${query}`);
     return response.data;
   },
 
-  getJobTitles: async (): Promise<string[]> => {
-    const response = await apiClient.get('/users/job-titles');
+  getJobTitles: async (filters?: { organization?: string; department?: string }): Promise<string[]> => {
+    const params = new URLSearchParams();
+    if (filters?.organization) params.append('organization', filters.organization);
+    if (filters?.department) params.append('department', filters.department);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await apiClient.get<string[]>(`/users/job-titles${query}`);
     return response.data;
   }
 };

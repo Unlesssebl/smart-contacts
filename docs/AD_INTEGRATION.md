@@ -10,9 +10,9 @@
 | `full_name` | `displayName` | Читается как есть. Изменение только через IT-Operator. |
 | `internal_phone` | `telephoneNumber` | Корпоративный (внутренний) номер. Приведение к формату XX-XX (например, 49-87). |
 | `mobile_phone` | `mobile` | Мобильный телефон. Нормализация в E.164 (`+7XXXXXXXXXX`). |
-| `department` | `department` | Читается как есть. Структурные изменения одобряет IT-Operator. |
+| `department` | `ad_dn` (OU) / `department` | **Сложная логика**: извлечение иерархии OU подразделений из `distinguishedName` (ниже организации). Fallback на атрибут `department`, если в OU нет подотделов. |
 | `office_location` | `physicalDeliveryOfficeName` | Читается как есть. |
-| `job_title` | `title` | Читается как есть. Изменение только через AD/HR. |
+| `job_title` | `title` | Читается как есть из атрибута LDAP. Изменение только через AD/HR. |
 | `organization` | `ad_dn` (OU) | **Сложная логика**: извлечение OU из `distinguishedName` и сопоставление с маппингом из таблицы `system_settings` (ключ `OU_MAPPING`). |
 
 **Поля `is_verified`, `is_protected`, `grace_period_left`, `role`, `tg_id`** — только в PostgreSQL. В AD **не записываются**.

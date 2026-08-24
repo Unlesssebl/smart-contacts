@@ -154,3 +154,40 @@ def test_user_ad_dn_access_control(client: TestClient, mocker, db_session, test_
     response = client.get(f"/api/v1/users/{test_normal_user.object_guid}")
     assert response.status_code == 200
     assert response.json()["ad_dn"] is None
+
+def test_department_filtering_and_listing(client: TestClient, mocker, db_session, test_admin_user, test_normal_user):
+    """
+    Test hierarchical department filtering and listing.
+    """
+    test_admin_user.organization = "Главный Офис"
+    test_admin_user.department = "Департамент ИТ / Отдел разработки"
+    test_normal_user.organization = "Главный Офис"
+    test_normal_user.department = "Департамент ИТ / Отдел поддержки"
+    db_session.commit()
+
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_admin_user.sam_account_name
+    )
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_admin"})
+
+    # 1. Test /departments returns all distinct levels and full paths
+    resp_deps = client.get("/api/v1/users/departments")
+    assert resp_deps.status_code == 200
+    deps = resp_deps.json()
+    assert "Департамент ИТ" in deps
+    assert "Отдел разработки" in deps
+    assert "Отдел поддержки" in deps
+    assert "Департамент ИТ / Отдел разработки" in deps
+
+    # 2. Filter by top level "Департамент ИТ" - should return both users
+    resp_all = client.get("/api/v1/users", params={"department": "Департамент ИТ"})
+    assert resp_all.status_code == 200
+    assert resp_all.json()["total"] == 2
+
+    # 3. Filter by sub-unit "Отдел разработки" - should return only test_admin_user
+    resp_sub = client.get("/api/v1/users", params={"department": "Отдел разработки"})
+    assert resp_sub.status_code == 200
+    assert resp_sub.json()["total"] == 1
+    assert resp_sub.json()["items"][0]["object_guid"] == str(test_admin_user.object_guid)
+

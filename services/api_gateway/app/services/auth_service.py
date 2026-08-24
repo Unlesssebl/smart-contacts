@@ -237,7 +237,6 @@ class AuthService:
             user_updated = True
         fields_to_sync = {
             "full_name": "full_name",
-            "department": "department",
             "job_title": "job_title",
             "mobile_phone": "mobile_phone",
             "internal_phone": "internal_phone",
@@ -247,6 +246,9 @@ class AuthService:
         # Load pending CRs to protect fields (EC-6)
         from shared.models.change_request import ChangeRequest
         from shared.models.enums import ChangeRequestStatus
+        from shared.utils import parse_ou_structure
+        from app.core import settings_manager
+        import json
         
         pending_crs = db.query(ChangeRequest).filter(
             ChangeRequest.user_guid == user.object_guid,
@@ -267,6 +269,22 @@ class AuthService:
         if ldap_ad_dn and user.ad_dn != ldap_ad_dn:
             user.ad_dn = ldap_ad_dn
             user_updated = True
+
+        if user.ad_dn:
+            mapping_str = settings_manager.get_setting(db, "OU_MAPPING")
+            ou_map = {}
+            if mapping_str:
+                try:
+                    ou_map = json.loads(mapping_str)
+                except Exception:
+                    pass
+            org, dept, _ = parse_ou_structure(user.ad_dn, ou_map, fallback_dept=getattr(ldap_user, "department", None))
+            if "organization" not in pending_fields and org and user.organization != org:
+                user.organization = org
+                user_updated = True
+            if "department" not in pending_fields and dept and user.department != dept:
+                user.department = dept
+                user_updated = True
                 
         if user_updated:
             db.commit()

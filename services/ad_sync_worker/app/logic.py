@@ -151,49 +151,24 @@ def get_ou_mapping(session) -> dict[str, Any]:
     _ou_mapping_cache_time = current_time
     return _ou_mapping_cache
 
-def _organization_name(mapping_value: Any) -> Optional[str]:
-    if isinstance(mapping_value, dict):
-        value = mapping_value.get("org")
-        return value if isinstance(value, str) and value else None
-    return mapping_value if isinstance(mapping_value, str) and mapping_value else None
+from shared.utils import parse_ou_structure
+
+
+def extract_ou_structure(
+    dn: str,
+    session,
+    fallback_dept: Optional[str] = None
+) -> tuple[Optional[str], Optional[str], list[str]]:
+    """
+    Extracts organization and department from DN using OU_MAPPING from DB.
+    """
+    mapping = get_ou_mapping(session)
+    return parse_ou_structure(dn, mapping, fallback_dept)
 
 
 def match_organization_by_ou(dn: str, session) -> tuple[Optional[str], list[str]]:
     """
     Matches the user's AD Organizational Units (OU) against the mapping in DB.
     """
-    mapping = get_ou_mapping(session)
-    if not mapping:
-        return None, ["OU mapping is empty or could not be loaded."]
-
-    user_ous = re.findall(r"OU=([^,]+)", dn)
-    
-    # Priority 1: Exact case-sensitive match
-    exact_matches = [ou for ou in user_ous if ou in mapping]
-    
-    # Priority 2: Case-insensitive match
-    case_insensitive_matches = []
-    mapping_lower = {k.lower(): v for k, v in mapping.items()}
-    for ou in user_ous:
-        if ou.lower() in mapping_lower:
-            case_insensitive_matches.append(ou)
-
-    matches = list(dict.fromkeys(exact_matches + case_insensitive_matches))
-    
-    if not matches:
-        return None, []
-    
-    if len(matches) == 1:
-        # Get the actual organization name from mapping
-        key = matches[0]
-        org_name = _organization_name(mapping.get(key) or mapping_lower.get(key.lower()))
-        return org_name, []
-    
-    # Multiple matches found
-    # Try to pick exact case match if exists, otherwise first match
-    selected_ou = exact_matches[0] if exact_matches else matches[0]
-    org_name = _organization_name(
-        mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower())
-    )
-    warning = f"Warning: Multiple OUs matched in DN: {matches}. Using {selected_ou} -> {org_name}."
-    return org_name, [warning]
+    org, _, warnings = extract_ou_structure(dn, session)
+    return org, warnings

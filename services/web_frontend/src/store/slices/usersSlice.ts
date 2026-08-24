@@ -27,6 +27,7 @@ export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set
   setFilters: (newFilters) => {
     set((state) => ({ filters: { ...state.filters, ...newFilters }, page: 1 }));
     get().fetchUsers(undefined, 1);
+    get().fetchFilterOptions();
   },
 
   setLimit: (limit) => {
@@ -41,10 +42,11 @@ export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set
 
   fetchFilterOptions: async () => {
     try {
+      const { organization, department, job_title } = get().filters;
       const [deps, orgs, jobs] = await Promise.all([
-        usersApi.getDepartments(),
-        usersApi.getOrganizations(),
-        usersApi.getJobTitles(),
+        usersApi.getDepartments({ organization, job_title }),
+        usersApi.getOrganizations({ department, job_title }),
+        usersApi.getJobTitles({ organization, department }),
       ]);
       set({ departments: deps, organizations: orgs, jobTitles: jobs });
     } catch (error) {
