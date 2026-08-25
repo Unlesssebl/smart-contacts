@@ -10,11 +10,19 @@ from shared.models.change_request import ChangeRequest
 from shared.models.report import Report
 from shared.models.token import RefreshToken
 from shared.models.system_setting import SystemSetting
+from shared.models.notification import Notification
 from .ldap import LDAPClient
 from .logic import direct_corporate_ous, determine_status, extract_ou_structure, prune_ou_mapping, save_known_ous, get_dept_mapping, get_job_title_mapping
-from shared.utils import ad_guid_to_uuid, apply_canonical_mapping
+from shared.utils import (
+    ad_guid_to_uuid,
+    apply_canonical_mapping,
+    build_field_applied_notification,
+    build_field_rejected_notification,
+    build_report_notification,
+)
 from .utils import with_retry, format_phone
 from .events import publish_admin_update, publish_profile_update, publish_report_moderated
+
 
 logger = logging.getLogger(__name__)
 
@@ -403,8 +411,37 @@ class SyncWorker:
                         item.status = "applied"
                         if task["type"] == "cr":
                             item.resolved_at = datetime.now(timezone.utc)
+                            title, body = build_field_applied_notification(task["attribute_name"])
+                            session.add(Notification(
+                                user_guid=user.object_guid,
+                                type="field_applied",
+                                title=title,
+                                body=body,
+                                field=task["attribute_name"],
+                                payload={"new_value": task["new_value"]},
+                                is_read=False,
+                            ))
                         else:
                             item.processed_at = datetime.now(timezone.utc)
+                            if task.get("reporter_user_guid"):
+                                notif_type, title, body = build_report_notification(
+                                    attribute_name=task["attribute_name"],
+                                    status="applied",
+                                    target_user_name=user.full_name,
+                                )
+                                session.add(Notification(
+                                    user_guid=task["reporter_user_guid"],
+                                    type=notif_type,
+                                    title=title,
+                                    body=body,
+                                    field=task["attribute_name"],
+                                    payload={
+                                        "target_user_guid": str(user.object_guid),
+                                        "target_user_name": user.full_name,
+                                        "status": "applied",
+                                    },
+                                    is_read=False,
+                                ))
                             
                         # Apply changes to local DB user upon success (Plan Option A)
                         final_value = task["new_value"] if task["new_value"] else None
@@ -460,6 +497,39 @@ class SyncWorker:
                         user.sync_error_log = _append_sync_error(user.sync_error_log, f"AD Push failed for {task['id']}: {error_msg}")
                         logger.error(f"AD Push failed for {task['id']}: {error_msg}")
                         
+                        if task["type"] == "cr":
+                            title, body = build_field_rejected_notification(task["attribute_name"], reason=error_msg)
+                            session.add(Notification(
+                                user_guid=user.object_guid,
+                                type="field_rejected",
+                                title=title,
+                                body=body,
+                                field=task["attribute_name"],
+                                payload={"error": error_msg},
+                                is_read=False,
+                            ))
+                        elif task["type"] == "report" and task.get("reporter_user_guid"):
+                            notif_type, title, body = build_report_notification(
+                                attribute_name=task["attribute_name"],
+                                status="rejected" if item.status == "rejected" else "conflict",
+                                target_user_name=user.full_name,
+                                rejection_reason=error_msg,
+                            )
+                            session.add(Notification(
+                                user_guid=task["reporter_user_guid"],
+                                type=notif_type,
+                                title=title,
+                                body=body,
+                                field=task["attribute_name"],
+                                payload={
+                                    "target_user_guid": str(user.object_guid),
+                                    "target_user_name": user.full_name,
+                                    "status": item.status,
+                                    "rejection_reason": error_msg,
+                                },
+                                is_read=False,
+                            ))
+
                         events_to_publish.append({"type": "admin_update"})
                         events_to_publish.append({
                             "type": "profile_updated",
@@ -507,6 +577,20 @@ class SyncWorker:
                     session.delete(t)
             except Exception as e:
                 logger.error(f"Failed to clean up expired tokens: {e}")
+
+            # Clean up notifications older than 7 days
+            try:
+                notif_threshold = datetime.now(timezone.utc) - timedelta(days=7)
+                expired_notifs = session.execute(
+                    select(Notification).where(Notification.created_at < notif_threshold)
+                ).scalars().all()
+                for n in expired_notifs:
+                    session.delete(n)
+                if expired_notifs:
+                    logger.info(f"Cleaned up {len(expired_notifs)} notifications older than 7 days.")
+            except Exception as e:
+                logger.error(f"Failed to clean up expired notifications: {e}")
+
 
             session.commit()
             

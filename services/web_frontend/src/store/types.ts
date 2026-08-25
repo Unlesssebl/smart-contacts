@@ -84,15 +84,19 @@ export interface SupportSlice {
 export interface NotificationsSlice {
   notifications: AppNotification[];
   unreadCount: number;
-  addNotification: (notif: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => boolean;
-  markNotificationRead: (id: string) => void;
-  markAllNotificationsRead: () => void;
-  deleteNotification: (id: string) => void;
+  isLoadingNotifications: boolean;
+  fetchNotifications: () => Promise<void>;
+  fetchUnreadCount: () => Promise<void>;
+  addNotification: (notif: Omit<AppNotification, 'id' | 'createdAt' | 'read'> & { id?: string; createdAt?: string; read?: boolean }) => boolean;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
   loadNotificationsFromStorage: (userGuid?: string) => void;
-  clearNotifications: () => void;
+  clearNotifications: () => Promise<void>;
 }
 
 export interface AdminSlice {
+
   securityIncidents: import('@/types').SecurityIncident[];
   isLoadingSecurity: boolean;
   fetchAdminData: () => Promise<void>;
