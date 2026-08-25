@@ -1,23 +1,82 @@
-# Corporate Directory App (Smart Contacts)
+# 🎨 Web Frontend (React 19 & TypeScript)
 
-This is a modern corporate directory application featuring a responsive glassmorphism UI.
+Современный веб-интерфейс корпоративного справочника сотрудников с адаптивным дизайном, поддержкой Glassmorphism и реактивным обновлением в реальном времени.
 
-## Key Features
+---
 
-- **Adaptive Pagination:** The grid dynamically calculates the optimal number of employee cards to display without causing vertical scrolling, adapting perfectly to Full HD, 2K, and Ultrawide monitors.
-- **Glassmorphism Design:** Modern aesthetic with a floating radial pagination component, blurred backgrounds, and smooth framer-motion layout animations.
-- **Centralized State:** Zustand handles global state, including pagination limits and current page syncing.
-- **Intelligent Search:** Spotlight search in the header immediately filters through the directory, featuring a global "type-to-search" capability that automatically focuses the input when you start typing.
-- **Fluid Animations:** Refined Framer Motion animations with custom bezier curves and staggered cascade delays, alongside robust `AnimatePresence` handling to maintain grid integrity during pagination.
+## 🛠️ Стек технологий
 
-## Running the code
+* **Фреймворк и сборка:** React 19, TypeScript, Vite 7
+* **Стилизация:** Tailwind CSS 4, Radix UI primitives, Lucide Icons
+* **Анимации:** `motion/react` (Framer Motion)
+* **Управление состоянием:** Zustand + `persist` middleware
+* **Сетевой слой:** Axios (управление сессиями через HttpOnly Cookies, CSRF, автоматический refresh токенов)
+* **Шлюз / Сервер статики:** Nginx (HTTP/2, SSL termination, HSTS, Security Headers)
 
-Run `npm i` to install the dependencies.
+---
 
-Run `npm run dev` to start the development server.
+## 📂 Структура проекта
 
-### Local Development (Mock Backend)
+```text
+services/web_frontend/
+├── src/
+│   ├── components/          # Компоненты UI (EmployeeCard, SearchBar, GatekeeperModal, AdminPanel)
+│   ├── hooks/               # Кастомные React-хуки (useWebSocket, useDebounce, usePresence)
+│   ├── store/               # Zustand сторы состояния (authStore, appStore, filtersStore)
+│   ├── services/            # Axios API клиенты и интерцепторы
+│   ├── types/               # TypeScript интерфейсы и типы
+│   ├── App.tsx              # Корневой компонент приложения
+│   └── main.tsx             # Точка монтирования React DOM
+├── mock-plugin.ts           # Встроенный мок-бэкенд для автономной разработки
+├── vite.config.ts           # Конфигурация сборщика Vite
+└── package.json             # Зависимости и npm-скрипты
+```
 
-The project includes a built-in mock backend via `mock-plugin.ts` integrated directly into Vite. When running locally with `npm run dev`, API requests starting with `/api/v1/` are intercepted by the Vite dev server plugin instead of being proxied to a real backend. This allows frontend development (including authentication flow, profile editing, and the admin panel) to proceed independently without needing the Python/FastAPI backend or Active Directory to be accessible.
+---
 
-To bypass the mock and connect to a real local backend, you can remove or comment out `mockBackendPlugin()` in `vite.config.ts` and uncomment the proxy configuration block.
+## ⚙️ Ключевые возможности
+
+1. **Адаптивная пагинация без скролла**:
+   * Сетка динамически рассчитывает оптимальное количество карточек сотрудников на основе высоты экрана без появления вертикального скролла страницы (Full HD, 2K, Ultrawide).
+2. **Glassmorphism & Дизайн**:
+   * Чистый стиль в духе Apple (мягкие тени, скругления 24px для карточек, полупрозрачные акцентные кнопки, аватары с инициалами на основе детерминированных цветов).
+3. **Умный поиск (Type-to-Search)**:
+   * Полнотекстовый и нечеткий поиск в шапке с поддержкой глобального фокуса по нажатию любой клавиши.
+4. **Реактивность (WebSockets)**:
+   * Мгновенная доставка статусов присутствия сотрудников и обновлений профилей без HTTP-поллинга.
+
+---
+
+## 🧠 Архитектура состояния и производительность (Zustand)
+
+Для предотвращения лишних ререндеров компонентов при обновлении общего стора `useAppStore`:
+1. Всегда используйте селекторы для выбора конкретных свойств.
+2. При выборке нескольких полей используйте хук `useShallow`:
+
+```typescript
+import { useShallow } from 'zustand/react/shallow';
+
+const { currentUser, isAuthenticated } = useAppStore(
+  useShallow((state) => ({
+    currentUser: state.currentUser,
+    isAuthenticated: state.isAuthenticated,
+  }))
+);
+```
+
+---
+
+## ⚡ Локальный запуск
+
+### 1. Установка зависимостей
+```bash
+npm install
+```
+
+### 2. Запуск сервера разработки
+```bash
+npm run dev
+```
+
+### 3. Автономный режим с Mock-бэкендом
+В Vite встроен плагин моков `mock-plugin.ts`. При локальном запуске `npm run dev` запросы `/api/v1/` перехватываются мок-сервером, что позволяет вести разработку интерфейса без поднятого backend-сервера и Active Directory. Для переключения на реальный бэкенд настройте проксирование в `vite.config.ts`.

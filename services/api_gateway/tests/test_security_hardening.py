@@ -53,3 +53,12 @@ def test_report_change_item_validation():
             new_value="D" * 65
         )
     assert "превышает допустимый лимит Active Directory" in str(exc_info.value)
+
+def test_prometheus_metrics_endpoint():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "http_requests_total" in response.text or "http_request_duration_seconds" in response.text or "process_cpu_seconds_total" in response.text
+

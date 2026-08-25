@@ -19,6 +19,8 @@ dependencies = [
     "pyspnego>=0.11.2",
     "gssapi>=1.9.1; sys_platform != 'win32'",
     "websockets>=16.0",
+    "alembic>=1.13.0",
+    "prometheus-fastapi-instrumentator>=7.0.0",
 ]
 
 [dependency-groups]

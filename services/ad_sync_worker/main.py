@@ -8,17 +8,12 @@ from app.sync import SyncWorker
 from app.ldap import InvalidLDAPCredentialsError
 from app.events import publish_ldap_status_update
 
-# Configure file handler for WARNING and above
-file_handler = logging.FileHandler("worker_errors.log", encoding="utf-8")
-file_handler.setLevel(logging.WARNING)
-
-# Configure logging
+# Configure 12-Factor Logging (stdout stream for Docker logging drivers)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        file_handler
+        logging.StreamHandler(sys.stdout)
     ]
 )
 

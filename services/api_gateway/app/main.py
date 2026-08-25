@@ -1,8 +1,11 @@
+import os
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.ldap import init_ldap_pool
@@ -12,12 +15,24 @@ from shared.database import Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 1. Run Alembic migrations or fallback to create_all
     try:
-        Base.metadata.create_all(bind=engine)
+        from alembic.config import Config
+        from alembic import command
+        alembic_ini_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "alembic.ini"))
+        if os.path.exists(alembic_ini_path):
+            alembic_cfg = Config(alembic_ini_path)
+            command.upgrade(alembic_cfg, "head")
+        else:
+            Base.metadata.create_all(bind=engine)
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("Could not run Base.metadata.create_all: %s", e)
-    # Startup: Initialize LDAP pool
+        logging.getLogger(__name__).warning("Could not run Alembic migrations (falling back to create_all): %s", e)
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception as e2:
+            logging.getLogger(__name__).warning("Could not run Base.metadata.create_all: %s", e2)
+
+    # 2. Startup: Initialize LDAP pool
     init_ldap_pool()
     yield
     # Shutdown logic (if any) could go here
@@ -27,6 +42,9 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
+
+# Prometheus Metrics Instrumentation
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 trusted_proxies = [h.strip() for h in settings.TRUSTED_PROXIES.split(",") if h.strip()]
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_proxies)

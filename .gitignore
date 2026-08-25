@@ -50,6 +50,8 @@ dist-ssr/
 data/
 pgdata/
 redisdata/
+prometheus_data/
+grafana_data/
 
 # IDEs
 .idea/

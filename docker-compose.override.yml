@@ -12,6 +12,7 @@ services:
   api_gateway:
     volumes:
       - ./services/api_gateway:/app
+      - /app/.venv
       - ./services/shared:/app/shared
       - ./certs:/app/certs:ro
     # Hot-reload при изменении .py файлов
@@ -22,6 +23,7 @@ services:
   ad_sync_worker:
     volumes:
       - ./services/ad_sync_worker:/app
+      - /app/.venv
       - ./services/shared:/app/shared
       - ./docs:/app/docs:ro
       - ./certs:/app/certs:ro
