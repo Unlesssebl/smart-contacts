@@ -1,0 +1,27 @@
+# ==============================================================================
+# docker-compose.override.yml
+# ==============================================================================
+# Автоматически применяется поверх docker-compose.yml при локальной разработке.
+# Обеспечивает Live Code Mounting и Hot Reloading (Uvicorn --reload).
+#
+# ВНИМАНИЕ ДЛЯ PRODUCTION:
+# На сервере продакшена не используйте этот файл (запуск: docker compose -f docker-compose.yml up -d --build).
+# ==============================================================================
+
+services:
+  api_gateway:
+    volumes:
+      - ./services/api_gateway:/app
+      - ./services/shared:/app/shared
+      - ./certs:/app/certs:ro
+    # Hot-reload при изменении .py файлов
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      - COOKIE_SECURE=False
+
+  ad_sync_worker:
+    volumes:
+      - ./services/ad_sync_worker:/app
+      - ./services/shared:/app/shared
+      - ./docs:/app/docs:ro
+      - ./certs:/app/certs:ro

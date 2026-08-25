@@ -1,11 +1,29 @@
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
+from app.schemas.change_request import sanitize_and_validate_value
 
 class ReportChangeItem(BaseModel):
     attribute_name: str
     new_value: Optional[str] = None
+
+    @field_validator("attribute_name")
+    @classmethod
+    def validate_attribute_name(cls, v: str) -> str:
+        allowed = [
+            "internal_phone", "mobile_phone", "office_location",
+            "department", "full_name", "job_title"
+        ]
+        if v not in allowed:
+            raise ValueError(f"Attribute {v} is not allowed for reports")
+        return v
+
+    @field_validator("new_value")
+    @classmethod
+    def validate_new_value(cls, v: Optional[str], info) -> Optional[str]:
+        attr = info.data.get("attribute_name")
+        return sanitize_and_validate_value(attr, v)
 
 class ReportCreateBulk(BaseModel):
     target_user_id: UUID
@@ -40,3 +58,13 @@ class ReportRead(BaseModel):
 
 class ReportUpdateValue(BaseModel):
     new_value: Optional[str] = None
+
+    @field_validator("new_value")
+    @classmethod
+    def validate_new_value(cls, v: Optional[str]) -> Optional[str]:
+        if not v or v in ("<Удалить>", "[]"):
+            return None
+        import re
+        v_clean = re.sub(r"[\r\n\t\x00-\x1f]", " ", str(v))
+        v_clean = re.sub(r"\s+", " ", v_clean).strip()
+        return v_clean or None

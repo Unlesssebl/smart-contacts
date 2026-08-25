@@ -11,6 +11,53 @@ class ChangeRequestBase(BaseModel):
     attribute_name: str
     new_value: Optional[str] = None
 
+# Active Directory Schema max length limits (rangeUpper) for text attributes
+AD_FIELD_MAX_LENGTHS = {
+    "office_location": 128,
+    "department": 64,
+    "organization": 64,
+    "job_title": 128,
+    "full_name": 256,
+    "email": 256,
+}
+
+def sanitize_and_validate_value(attr: Optional[str], v: Optional[str]) -> Optional[str]:
+    # Если значение пустое или None, пропускаем валидацию (это запрос на удаление)
+    if not v or v in ("<Удалить>", "[]"):
+        return None
+
+    # Очистка от управляющих символов (переносы строк, табуляции, нулевые байты)
+    v_clean = re.sub(r"[\r\n\t\x00-\x1f]", " ", str(v))
+    v_clean = re.sub(r"\s+", " ", v_clean).strip()
+
+    if not v_clean:
+        return None
+
+    if attr in AD_FIELD_MAX_LENGTHS:
+        max_len = AD_FIELD_MAX_LENGTHS[attr]
+        if len(v_clean) > max_len:
+            raise ValueError(f"Значение для '{attr}' превышает допустимый лимит Active Directory ({max_len} символов)")
+
+    if attr == "internal_phone":
+        # Разрешаем 0000 и 00-00
+        if not re.match(INTERNAL_PHONE_PATTERN, v_clean):
+            raise ValueError(r"Внутренний телефон должен соответствовать формату \d{2}-\d{2} или \d{4}")
+        return v_clean
+    elif attr == "mobile_phone":
+        # Нормализация: убираем пробелы, скобки и тире
+        phone_digits = re.sub(r"[\s\(\)\-]", "", v_clean)
+        # Автоматически заменяем 8 на +7
+        if len(phone_digits) == 11 and phone_digits.startswith("8"):
+            phone_digits = "+7" + phone_digits[1:]
+        elif len(phone_digits) == 11 and phone_digits.startswith("7"):
+            phone_digits = "+" + phone_digits
+        
+        if not re.match(MOBILE_PHONE_PATTERN, phone_digits):
+            raise ValueError(r"Мобильный телефон должен соответствовать формату +7 (999) 999-99-99")
+        return phone_digits
+
+    return v_clean
+
 class ChangeRequestCreate(ChangeRequestBase):
     @field_validator("attribute_name")
     @classmethod
@@ -26,27 +73,8 @@ class ChangeRequestCreate(ChangeRequestBase):
     @field_validator("new_value")
     @classmethod
     def validate_new_value(cls, v: Optional[str], info) -> Optional[str]:
-        # Если значение пустое или None, пропускаем валидацию (это запрос на удаление)
-        if not v or v in ("<Удалить>", "[]"):
-            return None
         attr = info.data.get("attribute_name")
-        if attr == "internal_phone":
-            # Разрешаем 0000 и 00-00
-            if not re.match(INTERNAL_PHONE_PATTERN, v):
-                raise ValueError(r"Internal phone must match pattern \d{2}-\d{2} or \d{4}")
-        elif attr == "mobile_phone":
-            # Нормализация: убираем пробелы, скобки и тире
-            v_clean = re.sub(r"[\s\(\)\-]", "", v)
-            # Автоматически заменяем 8 на +7
-            if len(v_clean) == 11 and v_clean.startswith("8"):
-                v_clean = "+7" + v_clean[1:]
-            elif len(v_clean) == 11 and v_clean.startswith("7"):
-                v_clean = "+" + v_clean
-            
-            if not re.match(MOBILE_PHONE_PATTERN, v_clean):
-                raise ValueError(r"Mobile phone must match pattern +7 (999) 999-99-99")
-            return v_clean
-        return v
+        return sanitize_and_validate_value(attr, v)
 
 class ChangeRequestRead(ChangeRequestBase):
     id: UUID
@@ -74,6 +102,15 @@ class ChangeRequestRead(ChangeRequestBase):
 
 class ChangeRequestUpdateValue(BaseModel):
     new_value: Optional[str] = None
+
+    @field_validator("new_value")
+    @classmethod
+    def validate_new_value(cls, v: Optional[str]) -> Optional[str]:
+        if not v or v in ("<Удалить>", "[]"):
+            return None
+        v_clean = re.sub(r"[\r\n\t\x00-\x1f]", " ", str(v))
+        v_clean = re.sub(r"\s+", " ", v_clean).strip()
+        return v_clean or None
 
 class BulkReviewActionRequest(BaseModel):
     request_ids: list[UUID] = []

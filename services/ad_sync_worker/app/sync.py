@@ -39,6 +39,14 @@ AD_ATTRIBUTE_MAP = {
 }
 
 
+def _get_scalar_attr(entry: dict, key: str, default: str = "") -> str:
+    val = entry.get(key)
+    if val is None:
+        return default
+    if isinstance(val, (list, tuple)):
+        return str(val[0]) if val else default
+    return str(val)
+
 class SyncWorker:
     def __init__(self):
         self.last_usn = self._load_last_usn()
@@ -125,7 +133,7 @@ class SyncWorker:
                             max_usn = current_usn
                         
                         # Collect OUs from distinguishedName
-                        dn = str(entry.get("distinguishedName", ""))
+                        dn = _get_scalar_attr(entry, "distinguishedName", "")
                         if dn:
                             ous = re.findall(r"OU=([^,]+)", dn)
                             if ous:
@@ -209,15 +217,16 @@ class SyncWorker:
             return None
         
         guid_str = ad_guid_to_uuid(guid_bytes)
-        sam = str(entry.get("sAMAccountName", ""))
+        sam = _get_scalar_attr(entry, "sAMAccountName", "")
         uac = int(entry.get("userAccountControl", 0))
         
         status = determine_status(uac, sam)
-        dn = str(entry.get("distinguishedName", ""))
+        dn = _get_scalar_attr(entry, "distinguishedName", "")
         org, dept, warnings = extract_ou_structure(dn, session)
         
         raw_dept = dept
-        raw_job = str(entry.get("title", "")) if entry.get("title") else None
+        raw_job_val = _get_scalar_attr(entry, "title", "")
+        raw_job = raw_job_val if raw_job_val else None
         
         dept_mapping = get_dept_mapping(session)
         job_title_mapping = get_job_title_mapping(session)
@@ -232,17 +241,17 @@ class SyncWorker:
                 object_guid=guid_str,
                 sam_account_name=sam,
                 status=status,
-                full_name=str(entry.get("displayName", "")),
+                full_name=_get_scalar_attr(entry, "displayName", ""),
                 job_title=canonical_job,
                 job_title_raw=raw_job,
                 department=canonical_dept,
                 department_raw=raw_dept,
-                office_location=str(entry.get("physicalDeliveryOfficeName", "")),
+                office_location=_get_scalar_attr(entry, "physicalDeliveryOfficeName", ""),
                 organization=org,
                 ad_dn=dn,
-                internal_phone=format_phone(str(entry.get("telephoneNumber", ""))),
-                mobile_phone=format_phone(str(entry.get("mobile", ""))),
-                email=str(entry.get("mail", "")) if entry.get("mail") else None,
+                internal_phone=format_phone(_get_scalar_attr(entry, "telephoneNumber", "")),
+                mobile_phone=format_phone(_get_scalar_attr(entry, "mobile", "")),
+                email=_get_scalar_attr(entry, "mail", "") or None,
                 sync_error_log="\n".join(warnings) if warnings else None,
                 last_sync_timestamp=datetime.now(timezone.utc)
             )
@@ -301,22 +310,23 @@ class SyncWorker:
             user.job_title = canonical_job
         
         if "full_name" not in pending_fields:
-            user.full_name = str(entry.get("displayName", ""))
+            user.full_name = _get_scalar_attr(entry, "displayName", "")
         
         if "department" not in pending_fields:
             user.department = canonical_dept
             
         if "office_location" not in pending_fields:
-            user.office_location = str(entry.get("physicalDeliveryOfficeName", ""))
+            user.office_location = _get_scalar_attr(entry, "physicalDeliveryOfficeName", "")
             
         if "internal_phone" not in pending_fields:
-            user.internal_phone = format_phone(str(entry.get("telephoneNumber", "")))
+            user.internal_phone = format_phone(_get_scalar_attr(entry, "telephoneNumber", ""))
         
         if "mobile_phone" not in pending_fields:
-            user.mobile_phone = format_phone(str(entry.get("mobile", "")))
+            user.mobile_phone = format_phone(_get_scalar_attr(entry, "mobile", ""))
 
         if "email" not in pending_fields:
-            user.email = str(entry.get("mail", "")) if entry.get("mail") else None
+            mail_val = _get_scalar_attr(entry, "mail", "")
+            user.email = mail_val if mail_val else None
 
         if warnings:
             user.sync_error_log = _append_sync_error(user.sync_error_log, "\n".join(warnings))

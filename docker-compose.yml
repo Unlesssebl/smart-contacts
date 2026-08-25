@@ -49,8 +49,6 @@ services:
     env_file:
       - .env
     volumes:
-      - ./services/api_gateway:/app
-      - ./services/shared:/app/shared
       - ./certs:/app/certs:ro
     command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
@@ -80,14 +78,12 @@ services:
     env_file:
       - .env
     volumes:
-      - ./services/ad_sync_worker:/app
-      - ./services/shared:/app/shared
       - ./docs:/app/docs:ro
       - ./certs:/app/certs:ro
     dns:
       - 10.244.0.11
     healthcheck:
-      test: ["CMD-SHELL", "uv run python -c \"import psycopg2, os; conn = psycopg2.connect(user=os.getenv('POSTGRES_USER'), password=os.getenv('POSTGRES_PASSWORD'), host=os.getenv('DB_HOST'), port=os.getenv('DB_PORT'), dbname=os.getenv('POSTGRES_DB')); conn.cursor().execute('SELECT 1'); conn.close()\""]
+      test: ["CMD-SHELL", "uv run python -c \"from app.db import SessionLocal; from sqlalchemy import text; s = SessionLocal(); s.execute(text('SELECT 1')); s.close()\""]
       interval: 30s
       timeout: 10s
       retries: 3
