@@ -3,9 +3,13 @@ import asyncio
 import logging
 from typing import Dict, Set
 from fastapi import WebSocket
+from prometheus_client import Gauge
 from app.core.redis import async_redis_client
 
 logger = logging.getLogger(__name__)
+
+WS_ACTIVE_CONNECTIONS = Gauge("smart_contacts_active_websockets", "Total active WebSocket connections (tabs)")
+WS_ONLINE_USERS = Gauge("smart_contacts_unique_online_users", "Total unique online users with open WebSockets")
 
 class ConnectionManager:
     def __init__(self):
@@ -21,6 +25,11 @@ class ConnectionManager:
             self.active_connections[user_id] = set()
         self.active_connections[user_id].add(websocket)
         
+        # Update metrics
+        total_tabs = sum(len(s) for s in self.active_connections.values())
+        WS_ACTIVE_CONNECTIONS.set(total_tabs)
+        WS_ONLINE_USERS.set(len(self.active_connections))
+        
         # Start listening to Redis if not already started
         if self.listener_task is None or self.listener_task.done():
             self.listener_task = asyncio.create_task(self._listen_to_redis())
@@ -35,6 +44,11 @@ class ConnectionManager:
                 logger.info(f"User {user_id} disconnected from local WS (all tabs closed).")
             else:
                 logger.info(f"User {user_id} closed one WS connection (remaining tabs: {len(self.active_connections[user_id])}).")
+        
+        # Update metrics
+        total_tabs = sum(len(s) for s in self.active_connections.values())
+        WS_ACTIVE_CONNECTIONS.set(total_tabs)
+        WS_ONLINE_USERS.set(len(self.active_connections))
 
     async def broadcast_status(self, user_id: str, status: str):
         """
