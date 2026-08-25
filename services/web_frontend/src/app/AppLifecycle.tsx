@@ -20,6 +20,30 @@ export function AppLifecycle() {
     }
   }, [isAuthenticated, currentUser?.id, fetchMyPendingFields, loadNotificationsFromStorage, fetchNotifications]);
 
+  // Sync notifications when the user returns to the tab or regains window focus.
+  // This is a cheap, event-driven fallback (no polling) that catches events
+  // missed while the tab was in the background or the WS was reconnecting.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void useAppStore.getState().fetchNotifications();
+      }
+    };
+
+    const handleFocus = () => {
+      void useAppStore.getState().fetchNotifications();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const instance = OverlayScrollbars(document.body, {

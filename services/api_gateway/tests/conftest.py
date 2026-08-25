@@ -19,7 +19,7 @@ import re
 
 # Create our test engine
 test_engine = create_engine(
-    "sqlite:////tmp/test.db",
+    "sqlite://",
     connect_args={"check_same_thread": False},
     poolclass=StaticPool
 )

@@ -59,6 +59,9 @@ export const usePresence = () => {
         console.log('[Presence] WebSocket connected successfully!');
         statusRef.current = 'online';
         reconnectAttemptsRef.current = 0; // reset attempts on success
+        // On every (re)connect, fetch fresh notifications to reconcile
+        // any events missed while the socket was down.
+        void useAppStore.getState().fetchNotifications();
       };
 
       ws.onmessage = (event) => {

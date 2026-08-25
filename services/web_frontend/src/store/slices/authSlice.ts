@@ -35,7 +35,9 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
   },
 
   logout: async () => {
-    get().clearNotifications();
+    // Reset only local state — do NOT delete notifications from the server
+    // so the user's history is preserved across sessions.
+    get().resetNotificationsState();
     set({ currentUser: null, isAuthenticated: false, users: [], changeRequests: [], reports: [] });
     try {
       await apiClient.post('/auth/logout');
@@ -48,8 +50,11 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
     try {
       const profile = await getMe();
       set({ currentUser: profile, isAuthenticated: true });
+      // Restore cached notifications immediately for instant UI, then sync with server
       get().loadNotificationsFromStorage(profile.id);
       await get().fetchMyPendingFields();
+      // Fetch fresh notifications from server — ensures missed events (WS down, offline) are picked up
+      void get().fetchNotifications();
     } catch (error) {
       console.error('Failed to fetch profile', error);
       if (!get().adSyncUnavailable) {

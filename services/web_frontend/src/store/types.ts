@@ -93,6 +93,7 @@ export interface NotificationsSlice {
   deleteNotification: (id: string) => Promise<void>;
   loadNotificationsFromStorage: (userGuid?: string) => void;
   clearNotifications: () => Promise<void>;
+  resetNotificationsState: () => void;
 }
 
 export interface AdminSlice {

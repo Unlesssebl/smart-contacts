@@ -194,4 +194,12 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
       console.error('Failed to clear notifications on server', e);
     }
   },
+
+  /**
+   * Resets notifications state in memory only — does NOT call the server.
+   * Use this on logout to avoid destroying the user's notification history in DB.
+   */
+  resetNotificationsState: () => {
+    set({ notifications: [], unreadCount: 0, isLoadingNotifications: false });
+  },
 });
