@@ -245,3 +245,75 @@ def ttl_cache(ttl_seconds: float = 60.0):
         wrapper.cache_clear = cache_clear
         return wrapper
     return decorator
+
+
+ATTRIBUTE_LABELS: dict[str, str] = {
+    "job_title": "должность",
+    "department": "отдел",
+    "email": "email",
+    "internal_phone": "внутренний телефон",
+    "mobile_phone": "мобильный телефон",
+    "office_location": "офис / расположение",
+    "organization": "организация",
+    "full_name": "ФИО",
+}
+
+
+def get_attribute_label(name: Optional[str]) -> str:
+    if not name:
+        return "атрибут"
+    return ATTRIBUTE_LABELS.get(name, name.replace("_", " "))
+
+
+def build_field_applied_notification(field: str) -> tuple[str, str]:
+    label = get_attribute_label(field)
+    title = f"{label.capitalize()} обновлён"
+    body = f"Ваша заявка на изменение поля «{label}» принята и успешно применена в Active Directory"
+    return title, body
+
+
+def build_field_rejected_notification(field: str, reason: Optional[str] = None) -> tuple[str, str]:
+    label = get_attribute_label(field)
+    title = f"Заявка на «{label}» отклонена"
+    body = f"Заявка на изменение поля «{label}» была отклонена администратором"
+    if reason:
+        body += f": {reason}"
+    return title, body
+
+
+def build_report_notification(
+    attribute_name: str,
+    status: str,
+    target_user_name: Optional[str] = None,
+    rejection_reason: Optional[str] = None,
+) -> tuple[str, str, str]:
+    label = get_attribute_label(attribute_name)
+    target_desc = f" по сотруднику «{target_user_name}»" if target_user_name else ""
+    is_success = status in ["approved", "applied"]
+
+    if is_success:
+        notif_type = "report_approved"
+        title = "Сообщение об ошибке принято"
+        body = f"Ваше сообщение об ошибке{target_desc} (поле «{label}») рассмотрено и данные успешно обновлены"
+    else:
+        notif_type = "report_rejected"
+        title = "Сообщение об ошибке отклонено"
+        reason_str = f": {rejection_reason}" if rejection_reason else ""
+        body = f"Ваше сообщение об ошибке{target_desc} (поле «{label}») отклонено администратором{reason_str}"
+
+    return notif_type, title, body
+
+
+def build_ticket_closed_notification(
+    category: Optional[str] = None,
+) -> tuple[str, str, str]:
+    is_suggestion = category == "suggestion"
+    notif_type = "ticket_closed"
+    title = "Предложение по улучшению рассмотрено" if is_suggestion else "Обращение в поддержку рассмотрено"
+    body = (
+        "Ваше предложение по улучшению сервиса было рассмотрено и закрыто администратором"
+        if is_suggestion
+        else "Ваше обращение в службу поддержки было рассмотрено и закрыто администратором"
+    )
+    return notif_type, title, body
+

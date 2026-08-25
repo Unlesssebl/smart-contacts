@@ -4,6 +4,7 @@ from shared.models.change_request import ChangeRequest
 from shared.models.report import Report
 from shared.models.system_setting import SystemSetting
 from shared.models.support_ticket import SupportTicket
+from shared.models.notification import Notification
 from shared.models.enums import UserRole, UserStatus, ChangeRequestStatus, ReportStatus, SupportTicketStatus, SupportTicketCategory
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
     "Report",
     "SystemSetting",
     "SupportTicket",
+    "Notification",
     "UserRole",
     "UserStatus",
     "ChangeRequestStatus",
@@ -20,3 +22,4 @@ __all__ = [
     "SupportTicketStatus",
     "SupportTicketCategory",
 ]
+

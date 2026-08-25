@@ -14,10 +14,12 @@ CREATE TABLE users (
     internal_phone VARCHAR(100),
     mobile_phone VARCHAR(100),
     department VARCHAR(256),
+    department_raw VARCHAR(256),
     office_location VARCHAR(256),
     organization VARCHAR(256),
     ad_dn VARCHAR(512),
     job_title VARCHAR(256),
+    job_title_raw VARCHAR(256),
     email VARCHAR(256),
     avatar_color VARCHAR(7),
     role VARCHAR(32) NOT NULL DEFAULT 'employee',
@@ -141,4 +143,22 @@ CREATE TABLE support_tickets (
 CREATE INDEX idx_support_tickets_status ON support_tickets (status);
 CREATE INDEX idx_support_tickets_created_at ON support_tickets (created_at DESC);
 CREATE INDEX idx_support_tickets_user_guid ON support_tickets (user_guid);
+
+-- 9. Таблица notifications (Пользовательские уведомления)
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
+    type VARCHAR(64) NOT NULL,
+    title VARCHAR(256) NOT NULL,
+    body TEXT NOT NULL,
+    field VARCHAR(64),
+    category VARCHAR(64),
+    payload JSONB DEFAULT '{}'::jsonb,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    read_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_notifications_user_unread ON notifications (user_guid, created_at DESC) WHERE is_read = FALSE;
+CREATE INDEX idx_notifications_user_created ON notifications (user_guid, created_at DESC);
 
