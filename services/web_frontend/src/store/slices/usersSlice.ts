@@ -1,0 +1,127 @@
+import type { StateCreator } from 'zustand';
+import { usersApi } from '@/api/users';
+import type { AppState, UsersSlice } from '../types';
+import { isCanceledRequest } from '@/api/errors';
+
+let searchAbortController: AbortController | null = null;
+
+export const createUsersSlice: StateCreator<AppState, [], [], UsersSlice> = (set, get) => ({
+  users: [],
+  searchQuery: '',
+  isSearching: false,
+  initialLoaded: false,
+  filters: {},
+  page: 1,
+  limit: 9,
+  totalUsers: 0,
+  departments: [],
+  organizations: [],
+  jobTitles: [],
+  globalPresence: {},
+
+  setSearchQuery: (query) => {
+    set({ searchQuery: query, page: 1 });
+    get().fetchUsers(query, 1);
+  },
+
+  setFilters: (newFilters) => {
+    set((state) => ({ filters: { ...state.filters, ...newFilters }, page: 1 }));
+    get().fetchUsers(undefined, 1);
+    get().fetchFilterOptions();
+  },
+
+  setLimit: (limit) => {
+    set({ limit, page: 1 });
+    get().fetchUsers(undefined, 1);
+  },
+
+  setPage: (page) => {
+    set({ page });
+    get().fetchUsers();
+  },
+
+  fetchFilterOptions: async () => {
+    try {
+      const { organization, department, job_title } = get().filters;
+      const [deps, orgs, jobs] = await Promise.all([
+        usersApi.getDepartments({ organization, job_title }),
+        usersApi.getOrganizations({ department, job_title }),
+        usersApi.getJobTitles({ organization, department }),
+      ]);
+      set({ departments: deps, organizations: orgs, jobTitles: jobs });
+    } catch (error) {
+      console.error('Failed to fetch filter options', error);
+    }
+  },
+
+  fetchUsers: async (query, pageOverride) => {
+    if (searchAbortController) {
+      searchAbortController.abort();
+    }
+    searchAbortController = new AbortController();
+
+    set({ isSearching: true });
+    try {
+      const currentPage = pageOverride ?? get().page;
+      const currentLimit = get().limit;
+
+      const response = await usersApi.getUsers(
+        query ?? get().searchQuery,
+        get().filters,
+        currentPage,
+        currentLimit,
+        searchAbortController.signal
+      );
+
+      // Merge global presence
+      const presences = get().globalPresence;
+      const updatedUsers = response.items.map((u) => ({
+        ...u,
+        presence: presences[u.id] || u.presence,
+      }));
+
+      set({
+        users: updatedUsers,
+        isSearching: false,
+        initialLoaded: true,
+        totalUsers: response.total,
+      });
+    } catch (error: unknown) {
+      if (isCanceledRequest(error)) {
+        return; // Игнорируем отмененные запросы
+      }
+      console.error('Failed to fetch users', error);
+      set({ isSearching: false });
+    }
+  },
+
+  getUserById: (id) => {
+    return get().users.find((u) => u.id === id);
+  },
+
+  setPresence: (id, presence) => {
+    set((state) => ({
+      globalPresence: { ...state.globalPresence, [id]: presence },
+      users: state.users.map((u) => (u.id === id ? { ...u, presence } : u)),
+      currentUser: state.currentUser?.id === id ? { ...state.currentUser, presence } : state.currentUser,
+    }));
+  },
+
+  setBulkPresence: (presences) => {
+    set((state) => ({
+      globalPresence: { ...state.globalPresence, ...presences },
+      users: state.users.map((u) => (presences[u.id] ? { ...u, presence: presences[u.id] } : u)),
+      currentUser:
+        state.currentUser && presences[state.currentUser.id]
+          ? { ...state.currentUser, presence: presences[state.currentUser.id] }
+          : state.currentUser,
+    }));
+  },
+
+  updateUserInStore: (id, updates) => {
+    set((state) => ({
+      users: state.users.map((u) => (u.id === id ? { ...u, ...updates } : u)),
+      currentUser: state.currentUser?.id === id ? { ...state.currentUser, ...updates } : state.currentUser,
+    }));
+  },
+});

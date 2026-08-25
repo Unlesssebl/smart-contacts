@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Cookie, Header
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Optional
 from jose import jwt, JWTError
 from app.core.config import settings
@@ -60,10 +60,11 @@ async def websocket_presence(websocket: WebSocket):
             except json.JSONDecodeError:
                 pass
     except WebSocketDisconnect:
-        manager.disconnect(user_id)
-        # Broadcast offline
-        await manager.broadcast_status(user_id, "offline")
+        manager.disconnect(user_id, websocket)
+        if user_id not in manager.active_connections:
+            await manager.broadcast_status(user_id, "offline")
     except Exception as e:
         logger.error(f"WebSocket error for user {user_id}: {e}")
-        manager.disconnect(user_id)
-        await manager.broadcast_status(user_id, "offline")
+        manager.disconnect(user_id, websocket)
+        if user_id not in manager.active_connections:
+            await manager.broadcast_status(user_id, "offline")

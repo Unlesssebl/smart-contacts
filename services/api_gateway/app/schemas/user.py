@@ -2,22 +2,26 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
-import re
 
 class UserBase(BaseModel):
     full_name: str
     internal_phone: Optional[str] = None
     mobile_phone: Optional[str] = None
     department: Optional[str] = None
+    department_raw: Optional[str] = None
     office_location: Optional[str] = None
     organization: Optional[str] = None
     job_title: Optional[str] = None
+    job_title_raw: Optional[str] = None
     email: Optional[str] = None
+    ad_dn: Optional[str] = None
+    avatar_color: Optional[str] = None
 
 class UserRead(UserBase):
     id: UUID = Field(alias="object_guid")
     tg_id: Optional[int] = None
     manager_id: Optional[str] = None
+    is_hidden: bool
     presence: str = "offline"
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
@@ -29,10 +33,6 @@ class UserFull(UserRead):
     is_protected: bool
     grace_period_left: int
     last_sync_timestamp: Optional[datetime] = None
-
-class UserInDB(UserFull):
-    created_at: datetime
-    updated_at: datetime
 
 class PaginatedUsers(BaseModel):
     total: int
@@ -49,3 +49,9 @@ class ProfileAcknowledge(BaseModel):
         if v not in ["confirm", "skip"]:
             raise ValueError("Action must be 'confirm' or 'skip'")
         return v
+
+class AvatarColorUpdate(BaseModel):
+    avatar_color: str = Field(..., max_length=7, pattern=r'^#[0-9a-fA-F]{6}$')
+
+class UserVisibilityUpdate(BaseModel):
+    is_hidden: bool

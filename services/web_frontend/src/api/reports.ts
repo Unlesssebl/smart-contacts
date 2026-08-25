@@ -1,9 +1,9 @@
 import apiClient from './client';
-import type { Report } from '../types';
+import type { Report } from '@/types';
 
 export interface ReportCreate {
   target_user_id: string;
-  reason: string;
+  changes: { attribute_name: string; new_value: string }[];
 }
 
 export const reportsApi = {

@@ -1,14 +1,21 @@
-import uuid
-import re
-from typing import List, Optional, Tuple, Any
+import json
 import logging
+import re
+import time
+from typing import Any, Optional
 
-from .config import settings
+from shared.models.system_setting import SystemSetting
+
 
 logger = logging.getLogger(__name__)
 
-
-from shared.utils import ad_guid_to_uuid
+EXCLUDED_ORGANIZATION_OUS = {
+    "!Дубли учётных записей",
+    "!ПЕРЕНОС",
+    "SERVICE_USERS",
+    "WIFI GUEST",
+    "Филиалы организаций",
+}
 
 
 def determine_status(uac: int, sam_account_name: str) -> str:
@@ -31,18 +38,31 @@ def determine_status(uac: int, sam_account_name: str) -> str:
     return "ACTIVE"
 
 
-from sqlalchemy import select
-from .db import SystemSetting
-import json
+def build_known_ou_tree(paths: set[tuple[str, ...]]) -> dict[str, Any]:
+    tree: dict[str, Any] = {}
+    for path in paths:
+        current = tree
+        for node in path:
+            if node not in current:
+                current[node] = {}
+            current = current[node]
+    return tree
 
-_ou_mapping_cache: Optional[dict[str, str]] = None
-_ou_mapping_cache_time: float = 0
+
+def direct_corporate_ous(paths: set[tuple[str, ...]]) -> set[str]:
+    return {
+        path[1]
+        for path in paths
+        if len(path) >= 2
+        and path[0] == "CORPORATE_USERS"
+        and path[1] not in EXCLUDED_ORGANIZATION_OUS
+    }
 
 
-def save_known_ous(session, paths: set):
-    """Saves the tree of known OUs to system_settings."""
+def save_known_ous(session, paths: set[tuple[str, ...]], *, replace: bool = False):
+    """Saves known OUs, replacing the snapshot on a full AD sync."""
     setting = session.get(SystemSetting, "KNOWN_OUS")
-    if setting and setting.value:
+    if not replace and setting and setting.value:
         try:
             tree = json.loads(setting.value)
             if not isinstance(tree, dict):
@@ -51,13 +71,17 @@ def save_known_ous(session, paths: set):
             tree = {}
     else:
         tree = {}
-    
-    for path in paths:
-        current = tree
-        for node in path:
-            if node not in current:
-                current[node] = {}
-            current = current[node]
+
+    fresh_tree = build_known_ou_tree(paths)
+    if replace:
+        tree = fresh_tree
+    else:
+        for path in paths:
+            current = tree
+            for node in path:
+                if node not in current:
+                    current[node] = {}
+                current = current[node]
             
     merged_json = json.dumps(tree, ensure_ascii=False)
     
@@ -66,6 +90,32 @@ def save_known_ous(session, paths: set):
     else:
         session.add(SystemSetting(key="KNOWN_OUS", value=merged_json))
     session.commit()
+
+
+from shared.utils import parse_ou_structure, apply_canonical_mapping, ttl_cache
+
+
+def prune_ou_mapping(session, valid_ous: set[str]) -> int:
+    """Removes mappings for OUs absent from the authoritative AD snapshot."""
+    setting = session.get(SystemSetting, "OU_MAPPING")
+    if not setting or not setting.value:
+        return 0
+
+    try:
+        mapping = json.loads(setting.value)
+    except json.JSONDecodeError:
+        logger.error("Failed to parse OU_MAPPING JSON while pruning stale entries")
+        return 0
+    if not isinstance(mapping, dict):
+        return 0
+
+    pruned = {ou: value for ou, value in mapping.items() if ou in valid_ous}
+    removed = len(mapping) - len(pruned)
+    if removed:
+        setting.value = json.dumps(pruned, ensure_ascii=False)
+        session.commit()
+        get_ou_mapping.cache_clear()
+    return removed
 
 
 def get_known_ous(session) -> list[str]:
@@ -78,15 +128,10 @@ def get_known_ous(session) -> list[str]:
             return []
     return []
 
-def get_ou_mapping(session) -> dict[str, str]:
+
+@ttl_cache(ttl_seconds=60.0)
+def get_ou_mapping(session) -> dict[str, Any]:
     """Returns OU mapping from DB, cached for 60 seconds."""
-    global _ou_mapping_cache, _ou_mapping_cache_time
-    import time
-    
-    current_time = time.time()
-    if _ou_mapping_cache is not None and current_time - _ou_mapping_cache_time < 60:
-        return _ou_mapping_cache
-        
     setting = session.get(SystemSetting, "OU_MAPPING")
     mapping = {}
     if setting and setting.value:
@@ -95,45 +140,53 @@ def get_ou_mapping(session) -> dict[str, str]:
         except json.JSONDecodeError:
             logger.error("Failed to parse OU_MAPPING JSON from DB")
             mapping = {}
-            
-    _ou_mapping_cache = mapping
-    _ou_mapping_cache_time = current_time
-    return _ou_mapping_cache
+    return mapping if isinstance(mapping, dict) else {}
 
-def match_organization_by_ou(dn: str, session) -> Tuple[Optional[str], List[str]]:
+
+@ttl_cache(ttl_seconds=60.0)
+def get_dept_mapping(session) -> dict[str, str]:
+    """Returns DEPT_MAPPING from DB, cached for 60 seconds."""
+    setting = session.get(SystemSetting, "DEPT_MAPPING")
+    mapping = {}
+    if setting and setting.value:
+        try:
+            mapping = json.loads(setting.value)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse DEPT_MAPPING JSON from DB")
+            mapping = {}
+    return mapping if isinstance(mapping, dict) else {}
+
+
+@ttl_cache(ttl_seconds=60.0)
+def get_job_title_mapping(session) -> dict[str, str]:
+    """Returns JOB_TITLE_MAPPING from DB, cached for 60 seconds."""
+    setting = session.get(SystemSetting, "JOB_TITLE_MAPPING")
+    mapping = {}
+    if setting and setting.value:
+        try:
+            mapping = json.loads(setting.value)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse JOB_TITLE_MAPPING JSON from DB")
+            mapping = {}
+    return mapping if isinstance(mapping, dict) else {}
+
+
+def extract_ou_structure(
+    dn: str,
+    session,
+    fallback_dept: Optional[str] = None
+) -> tuple[Optional[str], Optional[str], list[str]]:
+    """
+    Extracts organization and department from DN using OU_MAPPING from DB.
+    """
+    mapping = get_ou_mapping(session)
+    return parse_ou_structure(dn, mapping, fallback_dept)
+
+
+def match_organization_by_ou(dn: str, session) -> tuple[Optional[str], list[str]]:
     """
     Matches the user's AD Organizational Units (OU) against the mapping in DB.
     """
-    mapping = get_ou_mapping(session)
-    if not mapping:
-        return None, ["OU mapping is empty or could not be loaded."]
+    org, _, warnings = extract_ou_structure(dn, session)
+    return org, warnings
 
-    user_ous = re.findall(r"OU=([^,]+)", dn)
-    
-    # Priority 1: Exact case-sensitive match
-    exact_matches = [ou for ou in user_ous if ou in mapping]
-    
-    # Priority 2: Case-insensitive match
-    case_insensitive_matches = []
-    mapping_lower = {k.lower(): v for k, v in mapping.items()}
-    for ou in user_ous:
-        if ou.lower() in mapping_lower:
-            case_insensitive_matches.append(ou)
-
-    matches = list(dict.fromkeys(exact_matches + case_insensitive_matches))
-    
-    if not matches:
-        return None, []
-    
-    if len(matches) == 1:
-        # Get the actual organization name from mapping
-        key = matches[0]
-        org_name = mapping.get(key) or mapping_lower.get(key.lower())
-        return org_name, []
-    
-    # Multiple matches found
-    # Try to pick exact case match if exists, otherwise first match
-    selected_ou = exact_matches[0] if exact_matches else matches[0]
-    org_name = mapping.get(selected_ou) or mapping_lower.get(selected_ou.lower())
-    warning = f"Warning: Multiple OUs matched in DN: {matches}. Using {selected_ou} -> {org_name}."
-    return org_name, [warning]

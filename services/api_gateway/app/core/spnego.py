@@ -26,7 +26,7 @@ def validate_kerberos_ticket(auth_header: str) -> Optional[str]:
         server = spnego.server(hostname=None, service=settings.KRB5_SERVICE_NAME, protocol="negotiate")
         
         # Step through the authentication
-        out_token = server.step(in_token)
+        server.step(in_token)
         
         if server.complete:
             # Authentication successful

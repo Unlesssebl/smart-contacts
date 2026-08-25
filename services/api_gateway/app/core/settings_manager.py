@@ -3,7 +3,7 @@ import hashlib
 from typing import Optional
 from cryptography.fernet import Fernet
 from sqlalchemy.orm import Session
-from app.models.system_setting import SystemSetting
+from shared.models.system_setting import SystemSetting
 from app.core.config import settings
 from app.core.redis import redis_client
 
@@ -46,6 +46,9 @@ def set_setting(db: Session, key: str, value: str, encrypt: bool = False):
         db.add(setting)
     db.commit()
 
-def bump_ldap_credentials_version():
+def bump_ldap_credentials_version(db: Session = None):
     """Инвалидация кэша конфигурации LDAP."""
     redis_client.incr("ldap_credentials_version")
+    if db:
+        import time
+        set_setting(db, "LDAP_CREDENTIALS_VERSION", str(time.time()))

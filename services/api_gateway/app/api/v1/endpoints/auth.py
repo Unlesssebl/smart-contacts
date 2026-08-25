@@ -8,7 +8,7 @@ from app.core.spnego import validate_kerberos_ticket
 from app.core.config import settings
 import secrets
 from jose import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.api import deps
 
@@ -19,7 +19,7 @@ def set_auth_cookies(response: Response, tokens: Token):
         key="csrf_token",
         value=csrf_token,
         httponly=False,
-        secure=False, # Should be True in prod with HTTPS
+        secure=getattr(settings, "COOKIE_SECURE", False),
         samesite="lax"
     )
     # Access token
@@ -27,7 +27,7 @@ def set_auth_cookies(response: Response, tokens: Token):
         key="access_token",
         value=tokens.access_token,
         httponly=True,
-        secure=False,
+        secure=getattr(settings, "COOKIE_SECURE", False),
         samesite="lax",
         max_age=tokens.expires_in
     )
@@ -37,7 +37,7 @@ def set_auth_cookies(response: Response, tokens: Token):
             key="refresh_token",
             value=tokens.refresh_token,
             httponly=True,
-            secure=False,
+            secure=getattr(settings, "COOKIE_SECURE", False),
             samesite="lax",
             max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
         )
@@ -45,7 +45,7 @@ def set_auth_cookies(response: Response, tokens: Token):
 router = APIRouter()
 
 @router.get("/sso", response_model=LoginResponse)
-async def login_sso(request: Request, response: Response, db: Session = Depends(get_db)):
+def login_sso(request: Request, response: Response, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
     username = validate_kerberos_ticket(auth_header)
     
@@ -63,14 +63,14 @@ async def login_sso(request: Request, response: Response, db: Session = Depends(
     return LoginResponse(user=auth_result.user)
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: Request, response: Response, data: LoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, response: Response, data: LoginRequest, db: Session = Depends(get_db)):
     client_ip = request.client.host
     auth_result = AuthService.login(db, data.username, data.password, client_ip)
     set_auth_cookies(response, auth_result.tokens)
     return LoginResponse(user=auth_result.user)
 
 @router.post("/refresh")
-async def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
+def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
         raise HTTPException(status_code=401, detail="No refresh token provided")
@@ -80,14 +80,18 @@ async def refresh(request: Request, response: Response, db: Session = Depends(ge
     return {"detail": "Tokens refreshed"}
 
 @router.post("/logout")
-async def logout(response: Response):
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        from app.db.repository.token import revoke_refresh_token
+        revoke_refresh_token(db, refresh_token)
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
     response.delete_cookie("csrf_token")
     return {"detail": "Logged out"}
 
 @router.get("/me", response_model=UserProfile)
-async def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Session = Depends(get_db)):
+def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Session = Depends(get_db)):
     user = get_user_by_guid(db, user_guid)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -104,14 +108,15 @@ async def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Sessi
         is_verified=user.is_verified,
         is_protected=user.is_protected,
         grace_period_left=user.grace_period_left,
-        last_sync_timestamp=user.last_sync_timestamp.isoformat() if user.last_sync_timestamp else None
+        last_sync_timestamp=user.last_sync_timestamp.isoformat() if user.last_sync_timestamp else None,
+        avatar_color=user.avatar_color
     )
 
 @router.get("/ws-token")
-async def get_ws_token(user_guid: str = Depends(deps.get_current_user_guid)):
+def get_ws_token(user_guid: str = Depends(deps.get_current_user_guid)):
     # Generate a short-lived token to be passed in the WebSocket URL query param
     # (Because WebSockets can't send HttpOnly cookies cross-origin)
-    expire = datetime.utcnow() + timedelta(minutes=5)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=5)
     to_encode = {"sub": str(user_guid), "exp": expire}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return {"ws_token": encoded_jwt}

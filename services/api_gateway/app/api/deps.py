@@ -4,9 +4,11 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 from app.db.repository.user import get_user_by_guid
-from app.models.user import User
+from shared.models.user import User
+from shared.models.enums import UserRole, UserStatus
+from jose.exceptions import JWTError
 
-async def get_current_user_guid(request: Request) -> str:
+def get_current_user_guid(request: Request) -> str:
     # 1. Get token from cookies or Authorization header (fallback for Swagger)
     token = request.cookies.get("access_token")
     if not token:
@@ -15,7 +17,7 @@ async def get_current_user_guid(request: Request) -> str:
             token = auth_header.split(" ")[1]
             
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Требуется авторизация")
 
     # 2. CSRF Protection for state-changing methods
     if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
@@ -27,28 +29,64 @@ async def get_current_user_guid(request: Request) -> str:
         
         if not is_bearer:
             if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF token validation failed")
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Ошибка проверки CSRF-токена")
 
     # 3. Validate JWT
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_guid = payload.get("sub")
         if user_guid is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительный токен")
         return user_guid
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Не удалось проверить учетные данные")
 
-async def get_current_user(
+def get_current_user(
     db: Session = Depends(get_db), 
     user_guid: str = Depends(get_current_user_guid)
 ) -> User:
     user = get_user_by_guid(db, user_guid)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден или удален")
     
     # 4. Enforce user status (immediate revocation)
-    if user.status != "ACTIVE":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
+    if user.status != UserStatus.ACTIVE.value:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Учетная запись отключена")
         
     return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in (UserRole.IT_OPERATOR.value, UserRole.ADMIN.value):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав для выполнения операции",
+        )
+    return current_user
+
+
+def get_optional_current_user(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> User | None:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_guid = payload.get("sub")
+        if not user_guid:
+            return None
+        user = get_user_by_guid(db, user_guid)
+        if user and user.status == UserStatus.ACTIVE.value:
+            return user
+        return None
+    except Exception:
+        return None
+

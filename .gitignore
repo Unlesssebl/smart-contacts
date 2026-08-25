@@ -39,6 +39,7 @@ dist-ssr/
 
 # Environment
 .env
+.env.dev
 .env.local
 .env.development.local
 .env.test.local
@@ -49,6 +50,8 @@ dist-ssr/
 data/
 pgdata/
 redisdata/
+prometheus_data/
+grafana_data/
 
 # IDEs
 .idea/
@@ -60,4 +63,15 @@ redisdata/
 # Misc
 *.log
 .cgr-hash-cache.json
+.codegraph/
 .qdrant_code_embeddings/
+*.db
+
+# Certificates
+# Директория certs/ отслеживается Git (через .gitkeep), но файлы сертификатов — нет
+certs/*.pem
+certs/*.key
+certs/*.crt
+certs/*.csr
+certs/csr.conf
+sing-box-config.json

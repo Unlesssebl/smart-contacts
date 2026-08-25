@@ -1,7 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
-import { getWsToken } from '../api/auth';
+import { getWsToken } from '@/api/auth';
+import { usersApi } from '@/api/users';
+import { toast } from 'sonner';
+import { getAttributeLabel } from '@/lib/localization';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const THROTTLE_MS = 2000; // 2 seconds
@@ -9,10 +13,19 @@ const THROTTLE_MS = 2000; // 2 seconds
 export const usePresence = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const statusRef = useRef<'online' | 'away' | 'offline'>('offline');
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef<number>(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const isActiveRef = useRef<boolean>(false); // tracks whether the current effect is still alive
   
-  const { setPresence, setBulkPresence, isAuthenticated } = useAppStore();
+  const { setPresence, setBulkPresence, isAuthenticated } = useAppStore(
+    useShallow((state) => ({
+      setPresence: state.setPresence,
+      setBulkPresence: state.setBulkPresence,
+      isAuthenticated: state.isAuthenticated,
+    })),
+  );
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -22,9 +35,13 @@ export const usePresence = () => {
       return;
     }
 
+    isActiveRef.current = true;
+
     const connect = async () => {
+      if (!isActiveRef.current) return;
       try {
         const token = await getWsToken();
+        if (!isActiveRef.current) return; // logged out while waiting for token
         const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
         let wsUrl = '';
         
@@ -41,6 +58,7 @@ export const usePresence = () => {
       ws.onopen = () => {
         console.log('[Presence] WebSocket connected successfully!');
         statusRef.current = 'online';
+        reconnectAttemptsRef.current = 0; // reset attempts on success
       };
 
       ws.onmessage = (event) => {
@@ -52,6 +70,110 @@ export const usePresence = () => {
           } else if (data.type === 'presence_update') {
             console.log('[Presence] Received update:', data.user_id, data.status);
             setPresence(data.user_id, data.status);
+          } else if (data.type === 'admin_update') {
+            if (window.location.pathname.includes('/admin')) {
+              useAppStore.getState().fetchAdminData();
+            }
+          } else if (data.type === 'ldap_status_updated') {
+            if (window.location.pathname.includes('/admin')) {
+              useAppStore.getState().fetchLDAPSettings(true);
+            }
+          } else if (data.type === 'profile_updated') {
+            const state = useAppStore.getState();
+            const currentUser = state.currentUser;
+            if (currentUser && currentUser.id === data.user_id) {
+              state.fetchMyPendingFields();
+              usersApi.getUserByGuid(data.user_id).then((user) => {
+                state.updateUserInStore(user.id, user);
+              });
+
+              if (Array.isArray(data.applied_fields) && data.applied_fields.length > 0) {
+                data.applied_fields.forEach((field: string) => {
+                  const label = getAttributeLabel(field);
+                  const added = state.addNotification({
+                    type: 'field_applied',
+                    title: `${label.charAt(0).toUpperCase() + label.slice(1)} обновлён`,
+                    body: `Ваша заявка на изменение поля «${label}» принята и успешно применена в Active Directory`,
+                    field,
+                  });
+                  if (added) {
+                    toast.success(`✓ Ваш ${label} обновлён и применён`);
+                  }
+                });
+              }
+
+              if (Array.isArray(data.rejected_fields) && data.rejected_fields.length > 0) {
+                data.rejected_fields.forEach((field: string) => {
+                  const label = getAttributeLabel(field);
+                  state.markFieldRejected(field);
+                  const added = state.addNotification({
+                    type: 'field_rejected',
+                    title: `Заявка на «${label}» отклонена`,
+                    body: `Заявка на изменение поля «${label}» была отклонена администратором`,
+                    field,
+                  });
+                  if (added) {
+                    toast.warning(`Заявка на изменение поля «${label}» отклонена`);
+                  }
+                });
+              }
+            }
+          } else if (data.type === 'report_moderated') {
+            const state = useAppStore.getState();
+            const currentUser = state.currentUser;
+            if (currentUser && currentUser.id === data.reporter_guid) {
+              const label = getAttributeLabel(data.attribute_name);
+              const targetDesc = data.target_user_name ? ` по сотруднику «${data.target_user_name}»` : '';
+              const isSuccess = data.status === 'approved' || data.status === 'applied';
+
+              if (isSuccess) {
+                const title = 'Сообщение об ошибке принято';
+                const body = `Ваше сообщение об ошибке${targetDesc} (поле «${label}») рассмотрено и данные успешно обновлены`;
+                const added = state.addNotification({
+                  type: 'report_approved',
+                  title,
+                  body,
+                  field: data.attribute_name,
+                });
+                if (added) {
+                  toast.success(`✓ ${title} (${label})`);
+                }
+              } else {
+                const title = 'Сообщение об ошибке отклонено';
+                const reasonStr = data.rejection_reason ? `: ${data.rejection_reason}` : '';
+                const body = `Ваше сообщение об ошибке${targetDesc} (поле «${label}») отклонено администратором${reasonStr}`;
+                const added = state.addNotification({
+                  type: 'report_rejected',
+                  title,
+                  body,
+                  field: data.attribute_name,
+                });
+                if (added) {
+                  toast.warning(`Сообщение об ошибке отклонено (${label})`);
+                }
+              }
+            }
+          } else if (data.type === 'ticket_closed') {
+            const state = useAppStore.getState();
+            const currentUser = state.currentUser;
+            if (currentUser && currentUser.id === data.user_guid) {
+              const isSuggestion = data.category === 'suggestion';
+              const title = isSuggestion
+                ? 'Предложение по улучшению рассмотрено'
+                : 'Обращение в поддержку рассмотрено';
+              const body = isSuggestion
+                ? 'Ваше предложение по улучшению сервиса было рассмотрено и закрыто администратором'
+                : 'Ваше обращение в службу поддержки было рассмотрено и закрыто администратором';
+              const added = state.addNotification({
+                type: 'ticket_closed',
+                title,
+                body,
+                category: data.category,
+              });
+              if (added) {
+                toast.info(`✓ ${title}`);
+              }
+            }
           }
         } catch (e) {
           console.error('Failed to parse WS message', e);
@@ -60,20 +182,33 @@ export const usePresence = () => {
 
       ws.onclose = () => {
         statusRef.current = 'offline';
-        // Try to reconnect in 5 seconds
-        setTimeout(connect, 5000);
+        if (isActiveRef.current) {
+          const delay = Math.min(1000 * (2 ** reconnectAttemptsRef.current) + Math.random() * 1000, 30000);
+          reconnectAttemptsRef.current += 1;
+          reconnectTimerRef.current = setTimeout(connect, delay);
+        }
       };
       } catch (err) {
         console.error('Failed to setup presence WS', err);
-        setTimeout(connect, 5000);
+        if (isActiveRef.current) {
+          const delay = Math.min(1000 * (2 ** reconnectAttemptsRef.current) + Math.random() * 1000, 30000);
+          reconnectAttemptsRef.current += 1;
+          reconnectTimerRef.current = setTimeout(connect, delay);
+        }
       }
     };
 
     connect();
 
     return () => {
+      isActiveRef.current = false; // stop any pending reconnects
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [isAuthenticated, setPresence, setBulkPresence]);
@@ -109,10 +244,10 @@ export const usePresence = () => {
     // Initial timer start
     handleActivity();
 
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('keydown', handleActivity);
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('scroll', handleActivity);
+    window.addEventListener('mousemove', handleActivity, { passive: true });
+    window.addEventListener('keydown', handleActivity, { passive: true });
+    window.addEventListener('click', handleActivity, { passive: true });
+    window.addEventListener('scroll', handleActivity, { passive: true });
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);

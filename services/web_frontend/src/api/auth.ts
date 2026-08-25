@@ -6,6 +6,11 @@ export const login = async (username: string, password: string) => {
   return response.data;
 };
 
+export const refreshToken = async () => {
+  const response = await apiClient.post('/auth/refresh');
+  return response.data;
+};
+
 export const getMe = async () => {
   const response = await apiClient.get('/auth/me');
   return response.data;

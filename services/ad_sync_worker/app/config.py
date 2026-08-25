@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     DB_HOST: str
     DB_PORT: int
 
+    # Redis
+    REDIS_HOST: str
+    REDIS_PORT: int = 6379
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:

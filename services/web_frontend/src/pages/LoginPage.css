@@ -1,0 +1,549 @@
+/* LoginPage.css */
+
+.login-page-wrapper {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #09121c;
+    /* Fallback dark background */
+    color: #0f1923;
+    display: flex;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    --brand: #1a3f6f;
+    --brand-dark: #0e2444;
+    --brand-mid: #1e4d85;
+    --brand-hover: #205c9e;
+    /* Updated as per design review */
+
+    --ink: #0f1923;
+    --ink-2: #374151;
+    --ink-3: #4b5563;
+    /* Darkened from 6b7280 */
+    --ink-4: #6b7280;
+    /* Darkened from 9ca3af */
+
+    --surface: #ffffff;
+    --border: #d1d5db;
+    /* Darkened from e5e7eb */
+    --error: #ef4444;
+}
+
+/* Фоновый слой (минималистичные волны) */
+.login-page-wrapper::before {
+    content: '';
+    position: fixed;
+    inset: -2%;
+    background-image: linear-gradient(rgba(32, 92, 158, 0.45), rgba(32, 92, 158, 0.45)), url('/login_background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(4px) brightness(1.2);
+    /* Легкое размытие для мягкости, увеличена яркость */
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Сетка (Dot Matrix) и виньетка поверх размытого фона */
+.login-page-wrapper::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 4px 4px;
+    box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.25);
+    /* Осветлена виньетка */
+    pointer-events: none;
+}
+
+/* ─────────────────────────────────────────
+    LEFT PANEL
+───────────────────────────────────────── */
+.brand-panel {
+    flex: 1;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 48px 60px;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    /* Мягкая тень перетекания на правую панель */
+    box-shadow: 20px 0 60px -10px rgba(10, 29, 54, 0.25);
+}
+
+/* Затемняющий оверлей для улучшения читаемости текста */
+.brand-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    /* Тёмный градиент слева направо: текст читаем, фон остаётся декоративным */
+    background: linear-gradient(to right, rgba(13, 43, 79, 0.7) 0%, rgba(13, 43, 79, 0.1) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Шапка: логотип */
+.brand-header {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+}
+
+@keyframes logoReveal {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.brand-logo-img {
+    height: 50px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    opacity: 0;
+    animation: logoReveal 0.8s 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Центральный контент: вертикально по центру */
+.brand-content {
+    position: relative;
+    z-index: 2;
+    margin-top: auto;
+    margin-bottom: auto;
+    padding: 20px 0;
+}
+
+.brand-tag {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.40);
+    margin-bottom: 28px;
+}
+
+@keyframes headlineReveal {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes subReveal {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes descReveal {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.brand-headline {
+    font-size: clamp(38px, 4vw, 52px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    color: #ffffff;
+    margin-bottom: 12px;
+    opacity: 0;
+    animation: headlineReveal 0.9s 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.brand-headline-sub {
+    font-size: clamp(26px, 3vw, 38px);
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+    color: rgba(255, 255, 255, 0.70);
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: subReveal 0.9s 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.brand-divider {
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.6), transparent);
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: descReveal 0.8s 0.9s ease forwards;
+}
+
+.brand-description {
+    font-size: 15px;
+    line-height: 1.75;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 300;
+    max-width: 320px;
+    opacity: 0;
+    animation: descReveal 0.8s 1.0s ease forwards;
+}
+
+.brand-bottom {
+    position: relative;
+    z-index: 2;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    opacity: 0;
+    animation: descReveal 0.8s 1.2s ease forwards;
+}
+
+.brand-bottom-text {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ─────────────────────────────────────────
+    RIGHT PANEL — EDITORIAL FORM
+───────────────────────────────────────── */
+.form-panel {
+    width: 500px;
+    flex-shrink: 0;
+    /* Градиентный стекломорфизм для идеальной гармонии с фоном */
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.70) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transform: translateZ(0);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 80px;
+    position: relative;
+    z-index: 1;
+    border-left: none;
+    box-shadow: -8px 0 40px rgba(10, 29, 54, 0.15), inset 1px 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* ── Шапка ── */
+.form-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.form-eyebrow::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.form-title {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--brand-dark);
+    margin-bottom: 12px;
+    line-height: 1.15;
+}
+
+.form-subtitle {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-3);
+    font-weight: 400;
+    margin-bottom: 48px;
+}
+
+/* ── Поля ввода (Линии) ── */
+.form-group {
+    margin-bottom: 36px;
+    position: relative;
+}
+
+.form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 12px;
+    transition: color 0.3s ease;
+}
+
+.form-group:focus-within .form-label {
+    color: var(--brand);
+}
+
+.input-wrapper {
+    position: relative;
+    margin-left: -20px;
+    width: calc(100% + 20px);
+}
+
+.form-input {
+    width: 100%;
+    padding: 8px 0 16px 20px;
+    font-size: 16px;
+    font-family: inherit;
+    font-weight: 400;
+    border: none;
+    border-bottom: 1px solid transparent;
+    border-image: linear-gradient(to right, rgba(13, 43, 79, 0) 0%, rgba(13, 43, 79, 0.15) 10%, rgba(13, 43, 79, 0) 100%) 1;
+    background: transparent;
+    color: var(--ink);
+    outline: none;
+    border-radius: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.form-input::placeholder {
+    color: var(--ink-4);
+    font-weight: 300;
+}
+
+/* Выезжающая акцентная линия при фокусе */
+.input-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--brand);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 10%, transparent 100%);
+    transition: width 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.form-input:focus~.input-line {
+    width: 100%;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0;
+    top: 40%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink-3);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: inherit;
+    padding: 4px 0 4px 8px;
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: var(--brand);
+}
+
+/* ── Сообщение об ошибке ── */
+.form-error {
+    margin-bottom: 24px;
+    padding: 12px 0;
+    font-size: 13px;
+    color: var(--error);
+    font-weight: 500;
+}
+
+/* ── Элегантная текстовая кнопка ── */
+.btn-submit {
+    width: calc(100% + 20px) !important;
+    margin-left: -20px;
+    box-sizing: border-box;
+    margin-top: 24px;
+    padding: 12px 0 16px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: transparent !important;
+    color: var(--brand-dark);
+    /* Цвет как у "Добро пожаловать" */
+    border: none;
+    border-bottom: 1px solid transparent;
+    border-image: linear-gradient(to right, rgba(13, 43, 79, 0) 0%, rgba(13, 43, 79, 0.15) 10%, rgba(13, 43, 79, 0) 100%) 1;
+    /* Эффект плавного затухания по краям */
+    border-radius: 0;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    display: block;
+    text-align: left;
+    position: relative;
+}
+
+.btn-submit::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--brand);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 10%, transparent 100%);
+    transition: width 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    z-index: 2;
+}
+
+.btn-submit:hover:not(:disabled) {
+    /* Не меняем цвет, оставляем brand-dark */
+}
+
+.btn-submit:hover:not(:disabled)::after {
+    width: 100%;
+}
+
+.btn-submit:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Футер формы ── */
+.form-footer {
+    position: absolute;
+    bottom: 40px;
+    left: 72px;
+    right: 72px;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.form-footer a {
+    color: var(--ink-4);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.form-footer a:hover {
+    color: var(--brand);
+}
+
+/* ─────────────────────────────────────────
+    АНИМАЦИИ ПОЯВЛЕНИЯ
+───────────────────────────────────────── */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.9s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fade-up-1 {
+    animation: fadeUp 0.6s 0.10s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fade-up-2 {
+    animation: fadeUp 0.6s 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fade-up-3 {
+    animation: fadeUp 0.6s 0.24s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fade-up-4 {
+    animation: fadeUp 0.6s 0.30s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fade-up-5 {
+    animation: fadeUp 0.6s 0.36s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fade-up-6 {
+    animation: fadeUp 0.6s 0.42s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ─────────────────────────────────────────
+    RESPONSIVE
+───────────────────────────────────────── */
+@media (max-width: 960px) {
+    .login-page-wrapper {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .brand-panel {
+        padding: 36px 32px;
+        min-height: auto;
+    }
+
+    .brand-headline {
+        font-size: 32px;
+    }
+
+    .brand-headline-sub {
+        font-size: 24px;
+    }
+
+    .brand-bottom {
+        display: none;
+    }
+
+    .form-panel {
+        width: 100%;
+        padding: 48px 32px 80px;
+        border-left: none;
+        border-top: 1px solid var(--border);
+    }
+
+    .form-footer {
+        left: 32px;
+        right: 32px;
+        bottom: 28px;
+    }
+}

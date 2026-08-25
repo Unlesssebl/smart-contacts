@@ -14,13 +14,18 @@ CREATE TABLE users (
     internal_phone VARCHAR(100),
     mobile_phone VARCHAR(100),
     department VARCHAR(256),
+    department_raw VARCHAR(256),
     office_location VARCHAR(256),
     organization VARCHAR(256),
+    ad_dn VARCHAR(512),
     job_title VARCHAR(256),
+    job_title_raw VARCHAR(256),
     email VARCHAR(256),
+    avatar_color VARCHAR(7),
     role VARCHAR(32) NOT NULL DEFAULT 'employee',
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     is_protected BOOLEAN NOT NULL DEFAULT FALSE,
+    is_hidden BOOLEAN NOT NULL DEFAULT FALSE,
     grace_period_left SMALLINT NOT NULL DEFAULT 3,
     last_sync_timestamp TIMESTAMPTZ,
     sync_error_log TEXT,
@@ -38,7 +43,7 @@ CREATE TABLE change_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
     attribute_name VARCHAR(64) NOT NULL,
-    new_value TEXT NOT NULL,
+    new_value TEXT,
     source VARCHAR(10) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     rejection_reason TEXT,
@@ -49,7 +54,7 @@ CREATE TABLE change_requests (
     -- Ограничения
     CONSTRAINT cr_source_check CHECK (source IN ('web', 'bot')),
     CONSTRAINT cr_status_check CHECK (status IN ('pending', 'conflict', 'approved', 'applied', 'rejected')),
-    CONSTRAINT cr_attribute_check CHECK (attribute_name IN ('internal_phone', 'mobile_phone', 'office_location', 'department', 'full_name'))
+    CONSTRAINT cr_attribute_check CHECK (attribute_name IN ('internal_phone', 'mobile_phone', 'office_location', 'department', 'full_name', 'organization', 'job_title', 'email'))
 );
 
 -- 4. Таблица reports (Жалобы на контакты)
@@ -57,14 +62,17 @@ CREATE TABLE reports (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     target_user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
     reporter_user_guid UUID REFERENCES users(object_guid) ON DELETE SET NULL,
-    reason TEXT NOT NULL,
+    attribute_name VARCHAR(64) NOT NULL,
+    new_value TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    rejection_reason TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     processed_at TIMESTAMPTZ,
     processed_by UUID REFERENCES users(object_guid) ON DELETE SET NULL,
     
-    -- Ограничение статуса
-    CONSTRAINT reports_status_check CHECK (status IN ('pending', 'processed'))
+    -- Ограничения
+    CONSTRAINT reports_status_check CHECK (status IN ('pending', 'conflict', 'approved', 'applied', 'rejected')),
+    CONSTRAINT reports_attribute_check CHECK (attribute_name IN ('internal_phone', 'mobile_phone', 'office_location', 'department', 'full_name', 'job_title'))
 );
 
 -- 5. Таблица refresh_tokens (Сессии)
@@ -94,15 +102,15 @@ CREATE INDEX idx_users_is_verified ON users (is_verified) WHERE is_verified = FA
 -- Уникальный индекс для change_requests: одна активная заявка на поле
 CREATE UNIQUE INDEX idx_cr_unique_pending
   ON change_requests (user_guid, attribute_name)
-  WHERE status IN ('pending', 'conflict');
+  WHERE status IN ('pending', 'conflict', 'approved');
 
 CREATE INDEX idx_cr_user_guid ON change_requests (user_guid);
 CREATE INDEX idx_cr_status  ON change_requests (status);
 
--- Уникальный индекс для reports: один пользователь — одна активная жалоба на профиль
+-- Уникальный индекс для reports: один пользователь — одна активная жалоба на конкретное поле
 CREATE UNIQUE INDEX idx_reports_unique_new
-  ON reports (target_user_guid, reporter_user_guid)
-  WHERE status = 'pending';
+  ON reports (target_user_guid, reporter_user_guid, attribute_name)
+  WHERE status IN ('pending', 'conflict');
 
 CREATE INDEX idx_reports_target   ON reports (target_user_guid);
 CREATE INDEX idx_reports_status   ON reports (status);
@@ -113,3 +121,44 @@ CREATE TABLE system_settings (
     value TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- 8. Таблица support_tickets (Обращения в поддержку)
+CREATE TABLE support_tickets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_guid UUID REFERENCES users(object_guid) ON DELETE SET NULL,
+    sender_name VARCHAR(256),
+    sender_contact VARCHAR(256),
+    category VARCHAR(64) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    closed_by UUID REFERENCES users(object_guid) ON DELETE SET NULL,
+    closed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    
+    CONSTRAINT st_status_check CHECK (status IN ('open', 'closed')),
+    CONSTRAINT st_category_check CHECK (category IN ('access', 'data_error', 'bug', 'suggestion', 'other'))
+);
+
+CREATE INDEX idx_support_tickets_status ON support_tickets (status);
+CREATE INDEX idx_support_tickets_created_at ON support_tickets (created_at DESC);
+CREATE INDEX idx_support_tickets_user_guid ON support_tickets (user_guid);
+
+-- 9. Таблица notifications (Пользовательские уведомления)
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_guid UUID NOT NULL REFERENCES users(object_guid) ON DELETE CASCADE ON UPDATE CASCADE,
+    type VARCHAR(64) NOT NULL,
+    title VARCHAR(256) NOT NULL,
+    body TEXT NOT NULL,
+    field VARCHAR(64),
+    category VARCHAR(64),
+    payload JSONB DEFAULT '{}'::jsonb,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    read_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_notifications_user_unread ON notifications (user_guid, created_at DESC) WHERE is_read = FALSE;
+CREATE INDEX idx_notifications_user_created ON notifications (user_guid, created_at DESC);
+
