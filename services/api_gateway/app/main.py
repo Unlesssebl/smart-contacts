@@ -1,4 +1,5 @@
 import os
+import secrets
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -57,6 +58,25 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+
+        # Auto-issue csrf_token cookie for browser clients if missing in request and not already set by endpoint
+        if "csrf_token" not in request.cookies:
+            raw_headers = response.raw_headers
+            has_csrf_set = any(
+                k.lower() == b"set-cookie" and b"csrf_token=" in v
+                for k, v in raw_headers
+            )
+            if not has_csrf_set:
+                csrf_token = secrets.token_hex(32)
+                response.set_cookie(
+                    key="csrf_token",
+                    value=csrf_token,
+                    httponly=False,
+                    secure=getattr(settings, "COOKIE_SECURE", False),
+                    samesite="lax",
+                    path="/",
+                    max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+                )
         return response
 
 # Parse allowed origins from settings

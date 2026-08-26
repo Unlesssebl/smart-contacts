@@ -363,3 +363,35 @@ def test_unmapped_user_excluded_from_directory(client: TestClient, mocker, db_se
     resp_admin_get = client.get(f"/api/v1/users/{unmapped_user.object_guid}")
     assert resp_admin_get.status_code == 200
     assert resp_admin_get.json()["sam_account_name"] == "unmapped_user"
+
+
+def test_admin_security_unblock_and_csrf(client: TestClient, mocker, test_admin_user):
+    """
+    Test unblocking an IP address via /api/v1/admin/security/unblock
+    with and without proper CSRF token.
+    """
+    mocker.patch(
+        "app.api.v1.endpoints.auth.validate_kerberos_ticket",
+        return_value=test_admin_user.sam_account_name
+    )
+    # Login as admin
+    login_resp = client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock_admin"})
+    assert login_resp.status_code == 200
+    csrf_token = login_resp.cookies.get("csrf_token")
+    assert csrf_token is not None
+
+    # 1. POST unblock without X-CSRF-Token header -> 403 Forbidden
+    resp_fail = client.post("/api/v1/admin/security/unblock", json={"ip": "192.168.1.50"})
+    assert resp_fail.status_code == 403
+    assert "CSRF" in resp_fail.json()["detail"]
+
+    # 2. POST unblock with matching X-CSRF-Token header -> 200 OK
+    resp_ok = client.post(
+        "/api/v1/admin/security/unblock",
+        json={"ip": "192.168.1.50"},
+        headers={"X-CSRF-Token": csrf_token}
+    )
+    assert resp_ok.status_code == 200
+    assert resp_ok.json()["status"] == "ok"
+    assert "192.168.1.50" in resp_ok.json()["message"]
+

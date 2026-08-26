@@ -20,7 +20,9 @@ def set_auth_cookies(response: Response, tokens: Token):
         value=csrf_token,
         httponly=False,
         secure=getattr(settings, "COOKIE_SECURE", False),
-        samesite="lax"
+        samesite="lax",
+        path="/",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     )
     # Access token
     response.set_cookie(
@@ -29,6 +31,7 @@ def set_auth_cookies(response: Response, tokens: Token):
         httponly=True,
         secure=getattr(settings, "COOKIE_SECURE", False),
         samesite="lax",
+        path="/",
         max_age=tokens.expires_in
     )
     # Refresh token
@@ -39,6 +42,7 @@ def set_auth_cookies(response: Response, tokens: Token):
             httponly=True,
             secure=getattr(settings, "COOKIE_SECURE", False),
             samesite="lax",
+            path="/",
             max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
         )
 
@@ -85,9 +89,9 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     if refresh_token:
         from app.db.repository.token import revoke_refresh_token
         revoke_refresh_token(db, refresh_token)
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
-    response.delete_cookie("csrf_token")
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("csrf_token", path="/")
     return {"detail": "Logged out"}
 
 @router.get("/me", response_model=UserProfile)

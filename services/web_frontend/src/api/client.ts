@@ -10,10 +10,9 @@ const apiClient = axios.create({
 });
 
 // Helper to read cookie by name
-function getCookie(name: string) {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  if (match) return match[2];
-  return null;
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 // Request interceptor: add CSRF token
@@ -27,6 +26,7 @@ apiClient.interceptors.request.use((config) => {
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  _csrfRetry?: boolean;
 }
 
 interface RefreshQueueItem {
@@ -106,6 +106,26 @@ apiClient.interceptors.response.use(
             isRefreshing = false;
           });
       });
+    }
+
+    // Handle 403 CSRF token error retry
+    if (
+      error.response?.status === 403 &&
+      originalRequest &&
+      !originalRequest._csrfRetry &&
+      error.response?.data?.detail === 'Ошибка проверки CSRF-токена'
+    ) {
+      originalRequest._csrfRetry = true;
+      try {
+        await axios.get(`${apiClient.defaults.baseURL}/auth/me`, { withCredentials: true });
+        const newCsrf = getCookie('csrf_token');
+        if (newCsrf && originalRequest.headers) {
+          originalRequest.headers['X-CSRF-Token'] = newCsrf;
+        }
+        return apiClient(originalRequest);
+      } catch (csrfErr) {
+        return Promise.reject(csrfErr);
+      }
     }
 
     // Handle 503 Service Unavailable (AD Sync issues)
