@@ -8,7 +8,7 @@ export const supportApi = {
   },
 
   getTickets: async (params?: { status?: string; page?: number; pageSize?: number; search?: string }): Promise<PaginatedSupportTickets> => {
-    const queryParams: Record<string, any> = {};
+    const queryParams: Record<string, string | number> = {};
     if (params?.status && params.status !== 'all') {
       queryParams.status = params.status;
     }

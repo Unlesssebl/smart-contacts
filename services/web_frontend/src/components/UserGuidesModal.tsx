@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -15,11 +15,9 @@ import {
   User,
   MousePointer,
   RotateCcw,
-  Zap,
   SlidersHorizontal,
   Check,
   Building,
-  Mail,
 } from 'lucide-react';
 
 interface UserGuidesModalProps {
@@ -429,14 +427,14 @@ export function UserGuidesModal({
     };
   }, [isOpen]);
 
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     try {
       localStorage.setItem('smart_contacts_onboarding_completed', 'true');
     } catch {
       // ignore
     }
     onClose();
-  };
+  }, [onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -452,7 +450,7 @@ export function UserGuidesModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, mode, currentStep, onClose]);
+  }, [isOpen, mode, currentStep, handleDismiss]);
 
   if (!isOpen) return null;
 

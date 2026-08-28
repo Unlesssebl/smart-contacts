@@ -2,9 +2,11 @@ import type { StateCreator } from 'zustand';
 import axios from 'axios';
 import { login, getMe } from '@/api/auth';
 import { acknowledgeGatekeeper } from '@/api/profile';
-import apiClient from '@/api/client';
+import { getCookie } from '@/api/client';
 import type { AppState, AuthSlice } from '../types';
 import { getErrorStatus } from '@/api/errors';
+
+let isLoggingOut = false;
 
 export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, get) => ({
   currentUser: null,
@@ -35,14 +37,30 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
   },
 
   logout: async () => {
-    // Reset only local state — do NOT delete notifications from the server
-    // so the user's history is preserved across sessions.
-    get().resetNotificationsState();
-    set({ currentUser: null, isAuthenticated: false, users: [], changeRequests: [], reports: [] });
+    if (isLoggingOut) return;
+    isLoggingOut = true;
     try {
-      await apiClient.post('/auth/logout');
-    } catch (e) {
-      console.error('Logout API failed', e);
+      // 1. Immediately reset memory state and clear notifications state
+      get().resetNotificationsState();
+      set({ currentUser: null, isAuthenticated: false, users: [], changeRequests: [], reports: [] });
+
+      // 2. Best-effort logout notification to server using isolated axios call (bypasses apiClient interceptors)
+      try {
+        const csrfToken = getCookie('csrf_token');
+        const headers: Record<string, string> = {};
+        if (csrfToken) {
+          headers['X-CSRF-Token'] = csrfToken;
+        }
+        await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/logout`,
+          {},
+          { withCredentials: true, headers, timeout: 5000 }
+        );
+      } catch {
+        // Silently ignore logout network/401 errors since local state is already cleared
+      }
+    } finally {
+      isLoggingOut = false;
     }
   },
 

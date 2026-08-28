@@ -31,15 +31,6 @@ export function DirectoryPage() {
   );
   
   const totalPages = Math.ceil(totalUsers / limit);
-  const hasActiveFilterOrQuery = Boolean(
-    searchQuery.trim() ||
-    filters.organization ||
-    filters.department ||
-    filters.job_title ||
-    filters.has_phone ||
-    filters.has_email ||
-    filters.hidden_only
-  );
   const gridContainerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
 

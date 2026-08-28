@@ -10,7 +10,7 @@ const apiClient = axios.create({
 });
 
 // Helper to read cookie by name
-function getCookie(name: string) {
+export function getCookie(name: string) {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   if (match) return match[2];
   return null;
@@ -48,6 +48,18 @@ const processQueue = (error?: unknown) => {
   failedQueue = [];
 };
 
+function isAuthEndpoint(url?: string): boolean {
+  if (!url) return false;
+  const cleanUrl = url.split('?')[0];
+  return (
+    cleanUrl.endsWith('/auth/sso') ||
+    cleanUrl.endsWith('/auth/login') ||
+    cleanUrl.endsWith('/auth/refresh') ||
+    cleanUrl.endsWith('/auth/logout') ||
+    cleanUrl.endsWith('/auth/ws-token')
+  );
+}
+
 // Response interceptor: handle 401 and 503
 apiClient.interceptors.response.use(
   (response) => {
@@ -63,7 +75,7 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error) => {
-    const originalRequest = error.config as RetryableRequestConfig | undefined;
+    const originalRequest = error?.config as RetryableRequestConfig | undefined;
     const store = useAppStore.getState();
 
     // Handle Network Error or Vite proxy errors (502, 504)
@@ -74,25 +86,43 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle 401 Unauthorized
     const url = originalRequest?.url || '';
-    if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login') && !url.endsWith('/auth/refresh') && !url.endsWith('/auth/ws-token')) {
+
+    // Handle 401 Unauthorized
+    // Only attempt refresh if:
+    // 1. Request config exists
+    // 2. HTTP status is 401
+    // 3. User is currently marked as authenticated in store
+    // 4. Request was not already retried
+    // 5. Target URL is not an auth endpoint (sso, login, refresh, logout, ws-token)
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      store.isAuthenticated &&
+      !isAuthEndpoint(url)
+    ) {
       if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
-          failedQueue.push({ resolve: () => resolve(undefined), reject });
-        }).then(() => {
-          return apiClient(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
+        return new Promise<void>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => apiClient(originalRequest))
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
-      return new Promise(function (resolve, reject) {
-        // Use a new axios instance to avoid interceptor loops
-        axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true })
+      return new Promise((resolve, reject) => {
+        const csrfToken = getCookie('csrf_token');
+        const headers: Record<string, string> = {};
+        if (csrfToken) {
+          headers['X-CSRF-Token'] = csrfToken;
+        }
+
+        // Use clean axios instance to avoid interceptor loops
+        axios
+          .post(`${apiClient.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true, headers })
           .then(() => {
             processQueue();
             resolve(apiClient(originalRequest));
@@ -117,7 +147,7 @@ apiClient.interceptors.response.use(
       });
     }
 
-    // Handle other errors
+    // Handle other server errors
     if (error.response?.status === 500) {
       toast.error('Ошибка сервера. Попробуйте позже.');
     }

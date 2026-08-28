@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   Pencil,
   Save,
-  Clock,
   Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';

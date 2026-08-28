@@ -11,12 +11,10 @@ import {
   AlertTriangle, 
   User, 
   Globe, 
-  X,
-  Check
+  X
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import type { SecurityIncident } from '@/types';
 
 export function SecurityPanel() {
   const [searchTerm, setSearchTerm] = useState('');

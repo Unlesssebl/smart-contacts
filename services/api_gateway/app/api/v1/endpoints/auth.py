@@ -73,9 +73,19 @@ def login(request: Request, response: Response, data: LoginRequest, db: Session 
 def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
+        response.delete_cookie("access_token")
+        response.delete_cookie("refresh_token")
+        response.delete_cookie("csrf_token")
         raise HTTPException(status_code=401, detail="No refresh token provided")
     
-    new_tokens = AuthService.refresh(db, refresh_token)
+    try:
+        new_tokens = AuthService.refresh(db, refresh_token)
+    except HTTPException:
+        response.delete_cookie("access_token")
+        response.delete_cookie("refresh_token")
+        response.delete_cookie("csrf_token")
+        raise
+
     set_auth_cookies(response, new_tokens)
     return {"detail": "Tokens refreshed"}
 

@@ -18,7 +18,6 @@ vi.mock('sonner', () => ({
 
 const mockUser: UserProfile = {
   id: 'user-1',
-  object_guid: 'user-1',
   sam_account_name: 'test.user',
   full_name: 'Тестовый Пользователь',
   email: 'test@company.loc',

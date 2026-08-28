@@ -40,7 +40,7 @@ export function ProfilePage() {
   );
   const [isConfirmingGatekeeper, setIsConfirmingGatekeeper] = useState(false);
   
-  const isCurrentUserProfile = Boolean(currentUser && (currentUser.id === id || currentUser.object_guid === id));
+  const isCurrentUserProfile = Boolean(currentUser && currentUser.id === id);
   const storeUser = id ? getUserById(id) : null;
   const initialUser = storeUser || (isCurrentUserProfile ? (currentUser as unknown as User) : null);
   const [user, setUser] = useState<User | null>(initialUser);

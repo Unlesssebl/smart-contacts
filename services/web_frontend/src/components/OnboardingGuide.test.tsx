@@ -5,32 +5,24 @@ import { cleanup, render, screen, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { OnboardingGuide } from './OnboardingGuide';
 import { useAppStore } from '@/store/useAppStore';
-import type { CurrentUser } from '@/types';
+import type { UserProfile } from '@/types';
 
 afterEach(cleanup);
 
-const mockUser: CurrentUser = {
+const mockUser: UserProfile = {
   id: 'user-1',
-  object_guid: 'guid-1',
   sam_account_name: 'test.user',
   full_name: 'Тестовый Пользователь',
-  first_name: 'Тестовый',
-  last_name: 'Пользователь',
-  middle_name: '',
-  title: 'Инженер',
-  company: 'АО НТЗ',
+  job_title: 'Инженер',
+  organization: 'АО НТЗ',
   department: 'ИТ отдел',
-  work_phone: '',
   internal_phone: '2040',
   mobile_phone: '',
   email: 'test@example.com',
-  city: '',
-  cabinet: '',
-  is_active: true,
   is_verified: true,
-  grace_period_left: 0,
-  organization: 'АО НТЗ ТЭМ-ПО',
-  is_admin: false,
+  is_protected: false,
+  grace_period_left: 3,
+  role: 'employee',
 };
 
 describe('OnboardingGuide', () => {
