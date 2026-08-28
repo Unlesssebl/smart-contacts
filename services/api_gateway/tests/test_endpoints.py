@@ -486,5 +486,23 @@ def test_l1_auth_cache_invalidation(client: TestClient, mock_kerberos, test_admi
     invalidate_user_cache(test_admin_user.object_guid)
     assert str(test_admin_user.object_guid) not in _L1_USER_CACHE
 
+def test_cached_user_session_detachment_safety(client: TestClient, mock_kerberos, test_admin_user, db_session):
+    """Ensure subsequent requests using L1/L2 cached user models do not raise DetachedInstanceError."""
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock"})
+    
+    # First call populates cache
+    resp1 = client.get("/api/v1/auth/me")
+    assert resp1.status_code == 200
+    
+    # Force close / rollback any active session to simulate new request lifecycle
+    db_session.rollback()
+    db_session.close()
+    
+    # Second call uses L1 cache - must succeed without DetachedInstanceError
+    resp2 = client.get("/api/v1/auth/me")
+    assert resp2.status_code == 200
+    assert resp2.json()["sam_account_name"] == test_admin_user.sam_account_name
+
+
 
 

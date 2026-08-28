@@ -50,7 +50,7 @@ from app.core.redis import redis_client
 
 USER_CACHE_TTL = 30  # seconds (Redis L2)
 L1_CACHE_TTL = 5.0   # seconds (Process Memory L1)
-_L1_USER_CACHE: dict[str, tuple[User, float]] = {}
+_L1_USER_CACHE: dict[str, tuple[str, float]] = {}
 
 from sqlalchemy import event
 
@@ -90,7 +90,7 @@ def _serialize_user(user: User) -> str:
 
 def _deserialize_user(raw_json: str) -> User:
     data = json.loads(raw_json)
-    if data.get("object_guid"):
+    if data.get("object_guid") and isinstance(data["object_guid"], str):
         data["object_guid"] = uuid.UUID(data["object_guid"])
     for dt_col in ("created_at", "updated_at", "last_sync_timestamp"):
         if data.get(dt_col) and isinstance(data[dt_col], str):
@@ -110,7 +110,7 @@ def get_current_user(
     # 1. L1 In-Memory Fast-Path
     cached_l1 = _L1_USER_CACHE.get(guid_str)
     if cached_l1 and (now - cached_l1[1]) < L1_CACHE_TTL:
-        user = cached_l1[0]
+        user = _deserialize_user(cached_l1[0])
         if user.status != UserStatus.ACTIVE.value:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Учетная запись отключена")
         return user
@@ -121,7 +121,7 @@ def get_current_user(
         cached_data = redis_client.get(cache_key)
         if cached_data:
             user = _deserialize_user(cached_data)
-            _L1_USER_CACHE[guid_str] = (user, now)
+            _L1_USER_CACHE[guid_str] = (cached_data, now)
             if user.status != UserStatus.ACTIVE.value:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Учетная запись отключена")
             return user
@@ -140,8 +140,9 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Учетная запись отключена")
         
     try:
-        redis_client.setex(cache_key, USER_CACHE_TTL, _serialize_user(user))
-        _L1_USER_CACHE[guid_str] = (user, now)
+        user_json = _serialize_user(user)
+        redis_client.setex(cache_key, USER_CACHE_TTL, user_json)
+        _L1_USER_CACHE[guid_str] = (user_json, now)
     except Exception:
         pass
 
@@ -181,7 +182,7 @@ def get_optional_current_user(
 
         cached_l1 = _L1_USER_CACHE.get(guid_str)
         if cached_l1 and (now - cached_l1[1]) < L1_CACHE_TTL:
-            user = cached_l1[0]
+            user = _deserialize_user(cached_l1[0])
             if user.status == UserStatus.ACTIVE.value:
                 return user
             return None
@@ -191,7 +192,7 @@ def get_optional_current_user(
             cached_data = redis_client.get(cache_key)
             if cached_data:
                 user = _deserialize_user(cached_data)
-                _L1_USER_CACHE[guid_str] = (user, now)
+                _L1_USER_CACHE[guid_str] = (cached_data, now)
                 if user.status == UserStatus.ACTIVE.value:
                     return user
                 return None
@@ -201,8 +202,9 @@ def get_optional_current_user(
         user = get_user_by_guid(db, user_guid)
         if user and user.status == UserStatus.ACTIVE.value:
             try:
-                redis_client.setex(cache_key, USER_CACHE_TTL, _serialize_user(user))
-                _L1_USER_CACHE[guid_str] = (user, now)
+                user_json = _serialize_user(user)
+                redis_client.setex(cache_key, USER_CACHE_TTL, user_json)
+                _L1_USER_CACHE[guid_str] = (user_json, now)
             except Exception:
                 pass
             return user
