@@ -167,6 +167,14 @@ def list_departments(
     current_user: User = Depends(deps.get_current_user)
 ):
     is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    cache_key = f"filter:depts:{organization or ''}:{job_title or ''}:{is_admin}"
+    try:
+        cached = redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
     query = db.query(User.department).filter(
         User.status != UserStatus.RESIGNED.value,
         User.organization.isnot(None),
@@ -193,7 +201,12 @@ def list_departments(
                 if clean_part:
                     dept_set.add(clean_part)
                     
-    return sorted(dept_set, key=lambda x: x.lower())
+    result = sorted(dept_set, key=lambda x: x.lower())
+    try:
+        redis_client.setex(cache_key, 60, json.dumps(result))
+    except Exception:
+        pass
+    return result
 
 @router.get("/organizations", response_model=List[str])
 def list_organizations(
@@ -203,6 +216,14 @@ def list_organizations(
     current_user: User = Depends(deps.get_current_user)
 ):
     is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    cache_key = f"filter:orgs:{department or ''}:{job_title or ''}:{is_admin}"
+    try:
+        cached = redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
     query = db.query(User.organization).filter(
         User.status != UserStatus.RESIGNED.value,
         User.organization.isnot(None),
@@ -233,7 +254,12 @@ def list_organizations(
         )
         
     organizations = query.distinct().order_by(User.organization).all()
-    return [o[0] for o in organizations if o[0]]
+    result = [o[0] for o in organizations if o[0]]
+    try:
+        redis_client.setex(cache_key, 60, json.dumps(result))
+    except Exception:
+        pass
+    return result
 
 @router.get("/job-titles", response_model=List[str])
 def list_job_titles(
@@ -243,6 +269,14 @@ def list_job_titles(
     current_user: User = Depends(deps.get_current_user)
 ):
     is_admin = current_user.role in [UserRole.ADMIN.value, UserRole.IT_OPERATOR.value]
+    cache_key = f"filter:jobs:{organization or ''}:{department or ''}:{is_admin}"
+    try:
+        cached = redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
     query = db.query(User.job_title).filter(
         User.status != UserStatus.RESIGNED.value,
         User.organization.isnot(None),
@@ -271,7 +305,12 @@ def list_job_titles(
         )
         
     job_titles = query.distinct().order_by(User.job_title).all()
-    return [j[0] for j in job_titles if j[0]]
+    result = [j[0] for j in job_titles if j[0]]
+    try:
+        redis_client.setex(cache_key, 60, json.dumps(result))
+    except Exception:
+        pass
+    return result
 
 @router.get("/{user_id}", response_model=UserFull)
 def get_user(

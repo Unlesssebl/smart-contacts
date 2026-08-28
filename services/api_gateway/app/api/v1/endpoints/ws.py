@@ -39,13 +39,14 @@ async def websocket_presence(websocket: WebSocket):
         await websocket.close(code=1008)
         return
 
-    await manager.connect(websocket, user_id)
+    global_tabs = await manager.connect(websocket, user_id)
     
     # Send full current state
     await manager.send_full_state(websocket)
     
-    # Broadcast to others that this user is online
-    await manager.broadcast_status(user_id, "online")
+    # Broadcast to others that this user is online if first global tab
+    if global_tabs <= 1:
+        await manager.broadcast_status(user_id, "online")
 
     try:
         while True:
@@ -60,11 +61,11 @@ async def websocket_presence(websocket: WebSocket):
             except json.JSONDecodeError:
                 pass
     except WebSocketDisconnect:
-        manager.disconnect(user_id, websocket)
-        if user_id not in manager.active_connections:
+        remaining_tabs = await manager.disconnect(user_id, websocket)
+        if remaining_tabs == 0:
             await manager.broadcast_status(user_id, "offline")
     except Exception as e:
         logger.error(f"WebSocket error for user {user_id}: {e}")
-        manager.disconnect(user_id, websocket)
-        if user_id not in manager.active_connections:
+        remaining_tabs = await manager.disconnect(user_id, websocket)
+        if remaining_tabs == 0:
             await manager.broadcast_status(user_id, "offline")

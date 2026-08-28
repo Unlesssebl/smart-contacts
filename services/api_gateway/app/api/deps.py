@@ -44,17 +44,22 @@ def get_current_user_guid(request: Request) -> str:
 
 import json
 import uuid
+import time
 from datetime import datetime
 from app.core.redis import redis_client
 
-USER_CACHE_TTL = 30  # seconds
+USER_CACHE_TTL = 30  # seconds (Redis L2)
+L1_CACHE_TTL = 5.0   # seconds (Process Memory L1)
+_L1_USER_CACHE: dict[str, tuple[User, float]] = {}
 
 from sqlalchemy import event
 
 def invalidate_user_cache(user_guid: str | uuid.UUID) -> None:
-    """Invalidates the Redis cache entry for a user."""
+    """Invalidates both L1 memory cache and Redis L2 cache for a user."""
+    guid_str = str(user_guid)
+    _L1_USER_CACHE.pop(guid_str, None)
     try:
-        redis_client.delete(f"user_cache:{user_guid}")
+        redis_client.delete(f"user_cache:{guid_str}")
     except Exception:
         pass
 
@@ -99,11 +104,24 @@ def get_current_user(
     db: Session = Depends(get_db), 
     user_guid: str = Depends(get_current_user_guid)
 ) -> User:
-    cache_key = f"user_cache:{user_guid}"
+    guid_str = str(user_guid)
+    now = time.monotonic()
+
+    # 1. L1 In-Memory Fast-Path
+    cached_l1 = _L1_USER_CACHE.get(guid_str)
+    if cached_l1 and (now - cached_l1[1]) < L1_CACHE_TTL:
+        user = cached_l1[0]
+        if user.status != UserStatus.ACTIVE.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Учетная запись отключена")
+        return user
+
+    # 2. L2 Redis Cache
+    cache_key = f"user_cache:{guid_str}"
     try:
         cached_data = redis_client.get(cache_key)
         if cached_data:
             user = _deserialize_user(cached_data)
+            _L1_USER_CACHE[guid_str] = (user, now)
             if user.status != UserStatus.ACTIVE.value:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Учетная запись отключена")
             return user
@@ -112,6 +130,7 @@ def get_current_user(
     except Exception:
         pass
 
+    # 3. L3 Database Fetch
     user = get_user_by_guid(db, user_guid)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден или удален")
@@ -122,6 +141,7 @@ def get_current_user(
         
     try:
         redis_client.setex(cache_key, USER_CACHE_TTL, _serialize_user(user))
+        _L1_USER_CACHE[guid_str] = (user, now)
     except Exception:
         pass
 
@@ -156,11 +176,22 @@ def get_optional_current_user(
         if not user_guid:
             return None
             
-        cache_key = f"user_cache:{user_guid}"
+        guid_str = str(user_guid)
+        now = time.monotonic()
+
+        cached_l1 = _L1_USER_CACHE.get(guid_str)
+        if cached_l1 and (now - cached_l1[1]) < L1_CACHE_TTL:
+            user = cached_l1[0]
+            if user.status == UserStatus.ACTIVE.value:
+                return user
+            return None
+
+        cache_key = f"user_cache:{guid_str}"
         try:
             cached_data = redis_client.get(cache_key)
             if cached_data:
                 user = _deserialize_user(cached_data)
+                _L1_USER_CACHE[guid_str] = (user, now)
                 if user.status == UserStatus.ACTIVE.value:
                     return user
                 return None
@@ -171,6 +202,7 @@ def get_optional_current_user(
         if user and user.status == UserStatus.ACTIVE.value:
             try:
                 redis_client.setex(cache_key, USER_CACHE_TTL, _serialize_user(user))
+                _L1_USER_CACHE[guid_str] = (user, now)
             except Exception:
                 pass
             return user

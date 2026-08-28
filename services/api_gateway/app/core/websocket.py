@@ -11,6 +11,25 @@ logger = logging.getLogger(__name__)
 WS_ACTIVE_CONNECTIONS = Gauge("smart_contacts_active_websockets", "Total active WebSocket connections (tabs)")
 WS_ONLINE_USERS = Gauge("smart_contacts_unique_online_users", "Total unique online users with open WebSockets")
 
+def _get_global_active_websockets_count() -> float:
+    try:
+        from app.core.redis import redis_client
+        tab_counts = redis_client.hvals("ws_user_tab_counts")
+        return float(sum(int(v) for v in tab_counts if v))
+    except Exception:
+        return 0.0
+
+def _get_global_unique_online_users_count() -> float:
+    try:
+        from app.core.redis import redis_client
+        presence = redis_client.hgetall("global_presence")
+        return float(len([u for u, s in presence.items() if s in ("online", "away")]))
+    except Exception:
+        return 0.0
+
+WS_ACTIVE_CONNECTIONS.set_function(_get_global_active_websockets_count)
+WS_ONLINE_USERS.set_function(_get_global_unique_online_users_count)
+
 class ConnectionManager:
     def __init__(self):
         # Local connections for this worker: object_guid -> Set[WebSocket]
@@ -19,7 +38,7 @@ class ConnectionManager:
         self.pubsub = async_redis_client.pubsub()
         self.listener_task = None
 
-    async def connect(self, websocket: WebSocket, user_id: str):
+    async def connect(self, websocket: WebSocket, user_id: str) -> int:
         await websocket.accept()
         if user_id not in self.active_connections:
             self.active_connections[user_id] = set()
@@ -34,21 +53,37 @@ class ConnectionManager:
         if self.listener_task is None or self.listener_task.done():
             self.listener_task = asyncio.create_task(self._listen_to_redis())
             
-        logger.info(f"User {user_id} connected to local WS (total tabs: {len(self.active_connections[user_id])}).")
+        try:
+            global_tabs = await async_redis_client.hincrby("ws_user_tab_counts", user_id, 1)
+        except Exception:
+            global_tabs = len(self.active_connections[user_id])
+            
+        logger.info(f"User {user_id} connected to local WS (local tabs: {len(self.active_connections[user_id])}, global tabs: {global_tabs}).")
+        return int(global_tabs)
 
-    def disconnect(self, user_id: str, websocket: WebSocket):
+    async def disconnect(self, user_id: str, websocket: WebSocket) -> int:
         if user_id in self.active_connections:
             self.active_connections[user_id].discard(websocket)
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
-                logger.info(f"User {user_id} disconnected from local WS (all tabs closed).")
+                logger.info(f"User {user_id} disconnected from local WS (all local tabs closed).")
             else:
-                logger.info(f"User {user_id} closed one WS connection (remaining tabs: {len(self.active_connections[user_id])}).")
+                logger.info(f"User {user_id} closed one local WS connection (remaining local tabs: {len(self.active_connections[user_id])}).")
         
         # Update metrics
         total_tabs = sum(len(s) for s in self.active_connections.values())
         WS_ACTIVE_CONNECTIONS.set(total_tabs)
         WS_ONLINE_USERS.set(len(self.active_connections))
+
+        try:
+            global_tabs = await async_redis_client.hincrby("ws_user_tab_counts", user_id, -1)
+            if global_tabs <= 0:
+                await async_redis_client.hdel("ws_user_tab_counts", user_id)
+                global_tabs = 0
+        except Exception:
+            global_tabs = len(self.active_connections.get(user_id, set()))
+            
+        return int(global_tabs)
 
     async def broadcast_status(self, user_id: str, status: str):
         """

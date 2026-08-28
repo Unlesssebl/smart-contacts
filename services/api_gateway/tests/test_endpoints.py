@@ -449,3 +449,42 @@ def test_list_users_is_online_filter(client: TestClient, mocker, mock_kerberos, 
     assert data["total"] == 0
     assert len(data["items"]) == 0
 
+def test_filter_dropdowns_caching(client: TestClient, mock_kerberos, test_admin_user, test_normal_user):
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock"})
+
+    # First request populates cache
+    resp1 = client.get("/api/v1/users/departments")
+    assert resp1.status_code == 200
+    data1 = resp1.json()
+    assert isinstance(data1, list)
+
+    # Second request hits cache
+    resp2 = client.get("/api/v1/users/departments")
+    assert resp2.status_code == 200
+    assert resp2.json() == data1
+
+    # Organizations
+    resp_org = client.get("/api/v1/users/organizations")
+    assert resp_org.status_code == 200
+    assert isinstance(resp_org.json(), list)
+
+    # Job titles
+    resp_job = client.get("/api/v1/users/job-titles")
+    assert resp_job.status_code == 200
+    assert isinstance(resp_job.json(), list)
+
+def test_l1_auth_cache_invalidation(client: TestClient, mock_kerberos, test_admin_user, db_session):
+    from app.api.deps import invalidate_user_cache, _L1_USER_CACHE
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock"})
+    
+    # 1. Trigger auth fetch to populate L1 and L2 cache
+    resp = client.get("/api/v1/auth/me")
+    assert resp.status_code == 200
+    assert str(test_admin_user.object_guid) in _L1_USER_CACHE
+    
+    # 2. Invalidate cache
+    invalidate_user_cache(test_admin_user.object_guid)
+    assert str(test_admin_user.object_guid) not in _L1_USER_CACHE
+
+
+

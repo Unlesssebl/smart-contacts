@@ -250,6 +250,13 @@ class FakeRedis:
             for f in fields:
                 self._store[key].pop(f, None)
 
+    def hincrby(self, key: str, field: str, amount: int = 1):
+        if key not in self._store or not isinstance(self._store[key], dict):
+            self._store[key] = {}
+        val = int(self._store[key].get(field, 0)) + amount
+        self._store[key][field] = val
+        return val
+
     def eval(self, script, numkeys, *args):
         return [0, 0]
 
@@ -272,6 +279,7 @@ def mock_redis(mocker):
     mock_redis_client.hgetall.side_effect = fake.hgetall
     mock_redis_client.hset.side_effect = fake.hset
     mock_redis_client.hdel.side_effect = fake.hdel
+    mock_redis_client.hincrby.side_effect = fake.hincrby
     mock_redis_client.eval.side_effect = fake.eval
     mock_redis_client._fake_store = fake._store
 
@@ -282,8 +290,16 @@ def mock_redis(mocker):
     mocker.patch("app.services.event_service.redis_client", mock_redis_client)
     
     # Also patch async if it exists
+    async_mock = mocker.AsyncMock()
+    async_mock.hincrby.side_effect = fake.hincrby
+    async_mock.hset.side_effect = fake.hset
+    async_mock.hdel.side_effect = fake.hdel
+    async_mock.hgetall.side_effect = fake.hgetall
+    async_mock.publish.return_value = 1
+    async_mock.pubsub.return_value = mocker.MagicMock()
     try:
-        mocker.patch("app.core.redis.async_redis_client", mock_redis_client)
+        mocker.patch("app.core.redis.async_redis_client", async_mock)
+        mocker.patch("app.core.websocket.async_redis_client", async_mock)
     except Exception:
         pass
     
