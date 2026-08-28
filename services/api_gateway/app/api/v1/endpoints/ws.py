@@ -9,6 +9,7 @@ import json
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
 async def get_ws_user_guid(websocket: WebSocket) -> Optional[str]:
     # Try cookie first
     token = websocket.cookies.get("access_token")
@@ -17,20 +18,21 @@ async def get_ws_user_guid(websocket: WebSocket) -> Optional[str]:
         auth_header = websocket.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
-            
+
     if not token:
         # Try query param as a fallback
         token = websocket.query_params.get("token")
-        
+
     if not token:
         return None
-        
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_guid = payload.get("sub")
         return user_guid
     except JWTError:
         return None
+
 
 @router.websocket("/presence")
 async def websocket_presence(websocket: WebSocket):
@@ -39,14 +41,13 @@ async def websocket_presence(websocket: WebSocket):
         await websocket.close(code=1008)
         return
 
-    global_tabs = await manager.connect(websocket, user_id)
-    
+    await manager.connect(websocket, user_id)
+
+    # Ensure online status is set and broadcasted
+    await manager.broadcast_status(user_id, "online")
+
     # Send full current state
     await manager.send_full_state(websocket)
-    
-    # Broadcast to others that this user is online if first global tab
-    if global_tabs <= 1:
-        await manager.broadcast_status(user_id, "online")
 
     try:
         while True:
@@ -62,10 +63,10 @@ async def websocket_presence(websocket: WebSocket):
                 pass
     except WebSocketDisconnect:
         remaining_tabs = await manager.disconnect(user_id, websocket)
-        if remaining_tabs == 0:
+        if remaining_tabs <= 0:
             await manager.broadcast_status(user_id, "offline")
     except Exception as e:
         logger.error(f"WebSocket error for user {user_id}: {e}")
         remaining_tabs = await manager.disconnect(user_id, websocket)
-        if remaining_tabs == 0:
+        if remaining_tabs <= 0:
             await manager.broadcast_status(user_id, "offline")
