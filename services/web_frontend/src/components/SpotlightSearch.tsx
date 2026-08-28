@@ -34,7 +34,7 @@ export function SpotlightSearch() {
   // Show filters if any filter is active, or if user explicitly toggles it
   const hasActiveFilters = useMemo(() => Boolean(
     filters.department || filters.organization || filters.job_title ||
-    filters.has_phone || filters.has_email || filters.hidden_only
+    filters.is_online || filters.has_phone || filters.has_email || filters.hidden_only
   ), [filters]);
 
   const [showFilters, setShowFilters] = useState(hasActiveFilters);
@@ -48,6 +48,7 @@ export function SpotlightSearch() {
       organization: undefined,
       department: undefined,
       job_title: undefined,
+      is_online: false,
       has_phone: false,
       has_email: false,
       hidden_only: false,
@@ -229,6 +230,15 @@ export function SpotlightSearch() {
                   </div>
 
                   <div className="flex items-center gap-5 overflow-x-auto">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Switch
+                        id="is-online"
+                        checked={filters.is_online || false}
+                        onCheckedChange={(c) => setFilters({ is_online: c })}
+                      />
+                      <Label htmlFor="is-online" className="cursor-pointer whitespace-nowrap text-sm font-medium">В сети</Label>
+                    </div>
+
                     <div className="flex shrink-0 items-center gap-2">
                       <Switch
                         id="has-phone"

@@ -395,3 +395,57 @@ def test_admin_security_unblock_and_csrf(client: TestClient, mocker, test_admin_
     assert resp_ok.json()["status"] == "ok"
     assert "192.168.1.50" in resp_ok.json()["message"]
 
+
+def test_list_users_is_online_filter(client: TestClient, mocker, mock_kerberos, test_admin_user, test_normal_user):
+    """
+    Test filtering users by is_online (online/away statuses in Redis).
+    """
+    client.get("/api/v1/auth/sso", headers={"Authorization": "Negotiate mock"})
+
+    # 1. Mock Redis presence: test_normal_user is "online", test_admin_user is "offline"
+    mock_presence = {
+        str(test_normal_user.object_guid): "online",
+        str(test_admin_user.object_guid): "offline"
+    }
+    mocker.patch(
+        "app.api.v1.endpoints.users.async_redis_client.hgetall",
+        mocker.AsyncMock(return_value=mock_presence)
+    )
+
+    response = client.get("/api/v1/users", params={"is_online": "true"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["full_name"] == test_normal_user.full_name
+    assert data["items"][0]["presence"] == "online"
+
+    # 2. Mock Redis presence: test_admin_user is "away", test_normal_user is "offline"
+    mock_presence = {
+        str(test_admin_user.object_guid): "away",
+        str(test_normal_user.object_guid): "offline"
+    }
+    mocker.patch(
+        "app.api.v1.endpoints.users.async_redis_client.hgetall",
+        mocker.AsyncMock(return_value=mock_presence)
+    )
+
+    response = client.get("/api/v1/users", params={"is_online": "true"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["full_name"] == test_admin_user.full_name
+    assert data["items"][0]["presence"] == "away"
+
+    # 3. Mock Redis presence: both offline / empty
+    mocker.patch(
+        "app.api.v1.endpoints.users.async_redis_client.hgetall",
+        mocker.AsyncMock(return_value={})
+    )
+    response = client.get("/api/v1/users", params={"is_online": "true"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 0
+    assert len(data["items"]) == 0
+

@@ -13,6 +13,7 @@ import json
 import re
 
 from app.core import settings_manager
+from app.core.redis import async_redis_client
 
 router = APIRouter()
 
@@ -24,6 +25,7 @@ async def list_users(
     job_title: Optional[str] = Query(None, description="Filter by exact job title"),
     has_phone: Optional[bool] = Query(None, description="Filter by having a phone number"),
     has_email: Optional[bool] = Query(None, description="Filter by having an email address"),
+    is_online: Optional[bool] = Query(None, description="Filter by online or away status (в сети)"),
     hidden_only: Optional[bool] = Query(None, description="Filter by hidden status (Admin only)"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
@@ -83,6 +85,28 @@ async def list_users(
             User.email != '[]'
         )
     
+    global_presence = {}
+    try:
+        global_presence = await async_redis_client.hgetall("global_presence")
+    except Exception:
+        pass
+
+    if is_online:
+        active_guids = []
+        for guid_str, status in global_presence.items():
+            if status in ("online", "away"):
+                try:
+                    if isinstance(guid_str, UUID):
+                        active_guids.append(guid_str)
+                    else:
+                        active_guids.append(UUID(str(guid_str)))
+                except (ValueError, TypeError, AttributeError):
+                    continue
+        if active_guids:
+            query = query.filter(User.object_guid.in_(active_guids))
+        else:
+            query = query.filter(User.object_guid == None)
+    
     if q:
         # 2.1. Санитизация ввода для предотвращения SQL-инъекций и ошибок pg_trgm
         # Оставляем только буквы, цифры, пробелы, точки и дефисы
@@ -121,12 +145,12 @@ async def list_users(
     total = query.count()
     items = query.offset((page - 1) * limit).limit(limit).all()
     
-    
-    if not is_admin:
-        for item in items:
+    for item in items:
+        if not is_admin:
             if item in db:
                 db.expunge(item)
             item.ad_dn = None
+        item.presence = global_presence.get(str(item.object_guid), "offline")
             
     return {
         "total": total,

@@ -21,7 +21,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Скрипт автоматически генерирует самоподписанные SSL-сертификаты,
 # если корпоративные не были смонтированы в ./certs
 COPY 10-generate-certs.sh /docker-entrypoint.d/10-generate-certs.sh
-RUN chmod +x /docker-entrypoint.d/10-generate-certs.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.d/10-generate-certs.sh && chmod +x /docker-entrypoint.d/10-generate-certs.sh
 
 EXPOSE 80
 EXPOSE 443

@@ -91,6 +91,7 @@ services:
       - smart_net
 
   web_frontend:
+    image: smart-contacts-web_frontend
     build:
       context: ./services/web_frontend
       dockerfile: Dockerfile
