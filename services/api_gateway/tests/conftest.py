@@ -17,6 +17,13 @@ from sqlalchemy.pool import StaticPool
 import difflib
 import re
 
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+
+@compiles(PG_UUID, "sqlite")
+def compile_pg_uuid_sqlite(type_, compiler, **kw):
+    return "TEXT"
+
 # Create our test engine
 test_engine = create_engine(
     "sqlite://",
@@ -116,9 +123,19 @@ def mock_ldap_pool(mocker):
     Mocks the LDAP connection pool to avoid real AD network queries.
     """
     mock_conn = mocker.MagicMock()
+    mock_conn.entries = []
     mocker.patch("app.core.ldap.pool.get_search_pool", return_value=mock_conn)
     mocker.patch("app.core.ldap.search.get_search_pool", return_value=mock_conn)
+    mocker.patch("app.core.ldap.init_ldap_pool", return_value=None)
+    mocker.patch("app.core.ldap.pool.init_ldap_pool", return_value=None)
+    try:
+        mocker.patch("app.main.init_ldap_pool", return_value=None)
+    except Exception:
+        pass
     return mock_conn
+
+
+
 
 @pytest.fixture
 def test_admin_user(db_session, mock_service_upn):
@@ -163,15 +180,82 @@ def test_normal_user(db_session):
     return user
 
 @pytest.fixture(autouse=True)
+def mock_alembic(mocker):
+    """
+    Globally mocks Alembic migrations during tests to prevent connecting to PostgreSQL.
+    """
+    try:
+        mocker.patch("alembic.config.Config", return_value=mocker.MagicMock())
+        mocker.patch("alembic.command.upgrade", return_value=None)
+    except Exception:
+        pass
+
+
+class FakeRedis:
+    """
+    In-memory stateful Redis mock for testing session grace periods, rate limits, and caching.
+    """
+    def __init__(self):
+        self._store = {}
+        self._tracked_sets = set()
+
+    def setex(self, key: str, time: int, value: str):
+        self._store[key] = (str(value), time)
+
+    def set(self, key: str, value: str, ex: int = None):
+        self._store[key] = (str(value), ex if ex else -1)
+
+    def get(self, key: str):
+        item = self._store.get(key)
+        if item is not None:
+            return item[0]
+        return None
+
+    def exists(self, key: str) -> bool:
+        return key in self._store
+
+    def delete(self, *keys: str):
+        for k in keys:
+            self._store.pop(k, None)
+
+    def ttl(self, key: str) -> int:
+        item = self._store.get(key)
+        if item is not None:
+            return item[1] if item[1] is not None else -1
+        return -2
+
+    def sadd(self, key: str, *members: str):
+        self._tracked_sets.update(members)
+
+    def srem(self, key: str, *members: str):
+        for m in members:
+            self._tracked_sets.discard(m)
+
+    def smembers(self, key: str):
+        return set(self._tracked_sets)
+
+    def eval(self, script, numkeys, *args):
+        return [0, 0]
+
+@pytest.fixture(autouse=True)
 def mock_redis(mocker):
     """
     Globally mocks the Redis client to prevent hanging during brute-force checks or caching.
     """
+    fake = FakeRedis()
     mock_redis_client = mocker.MagicMock()
-    mock_redis_client.get.return_value = None
-    mock_redis_client.set.return_value = None
-    mock_redis_client.eval.return_value = [0, 0]
-    
+    mock_redis_client.get.side_effect = fake.get
+    mock_redis_client.set.side_effect = fake.set
+    mock_redis_client.setex.side_effect = fake.setex
+    mock_redis_client.exists.side_effect = fake.exists
+    mock_redis_client.delete.side_effect = fake.delete
+    mock_redis_client.ttl.side_effect = fake.ttl
+    mock_redis_client.sadd.side_effect = fake.sadd
+    mock_redis_client.srem.side_effect = fake.srem
+    mock_redis_client.smembers.side_effect = fake.smembers
+    mock_redis_client.eval.side_effect = fake.eval
+    mock_redis_client._fake_store = fake._store
+
     mocker.patch("app.core.redis.redis_client", mock_redis_client)
     mocker.patch("app.core.ldap.pool.redis_client", mock_redis_client)
     mocker.patch("app.services.event_service.redis_client", mock_redis_client)
@@ -183,3 +267,4 @@ def mock_redis(mocker):
         pass
     
     return mock_redis_client
+

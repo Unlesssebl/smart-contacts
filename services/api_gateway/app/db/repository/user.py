@@ -17,8 +17,9 @@ def update_user_guid(db: Session, sam: str, new_guid: str) -> None:
     Updates the primary key (object_guid) for a user identified by sam_account_name.
     Used for linking API stubs to real AD GUIDs.
     """
+    guid_val = uuid.UUID(new_guid) if isinstance(new_guid, str) else new_guid
     db.execute(
-        update(User).where(User.sam_account_name == sam).values(object_guid=new_guid)
+        update(User).where(User.sam_account_name == sam).values(object_guid=guid_val)
     )
     db.commit()
 
@@ -29,7 +30,7 @@ def create_user_stub(db: Session, sam: str, guid: Optional[str] = None, full_nam
     is_protected=True so they are never touched by AD sync reconciliation.
     """
     DEV_GUID = "00000000-0000-0000-0000-000000000001"
-    is_protected = guid == DEV_GUID
+    is_protected = str(guid) == DEV_GUID
 
     user_data = {
         "sam_account_name": sam,
@@ -39,10 +40,11 @@ def create_user_stub(db: Session, sam: str, guid: Optional[str] = None, full_nam
         "is_protected": is_protected
     }
     if guid:
-        user_data["object_guid"] = guid
+        user_data["object_guid"] = uuid.UUID(guid) if isinstance(guid, str) else guid
         
     user = User(**user_data)
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
+

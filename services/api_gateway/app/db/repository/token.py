@@ -24,17 +24,19 @@ def create_refresh_token(db: Session, user_guid: uuid.UUID) -> str:
 def revoke_refresh_token(db: Session, token: str):
     token_hash = hash_token(token)
     db_token = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
-    if db_token:
+    if db_token and not db_token.revoked:
         # Устанавливаем grace window 10 секунд перед полным отзывом (EC-5)
         try:
             from app.core.redis import redis_client
             grace_key = f"token_grace:{token_hash}"
-            redis_client.setex(grace_key, 10, str(db_token.user_guid))
+            if not redis_client.exists(grace_key):
+                redis_client.setex(grace_key, 10, str(db_token.user_guid))
         except Exception:
             pass
             
         db_token.revoked = True
         db.commit()
+
 
 def verify_refresh_token(db: Session, token: str) -> Optional[RefreshToken]:
     token_hash = hash_token(token)

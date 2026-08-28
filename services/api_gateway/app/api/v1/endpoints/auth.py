@@ -11,6 +11,7 @@ from jose import jwt
 from datetime import datetime, timedelta, timezone
 
 from app.api import deps
+from shared.models.user import User
 
 def set_auth_cookies(response: Response, tokens: Token):
     # CSRF token
@@ -95,10 +96,8 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     return {"detail": "Logged out"}
 
 @router.get("/me", response_model=UserProfile)
-def get_me(user_guid: str = Depends(deps.get_current_user_guid), db: Session = Depends(get_db)):
-    user = get_user_by_guid(db, user_guid)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+def get_me(user: User = Depends(deps.get_current_user)):
+
     
     return UserProfile(
         id=user.object_guid,

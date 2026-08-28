@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core import settings_manager
 from app.core.redis import check_brute_force_block, record_failed_login, reset_brute_force, decrement_brute_force
 from app.schemas.auth import Token, UserAuthResponse, AuthResult
-from shared.models.enums import UserRole, ChangeRequestStatus
+from shared.models.enums import UserRole, ChangeRequestStatus, UserStatus
 from shared.models.change_request import ChangeRequest
 from shared.utils import parse_ou_structure, apply_canonical_mapping, format_phone
 
@@ -330,20 +330,33 @@ class AuthService:
 
         user = get_user_by_guid(db, db_token.user_guid)
         if not user:
-             raise HTTPException(
+            raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Пользователь не найден"
             )
 
-        # Validate against AD
-        from app.core.ldap import search_user_by_sam
-        ldap_user = search_user_by_sam(user.sam_account_name)
-        if not ldap_user or ldap_user.is_disabled:
+        if user.status != UserStatus.ACTIVE.value:
             revoke_refresh_token(db, token)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Учетная запись отключена или не найдена в Active Directory"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Учетная запись отключена"
             )
+
+        # Validate against AD (revoke only if explicitly disabled in AD)
+        try:
+            from app.core.ldap import search_user_by_sam
+            ldap_user = search_user_by_sam(user.sam_account_name)
+            if ldap_user and ldap_user.is_disabled:
+                revoke_refresh_token(db, token)
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Учетная запись отключена в Active Directory"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"AD check during token refresh failed for {user.sam_account_name}: {e}")
+
 
         # Token rotation: revoke old, create new
         revoke_refresh_token(db, token)
