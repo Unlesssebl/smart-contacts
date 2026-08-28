@@ -50,7 +50,7 @@ services:
       - .env
     volumes:
       - ./certs:/app/certs:ro
-    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["./entrypoint.sh"]
     ports:
       - "127.0.0.1:8001:8000"
     dns:

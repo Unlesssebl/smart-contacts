@@ -13,12 +13,12 @@ import json
 import re
 
 from app.core import settings_manager
-from app.core.redis import async_redis_client
+from app.core.redis import redis_client
 
 router = APIRouter()
 
 @router.get("", response_model=PaginatedUsers)
-async def list_users(
+def list_users(
     q: Optional[str] = Query(None, description="Fuzzy search by name, department, office"),
     department: Optional[str] = Query(None, description="Filter by exact department name"),
     organization: Optional[str] = Query(None, description="Filter by exact organization name"),
@@ -87,7 +87,7 @@ async def list_users(
     
     global_presence = {}
     try:
-        global_presence = await async_redis_client.hgetall("global_presence")
+        global_presence = redis_client.hgetall("global_presence")
     except Exception:
         pass
 
@@ -160,7 +160,7 @@ async def list_users(
     }
 
 @router.get("/departments", response_model=List[str])
-async def list_departments(
+def list_departments(
     organization: Optional[str] = Query(None, description="Filter departments by organization"),
     job_title: Optional[str] = Query(None, description="Filter departments by job title"),
     db: Session = Depends(get_db),
@@ -196,7 +196,7 @@ async def list_departments(
     return sorted(dept_set, key=lambda x: x.lower())
 
 @router.get("/organizations", response_model=List[str])
-async def list_organizations(
+def list_organizations(
     department: Optional[str] = Query(None, description="Filter organizations by department"),
     job_title: Optional[str] = Query(None, description="Filter organizations by job title"),
     db: Session = Depends(get_db),
@@ -236,7 +236,7 @@ async def list_organizations(
     return [o[0] for o in organizations if o[0]]
 
 @router.get("/job-titles", response_model=List[str])
-async def list_job_titles(
+def list_job_titles(
     organization: Optional[str] = Query(None, description="Filter job titles by organization"),
     department: Optional[str] = Query(None, description="Filter job titles by department"),
     db: Session = Depends(get_db),
@@ -274,7 +274,7 @@ async def list_job_titles(
     return [j[0] for j in job_titles if j[0]]
 
 @router.get("/{user_id}", response_model=UserFull)
-async def get_user(
+def get_user(
     user_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)

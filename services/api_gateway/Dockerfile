@@ -29,10 +29,10 @@ COPY services/shared ./shared
 
 # Copy application code
 COPY services/api_gateway .
+RUN chmod +x ./entrypoint.sh
 
 # Expose port
 EXPOSE 8000
 
 # Command to run the application
-# We use 'uv run' to ensure we use the synced environment
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./entrypoint.sh"]

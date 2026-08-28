@@ -16,24 +16,7 @@ from shared.database import Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Run Alembic migrations or fallback to create_all
-    try:
-        from alembic.config import Config
-        from alembic import command
-        alembic_ini_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "alembic.ini"))
-        if os.path.exists(alembic_ini_path):
-            alembic_cfg = Config(alembic_ini_path)
-            command.upgrade(alembic_cfg, "head")
-        else:
-            Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        logging.getLogger(__name__).warning("Could not run Alembic migrations (falling back to create_all): %s", e)
-        try:
-            Base.metadata.create_all(bind=engine)
-        except Exception as e2:
-            logging.getLogger(__name__).warning("Could not run Base.metadata.create_all: %s", e2)
-
-    # 2. Startup: Initialize LDAP pool
+    # 1. Startup: Initialize LDAP pool
     init_ldap_pool()
     yield
     # Shutdown logic (if any) could go here

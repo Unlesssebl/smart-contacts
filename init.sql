@@ -96,6 +96,9 @@ CREATE INDEX idx_users_mobile_phone_trgm   ON users USING GIN (regexp_replace(mo
 -- Поиск по Telegram ID
 CREATE INDEX idx_users_tg_id ON users (tg_id) WHERE tg_id IS NOT NULL;
 
+-- Быстрая фильтрация активных пользователей и сортировка по ФИО
+CREATE INDEX idx_users_active_fullname ON users (full_name ASC) WHERE status != 'RESIGNED' AND is_hidden = FALSE;
+
 -- Быстрая фильтрация неверифицированных пользователей
 CREATE INDEX idx_users_is_verified ON users (is_verified) WHERE is_verified = FALSE;
 

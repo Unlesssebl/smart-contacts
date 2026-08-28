@@ -408,8 +408,8 @@ def test_list_users_is_online_filter(client: TestClient, mocker, mock_kerberos, 
         str(test_admin_user.object_guid): "offline"
     }
     mocker.patch(
-        "app.api.v1.endpoints.users.async_redis_client.hgetall",
-        mocker.AsyncMock(return_value=mock_presence)
+        "app.api.v1.endpoints.users.redis_client.hgetall",
+        return_value=mock_presence
     )
 
     response = client.get("/api/v1/users", params={"is_online": "true"})
@@ -426,8 +426,8 @@ def test_list_users_is_online_filter(client: TestClient, mocker, mock_kerberos, 
         str(test_normal_user.object_guid): "offline"
     }
     mocker.patch(
-        "app.api.v1.endpoints.users.async_redis_client.hgetall",
-        mocker.AsyncMock(return_value=mock_presence)
+        "app.api.v1.endpoints.users.redis_client.hgetall",
+        return_value=mock_presence
     )
 
     response = client.get("/api/v1/users", params={"is_online": "true"})
@@ -440,8 +440,8 @@ def test_list_users_is_online_filter(client: TestClient, mocker, mock_kerberos, 
 
     # 3. Mock Redis presence: both offline / empty
     mocker.patch(
-        "app.api.v1.endpoints.users.async_redis_client.hgetall",
-        mocker.AsyncMock(return_value={})
+        "app.api.v1.endpoints.users.redis_client.hgetall",
+        return_value={}
     )
     response = client.get("/api/v1/users", params={"is_online": "true"})
     assert response.status_code == 200

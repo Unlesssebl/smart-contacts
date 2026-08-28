@@ -234,6 +234,22 @@ class FakeRedis:
     def smembers(self, key: str):
         return set(self._tracked_sets)
 
+    def hgetall(self, key: str):
+        item = self._store.get(key)
+        if isinstance(item, dict):
+            return item
+        return {}
+
+    def hset(self, key: str, field: str, value: str):
+        if key not in self._store or not isinstance(self._store[key], dict):
+            self._store[key] = {}
+        self._store[key][field] = value
+
+    def hdel(self, key: str, *fields: str):
+        if key in self._store and isinstance(self._store[key], dict):
+            for f in fields:
+                self._store[key].pop(f, None)
+
     def eval(self, script, numkeys, *args):
         return [0, 0]
 
@@ -253,10 +269,15 @@ def mock_redis(mocker):
     mock_redis_client.sadd.side_effect = fake.sadd
     mock_redis_client.srem.side_effect = fake.srem
     mock_redis_client.smembers.side_effect = fake.smembers
+    mock_redis_client.hgetall.side_effect = fake.hgetall
+    mock_redis_client.hset.side_effect = fake.hset
+    mock_redis_client.hdel.side_effect = fake.hdel
     mock_redis_client.eval.side_effect = fake.eval
     mock_redis_client._fake_store = fake._store
 
     mocker.patch("app.core.redis.redis_client", mock_redis_client)
+    mocker.patch("app.api.deps.redis_client", mock_redis_client)
+    mocker.patch("app.api.v1.endpoints.users.redis_client", mock_redis_client)
     mocker.patch("app.core.ldap.pool.redis_client", mock_redis_client)
     mocker.patch("app.services.event_service.redis_client", mock_redis_client)
     

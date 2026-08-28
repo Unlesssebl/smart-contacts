@@ -45,6 +45,7 @@ def update_avatar_color(
     user.avatar_color = data.avatar_color
     db.commit()
     db.refresh(user)
+    deps.invalidate_user_cache(user.object_guid)
     
     return {"message": "Avatar color updated successfully", "avatar_color": user.avatar_color}
 
@@ -80,6 +81,7 @@ def acknowledge_gatekeeper(
     
     db.commit()
     db.refresh(user)
+    deps.invalidate_user_cache(user.object_guid)
     
     return {
         "status": "success",
