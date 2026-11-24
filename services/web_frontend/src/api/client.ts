@@ -17,6 +17,12 @@ function getCookie(name: string): string | null {
 
 // Request interceptor: add CSRF token
 apiClient.interceptors.request.use((config) => {
+  const request = config as RetryableRequestConfig;
+  const sessionVersion = useAppStore.getState().sessionVersion;
+  if (request._sessionVersion !== undefined && request._sessionVersion !== sessionVersion) {
+    throw new axios.CanceledError('Session changed');
+  }
+  request._sessionVersion = sessionVersion;
   const csrfToken = getCookie('csrf_token');
   if (csrfToken) {
     config.headers['X-CSRF-Token'] = csrfToken;
@@ -25,17 +31,21 @@ apiClient.interceptors.request.use((config) => {
 });
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _sessionVersion?: number;
   _retry?: boolean;
   _csrfRetry?: boolean;
 }
 
-let refreshRequest: Promise<unknown> | null = null;
+let refreshRequest: { sessionVersion: number; promise: Promise<unknown> } | null = null;
 let sessionExpired = false;
 
 // Response interceptor: handle 401 and 503
 apiClient.interceptors.response.use(
   (response) => {
     const store = useAppStore.getState();
+    if ((response.config as RetryableRequestConfig)._sessionVersion !== store.sessionVersion) {
+      throw new axios.CanceledError('Session changed');
+    }
     if (/\/auth\/(login|sso|me)$/.test(response.config.url || '')) {
       sessionExpired = false;
     }
@@ -52,6 +62,10 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as RetryableRequestConfig | undefined;
     const store = useAppStore.getState();
+    if (axios.isCancel(error)) return Promise.reject(error);
+    if (originalRequest?._sessionVersion !== undefined && originalRequest._sessionVersion !== store.sessionVersion) {
+      return Promise.reject(new axios.CanceledError('Session changed'));
+    }
 
     // Handle Network Error or Vite proxy errors (502, 504)
     if (!error.response || error.response.status === 502 || error.response.status === 504) {
@@ -67,24 +81,26 @@ apiClient.interceptors.response.use(
       if (sessionExpired) return Promise.reject(error);
       // Every waiting request may be retried only once, even if it still gets 401.
       originalRequest._retry = true;
-      if (!refreshRequest) {
+      const sessionVersion = store.sessionVersion;
+      if (!refreshRequest || refreshRequest.sessionVersion !== sessionVersion) {
         // Bypass this interceptor and share one refresh across concurrent requests.
-        refreshRequest = axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {}, {
+        const promise = axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {}, {
           withCredentials: true,
           timeout: apiClient.defaults.timeout,
         })
           .catch((err) => {
-            if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
+            if (useAppStore.getState().sessionVersion === sessionVersion && axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
               sessionExpired = true;
               useAppStore.getState().resetSession();
             }
             throw err;
           })
           .finally(() => {
-            refreshRequest = null;
+            if (refreshRequest?.sessionVersion === sessionVersion) refreshRequest = null;
           });
+        refreshRequest = { sessionVersion, promise };
       }
-      await refreshRequest;
+      await refreshRequest.promise;
       return apiClient(originalRequest);
     }
 

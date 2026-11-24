@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { useAppStore } from '@/store/useAppStore';
 
 export const login = async (username: string, password: string) => {
   // In a real app, this would be a POST request to your auth endpoint
@@ -17,6 +18,7 @@ export const getMe = async () => {
 };
 
 export const checkSso = async () => {
+  useAppStore.getState().resetSession();
   const response = await apiClient.get('/auth/sso');
   return response.data;
 };

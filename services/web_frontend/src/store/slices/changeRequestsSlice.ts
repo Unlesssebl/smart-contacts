@@ -25,9 +25,11 @@ export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeReq
   },
 
   fetchMyPendingFields: async () => {
+    const sessionVersion = get().sessionVersion;
     if (!get().currentUser) return;
     try {
       const requests = await changeRequestsApi.getMyChangeRequests();
+      if (get().sessionVersion !== sessionVersion) return;
       const activePending: Record<string, string> = {};
       requests.forEach((r) => {
         if (r.status === 'pending' || r.status === 'conflict' || r.status === 'approved') {
@@ -37,6 +39,7 @@ export const createChangeRequestsSlice: StateCreator<AppState, [], [], ChangeReq
       });
       set({ pendingFields: activePending });
     } catch (error) {
+      if (get().sessionVersion !== sessionVersion) return;
       console.error('Failed to fetch pending fields', error);
       set({ pendingFields: {} });
     }

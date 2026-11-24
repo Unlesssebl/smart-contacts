@@ -14,8 +14,10 @@ import type { LDAPSettings } from '@/api/settings';
 export interface AuthSlice {
   currentUser: UserProfile | null;
   isAuthenticated: boolean;
+  // Runtime generation; never persisted. Old requests cannot update a new session.
+  sessionVersion: number;
   login: (samAccount: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   resetSession: () => void;
   fetchMe: () => Promise<void>;
   acknowledgeGatekeeper: (action: 'confirm' | 'skip') => Promise<{ success: boolean; error?: string }>;

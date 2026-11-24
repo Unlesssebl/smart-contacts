@@ -13,12 +13,14 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
   isLoadingNotifications: false,
 
   fetchNotifications: async () => {
+    const sessionVersion = get().sessionVersion;
     const currentUser = get().currentUser;
     if (!currentUser?.id) return;
 
     set({ isLoadingNotifications: true });
     try {
       const data = await notificationsApi.getNotifications({ limit: MAX_NOTIFICATIONS });
+      if (get().sessionVersion !== sessionVersion || get().currentUser?.id !== currentUser.id) return;
       const mapped = data.items.map(mapNotificationDtoToApp);
       const unread = data.unread_count;
 
@@ -31,19 +33,23 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
 
       set({ notifications: mapped, unreadCount: unread, isLoadingNotifications: false });
     } catch (e) {
+      if (get().sessionVersion !== sessionVersion) return;
       console.error('Failed to fetch notifications from server', e);
       set({ isLoadingNotifications: false });
     }
   },
 
   fetchUnreadCount: async () => {
+    const sessionVersion = get().sessionVersion;
     const currentUser = get().currentUser;
     if (!currentUser?.id) return;
 
     try {
       const count = await notificationsApi.getUnreadCount();
+      if (get().sessionVersion !== sessionVersion || get().currentUser?.id !== currentUser.id) return;
       set({ unreadCount: count });
     } catch (e) {
+      if (get().sessionVersion !== sessionVersion) return;
       console.error('Failed to fetch unread notification count', e);
     }
   },
