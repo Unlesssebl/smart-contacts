@@ -16,6 +16,7 @@ export interface AuthSlice {
   isAuthenticated: boolean;
   login: (samAccount: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  resetSession: () => void;
   fetchMe: () => Promise<void>;
   acknowledgeGatekeeper: (action: 'confirm' | 'skip') => Promise<{ success: boolean; error?: string }>;
 }
@@ -93,6 +94,7 @@ export interface NotificationsSlice {
   deleteNotification: (id: string) => Promise<void>;
   loadNotificationsFromStorage: (userGuid?: string) => void;
   clearNotifications: () => Promise<void>;
+  resetNotifications: () => void;
 }
 
 export interface AdminSlice {

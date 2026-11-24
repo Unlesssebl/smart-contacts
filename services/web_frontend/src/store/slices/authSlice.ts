@@ -34,9 +34,14 @@ export const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set, 
     }
   },
 
-  logout: async () => {
-    get().clearNotifications();
+  resetSession: () => {
+    get().resetNotifications();
     set({ currentUser: null, isAuthenticated: false, users: [], changeRequests: [], reports: [] });
+  },
+
+  logout: async () => {
+    if (!get().isAuthenticated && !get().currentUser) return;
+    get().resetSession();
     try {
       await apiClient.post('/auth/logout');
     } catch (e) {

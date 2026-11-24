@@ -29,29 +29,16 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _csrfRetry?: boolean;
 }
 
-interface RefreshQueueItem {
-  resolve: () => void;
-  reject: (reason?: unknown) => void;
-}
-
-let isRefreshing = false;
-let failedQueue: RefreshQueueItem[] = [];
-
-const processQueue = (error?: unknown) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve();
-    }
-  });
-  failedQueue = [];
-};
+let refreshRequest: Promise<unknown> | null = null;
+let sessionExpired = false;
 
 // Response interceptor: handle 401 and 503
 apiClient.interceptors.response.use(
   (response) => {
     const store = useAppStore.getState();
+    if (/\/auth\/(login|sso|me)$/.test(response.config.url || '')) {
+      sessionExpired = false;
+    }
     // If we get a successful response, ensure adSyncUnavailable is false
     if (store.adSyncUnavailable) {
       store.setAdSyncStatus(false);
@@ -76,36 +63,29 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized
     const url = originalRequest?.url || '';
-    if (error.response?.status === 401 && !originalRequest._retry && !url.endsWith('/auth/sso') && !url.endsWith('/auth/login') && !url.endsWith('/auth/refresh') && !url.endsWith('/auth/ws-token')) {
-      if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
-          failedQueue.push({ resolve: () => resolve(undefined), reject });
-        }).then(() => {
-          return apiClient(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
-      }
-
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !/\/auth\/(sso|login|refresh|logout|ws-token)$/.test(url)) {
+      if (sessionExpired) return Promise.reject(error);
+      // Every waiting request may be retried only once, even if it still gets 401.
       originalRequest._retry = true;
-      isRefreshing = true;
-
-      return new Promise(function (resolve, reject) {
-        // Use a new axios instance to avoid interceptor loops
-        axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true })
-          .then(() => {
-            processQueue();
-            resolve(apiClient(originalRequest));
-          })
+      if (!refreshRequest) {
+        // Bypass this interceptor and share one refresh across concurrent requests.
+        refreshRequest = axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {}, {
+          withCredentials: true,
+          timeout: apiClient.defaults.timeout,
+        })
           .catch((err) => {
-            processQueue(err);
-            store.logout();
-            reject(err);
+            if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
+              sessionExpired = true;
+              useAppStore.getState().resetSession();
+            }
+            throw err;
           })
           .finally(() => {
-            isRefreshing = false;
+            refreshRequest = null;
           });
-      });
+      }
+      await refreshRequest;
+      return apiClient(originalRequest);
     }
 
     // Handle 403 CSRF token error retry

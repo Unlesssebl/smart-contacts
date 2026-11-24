@@ -177,7 +177,7 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
     set({ notifications: [], unreadCount: 0 });
   },
 
-  clearNotifications: async () => {
+  resetNotifications: () => {
     const state = get();
     const currentUser = state.currentUser;
     const key = getStorageKey(currentUser?.id);
@@ -186,8 +186,11 @@ export const createNotificationsSlice: StateCreator<AppState, [], [], Notificati
     } catch {
       // LocalStorage error handling
     }
-    set({ notifications: [], unreadCount: 0 });
+    set({ notifications: [], unreadCount: 0, isLoadingNotifications: false });
+  },
 
+  clearNotifications: async () => {
+    get().resetNotifications();
     try {
       await notificationsApi.clearNotifications();
     } catch (e) {
