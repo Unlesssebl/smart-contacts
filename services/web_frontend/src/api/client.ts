@@ -77,7 +77,11 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized
     const url = originalRequest?.url || '';
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !/\/auth\/(sso|login|refresh|logout|ws-token)$/.test(url)) {
+    // NOTE: /auth/ws-token must NOT be excluded here. The presence WebSocket
+    // fetches a fresh token on every reconnect, when the access token may
+    // already be expired (e.g. a tab kept open for hours). Skipping the
+    // refresh left such users permanently "offline" until a manual action.
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !/\/auth\/(sso|login|refresh|logout)$/.test(url)) {
       if (sessionExpired) return Promise.reject(error);
       // Every waiting request may be retried only once, even if it still gets 401.
       originalRequest._retry = true;

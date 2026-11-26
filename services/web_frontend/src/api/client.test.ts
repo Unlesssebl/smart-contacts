@@ -53,6 +53,32 @@ describe('session expiration', () => {
     expect(calls).toEqual(['get /users', 'get /notifications', 'get /users']);
   });
 
+  it('refreshes the session when the websocket token request is rejected', async () => {
+    const { axios, client, calls } = await setup();
+    let wsTokenAttempts = 0;
+    client.defaults.adapter = async (config) => {
+      calls.push(`${config.method} ${config.url}`);
+      const response: AxiosResponse = {
+        config, data: {}, status: 401, statusText: 'Unauthorized', headers: {},
+      };
+      if (config.url === '/auth/ws-token') {
+        wsTokenAttempts += 1;
+        if (wsTokenAttempts === 1) {
+          throw new axios.AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, undefined, response);
+        }
+        return { ...response, status: 200, statusText: 'OK', data: { ws_token: 'fresh-token' } };
+      }
+      return { ...response, status: 200, statusText: 'OK' };
+    };
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} });
+
+    await expect(client.get('/auth/ws-token')).resolves.toMatchObject({
+      data: { ws_token: 'fresh-token' },
+    });
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(['get /auth/ws-token', 'get /auth/ws-token']);
+  });
+
   it('allows refresh again after a successful login', async () => {
     const { axios, client, refreshError } = await setup();
     const refresh = vi.spyOn(axios, 'post').mockRejectedValue(refreshError);
