@@ -39,6 +39,9 @@ services:
     build:
       context: .
       dockerfile: services/api_gateway/Dockerfile
+      args:
+        DEBIAN_MIRROR: ${DEBIAN_MIRROR:-deb.debian.org}
+        DEBIAN_SCHEME: ${DEBIAN_SCHEME:-https}
     container_name: smart_contacts_api
     restart: always
     depends_on:
@@ -68,6 +71,9 @@ services:
     build:
       context: .
       dockerfile: services/ad_sync_worker/Dockerfile
+      args:
+        DEBIAN_MIRROR: ${DEBIAN_MIRROR:-deb.debian.org}
+        DEBIAN_SCHEME: ${DEBIAN_SCHEME:-https}
     container_name: smart_contacts_worker
     restart: always
     depends_on:

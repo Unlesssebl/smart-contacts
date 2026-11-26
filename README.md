@@ -94,6 +94,18 @@ docker compose -f docker-compose.yml up -d --build
 * 🛡️ **Иммутабельность**: Код запечен внутри Docker-образов, монтирование хоста отключено.
 * 🚀 **Производительность**: Отключен отладочный reloader, включен строгий HSTS и HTTPS.
 
+> **Сборка в закрытом контуре.** Dockerfile'ы ставят системные пакеты по HTTPS
+> (`https://deb.debian.org` по умолчанию). Если сервер выходит в интернет только
+> через прокси или использует внутреннее зеркало Debian, задайте параметры в `.env`:
+>
+> ```env
+> DEBIAN_MIRROR=mirror.corp.local/debian
+> DEBIAN_SCHEME=https
+> # при необходимости — прокси для сборочных контейнеров
+> HTTP_PROXY=http://proxy.corp.local:3128
+> HTTPS_PROXY=http://proxy.corp.local:3128
+> ```
+
 ---
 
 ## 🌐 Сетевые порты и доступ к сервисам
