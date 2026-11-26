@@ -3,7 +3,7 @@
 # ==============================================================================
 
 COMPOSE_PROD = docker compose -f docker-compose.yml
-COMPOSE_DEV  = docker compose -f docker-compose.yml -f docker-compose.dev.yml
+COMPOSE_DEV  = docker compose -f docker-compose.yml -f docker-compose.override.yml
 
 .PHONY: help up down restart build logs ps health dev-up dev-down dev-logs test db-backup
 

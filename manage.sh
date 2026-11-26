@@ -9,7 +9,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
 COMPOSE_PROD="docker compose -f docker-compose.yml"
-COMPOSE_DEV="docker compose -f docker-compose.yml -f docker-compose.dev.yml"
+COMPOSE_DEV="docker compose -f docker-compose.yml -f docker-compose.override.yml"
 
 show_help() {
   echo "Использование: ./manage.sh <команда>"
