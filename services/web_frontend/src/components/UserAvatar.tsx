@@ -52,9 +52,7 @@ export function UserAvatar({
             <span aria-hidden="true" className="h-full w-full rounded-full bg-[#22C55E]" />
           )}
           {presence === 'away' && (
-            <span aria-hidden="true" className="relative h-full w-full rounded-full border-2 border-amber-400 bg-white">
-              <span className="absolute left-1/2 top-1/2 h-[3px] w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500" />
-            </span>
+            <span aria-hidden="true" className="h-full w-full rounded-full bg-[#F59E0B]" />
           )}
           {presence === 'offline' && (
             <span aria-hidden="true" className="h-full w-full rounded-full border-2 border-[#94A3B8] bg-white" />
