@@ -56,7 +56,6 @@ export const usePresence = () => {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('[Presence] WebSocket connected successfully!');
         statusRef.current = 'online';
         reconnectAttemptsRef.current = 0; // reset attempts on success
       };
@@ -65,10 +64,8 @@ export const usePresence = () => {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'full_state') {
-            console.log('[Presence] Received full state:', data.data);
             setBulkPresence(data.data);
           } else if (data.type === 'presence_update') {
-            console.log('[Presence] Received update:', data.user_id, data.status);
             setPresence(data.user_id, data.status);
           } else if (data.type === 'admin_update') {
             if (window.location.pathname.includes('/admin')) {
